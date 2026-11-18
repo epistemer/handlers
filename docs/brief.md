@@ -173,6 +173,7 @@ A sketch; the schema is M1.4's.
 - Producers resolve every Go name (`name`, `var`, `go`, the types and their `import` paths) and every derived value: the deduplicated `permissions` with their text and level, a parameter's `kind` (`segment` or `rest` for `{path...}`). Templates only render (genx ADR 0001 §7).
 - Templates write every string literal with the built-in `printf "%q"`, which always gives valid Go. JSON escaping isn't relied on.
 - The generated package never imports the handler package: `Register` takes the `Handler` interface, and parameter types from the handler's package are refused (§5.3). An app that wants the compile-time check writes `var _ adminroutes.Handler = (*H)(nil)` in the handler package.
+- The schema is `schema/routes.v1.json`; `internal/routesv1.Check` enforces it and the rules across fields in `internal/routesv1/rules.md`, against the conformance files in `testdata/routes` (M1.4).
 - Within a major version, fields are only added. A generator, `Register` and every `Guard` fail closed on an `auth` or `surface` value they don't know: they error or panic, never fall through to a default.
 
 ## 7. Generated Go (`routes`)

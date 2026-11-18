@@ -3,6 +3,23 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M1.4, the routes/v1 schema
+
+- **Landed in [PR 5](https://github.com/epistemer/handlers/pull/5),** merging once CI is green: `schema/routes.v1.json`, `internal/routesv1.Check` with its
+  rules in `internal/routesv1/rules.md`, and `testdata/routes` (4 valid, 43
+  invalid files, each with its exact message). Gemini 3.8 Flash (High) wrote
+  it from a rule list in a worktree outside the repository (about 370k
+  tokens); Claude reviewed it and added rule 11: a route's name can't take a
+  name the generated package declares (`Handler`, `Register`, `Routes`,
+  `ByKey`, `L10n`) or a variable of the document.
+- **Decided for you:** rule 11, and the agent's three readings of the rule
+  list: only `auth: permission` routes count as using a permission; a bad
+  wildcard isn't also reported as unmatched; `L10n` and `Perm` variables are
+  unique within their own prefix.
+- **Next:** M1.5, `docs/interface.md` drafted from the brief, ADRs 0002–0004
+  and the rules, for you to lock.
+- **Waiting on you:** nothing until that draft.
+
 ## 2026-11-18: M1's three spikes
 
 - **Landed:** [ADR 0002](adr/0002-spike-s1-census.md),
