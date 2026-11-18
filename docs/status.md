@@ -3,6 +3,23 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M2.6, `Table` and `Search`; M2 is done
+
+- **Landed:** `NewTable`, `ByKey`, `Routes` and `Search` (interface §11.7,
+  §14): one `tr.Search` over `route.` in the request's locale, a match on
+  the text or source text ignoring case, `Only`, the guard's `Admit`, and
+  `Limit`. The benchmark answers the cost question from the plan: 300 routes,
+  a third of them matching, take **0.56 ms** a search (185 KB, 3,317
+  allocations) on the development machine, under M2.6's 1 ms budget; the
+  bbolt walk dominates, as predicted. Gemini 3.8 Flash (High) wrote it from a
+  spec (about 310k tokens); Claude reviewed it.
+- **Decided for you:** a request without a locale searches in the
+  translator's default locale.
+- **Next:** M3, the API surface (the OpenAPI producer, the `openapi`
+  adapter, `Mount`), and M4, the editor and agent tools, which can run side
+  by side.
+- **Waiting on you:** nothing.
+
 ## 2026-11-18: M2.5, permissions, `authguard` and `handlerstest`
 
 - **Landed:** the `permissions` generator (`access.Permission` per
