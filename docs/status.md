@@ -3,6 +3,27 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M5.2, zp's admin routes through handlers
+
+On a scratch copy: zp's 217 annotated handlers turned into stub methods
+with the new directive form (wildcards `{x}`, `//h:param`, `net/http`
+signatures), then the real `handlers vet` and `handlers gen`. Counts only.
+
+- **vet** (1.1 s) reported what ADR 0002 predicted: the duplicate key and
+  pattern, 4 paths without their slash, the wildcard named apart from its
+  parameter, 63 missing descriptions. And one more: a handler named
+  `Register`, which the generated package's own `Register` would clash with.
+- After fixing those in the copy (renaming that handler `SignUp`), **gen**
+  (0.7 s) wrote 216 routes: **the same 216 keys as zp**, none missing either
+  way; **212 of zp's 217 URL builders give the same path**, the other 5 being
+  zp's 4 slashless URLs (zp builds `/adminproviders/…`) and the duplicate;
+  206 permissions and 10 public routes, as the census counted. The routes
+  file is 181 KB.
+- **Decided for you:** nothing.
+- **Next:** M6: README, the skill, the API review and v0.1.0.
+- **Waiting on you:** nothing (see the question about `Register` in the
+  session's report, which doesn't block M6).
+
 ## 2026-11-18: M5.1, the example shop
 
 - **Landed:** `examples/shop`, an app on cfgx, i18n, genx, models (a real
