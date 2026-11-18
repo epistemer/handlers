@@ -154,3 +154,19 @@ jobs:
 
       - name: Test plugin and extension hooks
         run: (cd cmd && go test -race -v ./handlers -run TestPluginAndExtensionHooks)
+
+  quickstart:
+    name: Quickstart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.x'
+          cache: true
+
+      - name: Run quickstart
+        run: sh scripts/quickstart.sh

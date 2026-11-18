@@ -124,8 +124,8 @@ M3 and M4 are independent and can run side by side.
 
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
-| ☐ | M6.1 | README quickstart: add handlers to an app on genx, i18n and auth | S | A CI job runs the quickstart's commands in a fresh module and builds it |
-| ☐ | M6.2 | The `handlers` skill: its source in `dev/claude-plugin/skills/handlers/`, installed to `~/.claude/skills/handlers/` | S | Written against the frozen interface; `claude plugin validate` passes |
+| ☑ | M6.1 | README quickstart: add handlers to an app on genx, i18n and auth | S | A CI job runs the quickstart's commands in a fresh module and builds it |
+| ☑ | M6.2 | The `handlers` skill: its source in `dev/claude-plugin/skills/handlers/`, installed to `~/.claude/skills/handlers/` | S | Written against the frozen interface; `claude plugin validate` passes |
 | ☐ | M6.3 | `docs/api-review.md`, cross-model review of the release, CHANGELOG, tag `v0.1.0` | S | Tag pushed |
 
 ## After v0.1.0 (backlog)
