@@ -53,7 +53,8 @@ M3 and M4 are independent and can run side by side.
 
 ## Definition of done (every work item)
 
-1. `go test -race ./...` passes on the whole CI matrix.
+1. `go test -race ./...` passes in every module (every `go.mod`) on the whole
+   CI matrix.
 2. Generated files are golden-tested with `genxtest.Render`, and a second
    run gives the same bytes.
 3. Every labels file a test produces passes genx's conformance checks.
@@ -61,7 +62,8 @@ M3 and M4 are independent and can run side by side.
 5. If the behaviour differs from interface.md, that document is amended in
    the same PR.
 6. A new dependency needs an ADR.
-7. Nothing of zp's names, routes or spec enters the repository.
+7. Nothing of zp's routes, spec or schema names enters the repository or its
+   history.
 
 ---
 
@@ -69,17 +71,17 @@ M3 and M4 are independent and can run side by side.
 
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
-| ☐ | M0.1 | epistemer creates `github.com/epistemer/handlers` and grants ownership. go.mod (Go 1.26), MIT, CI like the siblings', `docs/ownership.md` | S | Merged |
-| ☐ | M0.2 | Commit [brief.md](brief.md) and this roadmap; ADR 0001 from the brief's §§1–3 | S | Merged |
-| ☐ | M0.3 | Cross-model review of ADR 0001 and the roadmap (Argon High). Every finding becomes a change or a recorded rejection | S | Triage in `docs/reviews/0001-design.md` merged |
+| ☑ | M0.1 | epistemer creates `github.com/epistemer/handlers` and grants ownership. go.mod (Go 1.26), MIT, CI like the siblings', `docs/ownership.md` | S | Merged |
+| ☑ | M0.2 | Commit [brief.md](brief.md) and this roadmap; ADR 0001 from the brief's §§1–3 | S | Merged |
+| ☑ | M0.3 | Cross-model review of ADR 0001 and the roadmap (Argon High). Every finding becomes a change or a recorded rejection | S | Triage in [`docs/reviews/0001-design.md`](reviews/0001-design.md) merged |
 
 ## M1 — Unknowns and the freeze
 
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
 | ☐ | M1.1 | **S1: zp census.** On a copy of zp in a scratch folder, run every admin route through the draft rules of brief §5: directive shapes, how many fail which check, wildcard conversions and `ServeMux` conflicts, parameter types, auth levels, page/action pairs (Q1) | M | ADR 0002 with counts only. Every zp route expressible, or the grammar amended |
-| ☐ | M1.2 | **S2: the API server.** ogen, oapi-codegen's strict `std-http` server, and oapi-codegen's types with this package's `routes` template, on a toy spec with zp's shapes (decimal money, multipart, bearer, the error envelope, a `/api/v1` prefix, request validation, OpenAPI 3.1) | M | ADR 0003 picks one against brief §10. **Kill criterion:** if none meets §10 without patching generated code, `routes` renders the API over oapi-codegen's types |
-| ☐ | M1.3 | **S3: editors and agents.** A Go LSP library; diagnostics latency on a 200-route package; the Claude Code plugin's LSP beside gopls and its PostToolUse hook, end to end | S | ADR 0004; Q6 answered |
+| ☐ | M1.2 | **S2: the API server.** ogen, oapi-codegen's strict `std-http` server, and oapi-codegen's types with this package's `routes` template, on a toy spec with zp's shapes (decimal money, multipart, bearer, the error envelope, a `/api/v1` prefix, request validation, OpenAPI 3.0 and 3.1) | M | ADR 0003 picks one against brief §10 and pins the OpenAPI version. **Kill criterion:** if none meets §10 without patching generated code, or none keeps one path matcher with the route in the context before the guard, `routes` renders the API over oapi-codegen's types |
+| ☐ | M1.3 | **S3: editors and agents.** A Go LSP library; a prototype of the engine's two passes (brief §11) timed on a generated 200-route package; the Claude Code plugin's LSP beside gopls and its PostToolUse hook, end to end | S | ADR 0004 with the timings; Q6 answered |
 | ☐ | M1.4 | `routes/v1`: JSON schema and conformance files (valid, and one invalid file per rule with its message), as genx's `testdata/labels/` | S | Files merged, with a test that reads them |
 | ☐ | M1.5 | **Freeze the interface.** `docs/interface.md`: the grammar, every diagnostic with its severity and message, the producers' flags, the generators and their parameters, the files they write, the generated Go, keys and permission defaults, the OpenAPI extensions, the runtime API | M | Locked by epistemer |
 
@@ -88,11 +90,11 @@ M3 and M4 are independent and can run side by side.
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
 | ☐ | M2.1 | `internal/directive`, the rule engine, and `handlers vet` | M | Every §5.3 diagnostic tested on toy packages, zp's faults among them |
-| ☐ | M2.2 | `handlers gen`, the directive producer, with `-check` and the removed-key warning | M | `genxtest.AssertGenerated` in a nested module; the warning's test |
-| ☐ | M2.3 | `routes` generator: interface, `Register`, binding, URL builders, the route table | M | Golden files; httptest of binding, 400 and 404, route in context before the guard, panic without a guard |
+| ☐ | M2.2 | `handlers gen`, the directive producer, with `-check` and the removed-key warning (`-baseline <git ref>`) | M | `genxtest.AssertGenerated` in a nested module; the warning's tests, against the file and against a git ref |
+| ☐ | M2.3 | `routes` generator: interface, `Register`, binding, URL builders, the route table | M | Golden files; httptest of binding, 400, 404 and 405 in both formats, `{$}` at the root, `rest` parameters in URL builders, route in context before the guard, panic without a guard |
 | ☐ | M2.4 | `labels` generator | S | Conformance passes; `i18ntest` shows a translation on a route and a parameter |
-| ☐ | M2.5 | `permissions` generator and `handlers/authguard` | M | `authtest`: 403 without the permission, 200 with it; `session`, `unverified` and `public`; an undeclared permission stops `Register`; `handlerstest`'s assertion |
-| ☐ | M2.6 | Runtime: declared errors, the HTML and JSON error writers, `Search` | S | Tests; a benchmark of `Search` on 300 routes in the status log |
+| ☐ | M2.5 | `permissions` generator, `handlers/authguard` and `handlers/handlerstest` | M | `authtest`: 403 without the permission, 200 with it; `session`, `unverified` and `public`; refusals in the surface's format; a key declared by two packages stops the generator; an undeclared permission stops `Register`; `Admit`; the fake guard and the assertion |
+| ☐ | M2.6 | Runtime: declared errors, the HTML and JSON error writers, `Search` | S | Tests; a benchmark of `Search` with its admit check on 300 routes, under 1 ms on the development machine, in the status log |
 
 ## M3 — The API
 
@@ -107,23 +109,23 @@ M3 and M4 are independent and can run side by side.
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
 | ☐ | M4.1 | `handlers lsp`: diagnostics, completion, hover, go to definition for `entity` | M | Protocol tests |
-| ☐ | M4.2 | `dev/vscode`: import zprouter with `git subtree`, rename, make it a client of `handlers lsp`, update the grammar | S | CI builds the `.vsix`; a smoke test opens a file with a fault and sees it |
-| ☐ | M4.3 | `dev/claude-plugin` and `.claude-plugin/marketplace.json` | S | `claude plugin validate` passes in CI; installing from the repository shows a fault after an edit |
-| ☐ | M4.4 | `dev/gemini-extension` | S | The hook reports a fault in a Gemini CLI session |
+| ☐ | M4.2 | `dev/vscode`: copy the extension without its history, rename, make it a client of `handlers lsp`, update the grammar | S | CI builds the `.vsix` and runs an extension test (`@vscode/test-electron`) that opens a file with a fault and gets its diagnostic |
+| ☐ | M4.3 | `dev/claude-plugin` (LSP and hook; the skill comes in M6.2) and `.claude-plugin/marketplace.json` | S | `claude plugin validate` passes in CI; a CI test feeds the hook a PostToolUse payload for a file with a fault and checks its JSON answer |
+| ☐ | M4.4 | `dev/gemini-extension` | S | A CI test feeds its hook a payload for a file with a fault and checks the answer |
 
 ## M5 — An example and zp
 
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
 | ☐ | M5.1 | `examples/shop`: an app on cfgx, i18n, genx, models, errors, auth and handlers, with admin pages and an API | M | CI green on all three OSes; `genxtest.AssertGenerated` |
-| ☐ | M5.2 | zp, on a copy in a scratch folder: convert the directives, generate, and compare routes, keys and URLs with zp's; time a run. Moving zp is out of scope | S | Numbers and findings in the status log; friction to genx's friction log |
+| ☐ | M5.2 | zp, on a copy in a scratch folder: convert the directives, generate, and compare routes, keys and URLs with zp's; time a run. Moving zp is out of scope | S | Every zp route generated with the same method, path and key, or the difference explained; numbers in the status log |
 
 ## M6 — v0.1.0
 
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
-| ☐ | M6.1 | README quickstart: add handlers to an app on genx, i18n and auth | S | A newcomer can follow it |
-| ☐ | M6.2 | The `handlers` skill, in `~/.claude/skills/handlers/` and in the plugin | S | Written against the frozen interface |
+| ☐ | M6.1 | README quickstart: add handlers to an app on genx, i18n and auth | S | A CI job runs the quickstart's commands in a fresh module and builds it |
+| ☐ | M6.2 | The `handlers` skill: its source in `dev/claude-plugin/skills/handlers/`, installed to `~/.claude/skills/handlers/` | S | Written against the frozen interface; `claude plugin validate` passes |
 | ☐ | M6.3 | `docs/api-review.md`, cross-model review of the release, CHANGELOG, tag `v0.1.0` | S | Tag pushed |
 
 ## After v0.1.0 (backlog)
@@ -142,7 +144,7 @@ M3 and M4 are independent and can run side by side.
 |------|---------------------|------------|
 | A zp route the grammar can't express, or a pattern `ServeMux` refuses | Medium / medium | S1 before the freeze |
 | No OpenAPI generator meets brief §10 | Low / high | S2's kill criterion |
-| The language server is slow on a large package | Low / medium | S3 measures it |
+| The language server is slow on a large package | Medium / medium | Only the syntax pass runs on change; S3 measures both passes |
 | Too many permissions to manage | Medium / low | S1's count, `//h:perm`, groups in `auth/access` |
 | A key rename orphans grants and translations | Medium / high | The removed-key warning; the committed domain file's diff in review |
 | genx lacks something a Go producer needs | Medium / low | Friction goes to genx backlog item 3 (a producer kit) |
