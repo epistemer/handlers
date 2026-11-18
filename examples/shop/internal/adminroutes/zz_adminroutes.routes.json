@@ -1,0 +1,182 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "internal/admin",
+  "package": {
+    "name": "adminroutes",
+    "dir": "internal/adminroutes"
+  },
+  "surface": "html",
+  "prefix": "/admin",
+  "routes": [
+    {
+      "key": "sign_in",
+      "method": "GET",
+      "pattern": "/sign-in",
+      "name": "SignInPage",
+      "var": "L10nSignInPage",
+      "text": "Sign in",
+      "auth": "public",
+      "view": true,
+      "search": false,
+      "params": []
+    },
+    {
+      "key": "sign_in.submit",
+      "method": "POST",
+      "pattern": "/sign-in",
+      "name": "SignInSubmit",
+      "var": "L10nSignInSubmit",
+      "text": "Submit sign-in",
+      "auth": "public",
+      "view": false,
+      "search": false,
+      "params": []
+    },
+    {
+      "key": "sign_in.code",
+      "method": "POST",
+      "pattern": "/sign-in/code",
+      "name": "SignInCode",
+      "var": "L10nSignInCode",
+      "text": "Verify sign-in code",
+      "auth": "public",
+      "view": false,
+      "search": false,
+      "params": []
+    },
+    {
+      "key": "dashboard",
+      "method": "GET",
+      "pattern": "/",
+      "name": "Dashboard",
+      "var": "L10nDashboard",
+      "text": "Dashboard",
+      "auth": "session",
+      "view": true,
+      "search": true,
+      "params": []
+    },
+    {
+      "key": "products.list",
+      "method": "GET",
+      "pattern": "/products",
+      "name": "Products",
+      "var": "L10nProducts",
+      "text": "Products",
+      "auth": "session",
+      "view": true,
+      "search": true,
+      "params": []
+    },
+    {
+      "key": "products.profile",
+      "method": "GET",
+      "pattern": "/products/{id}",
+      "name": "Product",
+      "var": "L10nProduct",
+      "text": "Product profile",
+      "auth": "session",
+      "view": true,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "id",
+          "var": "L10nProductId",
+          "type": "ids.ProductID",
+          "import": "github.com/epistemer/handlers/examples/shop/internal/ids",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Product ID",
+          "alias": "ids"
+        }
+      ],
+      "entity": "products.list"
+    },
+    {
+      "key": "orders.list",
+      "method": "GET",
+      "pattern": "/orders",
+      "name": "Orders",
+      "var": "L10nOrders",
+      "text": "Orders",
+      "auth": "permission",
+      "view": true,
+      "search": true,
+      "params": [],
+      "permission": "orders.manage"
+    },
+    {
+      "key": "orders.detail",
+      "method": "GET",
+      "pattern": "/orders/{id}",
+      "name": "Order",
+      "var": "L10nOrder",
+      "text": "Order detail",
+      "auth": "permission",
+      "view": true,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "id",
+          "var": "L10nOrderId",
+          "type": "ids.OrderID",
+          "import": "github.com/epistemer/handlers/examples/shop/internal/ids",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Order ID",
+          "alias": "ids"
+        }
+      ],
+      "permission": "orders.manage",
+      "entity": "orders.list"
+    },
+    {
+      "key": "orders.cancel",
+      "method": "POST",
+      "pattern": "/orders/{id}/cancel",
+      "name": "OrderCancel",
+      "var": "L10nOrderCancel",
+      "text": "Cancel order",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "id",
+          "var": "L10nOrderCancelId",
+          "type": "ids.OrderID",
+          "import": "github.com/epistemer/handlers/examples/shop/internal/ids",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Order ID",
+          "alias": "ids"
+        }
+      ],
+      "permission": "orders.manage"
+    },
+    {
+      "key": "search",
+      "method": "GET",
+      "pattern": "/search",
+      "name": "Search",
+      "var": "L10nSearch",
+      "text": "Search",
+      "auth": "session",
+      "view": false,
+      "search": false,
+      "params": []
+    }
+  ],
+  "permissions": [
+    {
+      "key": "orders.manage",
+      "var": "PermOrdersManage",
+      "text": "Orders Manage",
+      "level": "verified"
+    }
+  ]
+}

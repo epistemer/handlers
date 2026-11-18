@@ -1,0 +1,182 @@
+openapi: 3.0.3
+info:
+  title: Toy Shop API
+  version: 1.0.0
+servers:
+  - url: https://shop.example/api/v1
+security:
+  - bearerAuth: []
+paths:
+  /auth/sign-in:
+    post:
+      operationId: signIn
+      summary: Sign in
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        "200":
+          description: Sign-in result or second-factor challenge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignInResult"
+        default:
+          $ref: "#/components/responses/Error"
+  /auth/sign-in/code:
+    post:
+      operationId: signInCode
+      summary: Verify sign-in code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [flow, code]
+              properties:
+                flow:
+                  type: string
+                  minLength: 1
+                code:
+                  type: string
+                  minLength: 4
+      responses:
+        "200":
+          description: Bearer tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignInResult"
+        default:
+          $ref: "#/components/responses/Error"
+  /me:
+    get:
+      operationId: getMe
+      summary: Current session user
+      x-auth: session
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, verified]
+                properties:
+                  id:
+                    type: string
+                  verified:
+                    type: boolean
+        default:
+          $ref: "#/components/responses/Error"
+  /orders:
+    get:
+      operationId: listOrders
+      summary: List orders
+      x-permission: orders.read
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/Status"
+      responses:
+        "200":
+          description: Matching orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+        default:
+          $ref: "#/components/responses/Error"
+  /orders/{orderId}:
+    get:
+      operationId: getOrder
+      summary: Get order
+      x-permission: orders.read
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        default:
+          $ref: "#/components/responses/Error"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    SignInResult:
+      type: object
+      properties:
+        next:
+          type: string
+        flow:
+          type: string
+        access:
+          type: string
+        refresh:
+          type: string
+        verified:
+          type: boolean
+    Status:
+      type: string
+      enum: [pending, paid, shipped, cancelled]
+    Money:
+      type: string
+      pattern: '^-?[0-9]+(\.[0-9]+)?$'
+      x-go-type: decimal.Decimal
+      x-go-type-import:
+        path: github.com/shopspring/decimal
+    Order:
+      type: object
+      required: [id, status, total]
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          $ref: "#/components/schemas/Status"
+        total:
+          $ref: "#/components/schemas/Money"

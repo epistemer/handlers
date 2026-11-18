@@ -3,6 +3,24 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M5.1, the example shop
+
+- **Landed:** `examples/shop`, an app on cfgx, i18n, genx, models (a real
+  sqlc producer without `check`, so CI trusts the committed request, as in
+  models' example), errors, auth and handlers: admin pages with a page and
+  action sharing `orders.manage`, an API from an OpenAPI file through
+  oapi-codegen (run by `go:generate`, with a test that its output is
+  current) and `apiroutes.Mount`, a search page, settings, and real sign-in
+  flows with a code. Its tests cover 401/403/200 on both surfaces, a bad
+  parameter's French label, schema failures without echoed values, search
+  hiding what a user can't open, `vet -strict` and `AssertGenerated`. Gemini
+  4 Hydrogen (High) wrote it (about 950k tokens over two rounds); Claude
+  reviewed it and sent back a fake `go version` producer.
+- **Decided for you:** oapi-codegen runs from `go:generate`, not genx: it
+  doesn't produce a genx domain, so a genx entry would need a fake emit.
+- **Next:** M5.2, the comparison with zp on a scratch copy.
+- **Waiting on you:** nothing.
+
 ## 2026-11-18: M4, the editor and agent tools
 
 - **Landed:** `handlers lsp` (cmd/internal/lsp, no library: framing,

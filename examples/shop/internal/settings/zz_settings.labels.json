@@ -1,0 +1,286 @@
+{
+  "domain": "labels/v1",
+  "labels": [
+    {
+      "key": "settings.auth",
+      "path": "auth",
+      "text": "Sign-in and sessions",
+      "var": "L10nAuth"
+    },
+    {
+      "key": "settings.auth.issuer",
+      "path": "auth.issuer",
+      "text": "Issuer: the name in tokens and authenticator apps",
+      "var": "L10nAuthIssuer"
+    },
+    {
+      "key": "settings.auth.secret",
+      "path": "auth.secret",
+      "text": "Master secret, at least 32 bytes; every key is derived from it",
+      "var": "L10nAuthSecret"
+    },
+    {
+      "key": "settings.auth.secret_previous",
+      "path": "auth.secret_previous",
+      "text": "Previous master secret, while rotating",
+      "var": "L10nAuthSecretPrevious"
+    },
+    {
+      "key": "settings.auth.trusted_origins",
+      "path": "auth.trusted_origins",
+      "text": "Origins whose cross-origin requests are trusted",
+      "var": "L10nAuthTrustedOrigins"
+    },
+    {
+      "key": "settings.auth.session",
+      "path": "auth.session",
+      "text": "Sessions",
+      "var": "L10nAuthSession"
+    },
+    {
+      "key": "settings.auth.session.idle",
+      "path": "auth.session.idle",
+      "text": "Idle lifetime of a session",
+      "var": "L10nAuthSessionIdle"
+    },
+    {
+      "key": "settings.auth.session.remembered_idle",
+      "path": "auth.session.remembered_idle",
+      "text": "Idle lifetime of a remembered session",
+      "var": "L10nAuthSessionRememberedIdle"
+    },
+    {
+      "key": "settings.auth.session.lifetime",
+      "path": "auth.session.lifetime",
+      "text": "Longest lifetime of a session, whatever its use",
+      "var": "L10nAuthSessionLifetime"
+    },
+    {
+      "key": "settings.auth.access",
+      "path": "auth.access",
+      "text": "Access tokens",
+      "var": "L10nAuthAccess"
+    },
+    {
+      "key": "settings.auth.access.lifetime",
+      "path": "auth.access.lifetime",
+      "text": "Lifetime of an access token",
+      "var": "L10nAuthAccessLifetime"
+    },
+    {
+      "key": "settings.auth.refresh",
+      "path": "auth.refresh",
+      "text": "Refresh tokens",
+      "var": "L10nAuthRefresh"
+    },
+    {
+      "key": "settings.auth.refresh.grace",
+      "path": "auth.refresh.grace",
+      "text": "How long a replaced refresh token still returns its successor",
+      "var": "L10nAuthRefreshGrace"
+    },
+    {
+      "key": "settings.auth.flow",
+      "path": "auth.flow",
+      "text": "Sign-in flows",
+      "var": "L10nAuthFlow"
+    },
+    {
+      "key": "settings.auth.flow.lifetime",
+      "path": "auth.flow.lifetime",
+      "text": "Lifetime of a sign-in flow",
+      "var": "L10nAuthFlowLifetime"
+    },
+    {
+      "key": "settings.auth.fresh",
+      "path": "auth.fresh",
+      "text": "Fresh proofs",
+      "var": "L10nAuthFresh"
+    },
+    {
+      "key": "settings.auth.fresh.window",
+      "path": "auth.fresh.window",
+      "text": "How recent a proof must be to change a factor",
+      "var": "L10nAuthFreshWindow"
+    },
+    {
+      "key": "settings.auth.code",
+      "path": "auth.code",
+      "text": "Codes sent by email or SMS",
+      "var": "L10nAuthCode"
+    },
+    {
+      "key": "settings.auth.code.length",
+      "path": "auth.code.length",
+      "text": "Digits in a code",
+      "var": "L10nAuthCodeLength"
+    },
+    {
+      "key": "settings.auth.code.lifetime",
+      "path": "auth.code.lifetime",
+      "text": "Lifetime of a code",
+      "var": "L10nAuthCodeLifetime"
+    },
+    {
+      "key": "settings.auth.code.tries",
+      "path": "auth.code.tries",
+      "text": "Wrong tries a code allows",
+      "var": "L10nAuthCodeTries"
+    },
+    {
+      "key": "settings.auth.code.resend",
+      "path": "auth.code.resend",
+      "text": "Wait before another code may be sent",
+      "var": "L10nAuthCodeResend"
+    },
+    {
+      "key": "settings.auth.code.hourly",
+      "path": "auth.code.hourly",
+      "text": "Codes a user may be sent in an hour",
+      "var": "L10nAuthCodeHourly"
+    },
+    {
+      "key": "settings.auth.link",
+      "path": "auth.link",
+      "text": "Links sent by email",
+      "var": "L10nAuthLink"
+    },
+    {
+      "key": "settings.auth.link.lifetime",
+      "path": "auth.link.lifetime",
+      "text": "Lifetime of a recovery link",
+      "var": "L10nAuthLinkLifetime"
+    },
+    {
+      "key": "settings.auth.invitation",
+      "path": "auth.invitation",
+      "text": "Invitations",
+      "var": "L10nAuthInvitation"
+    },
+    {
+      "key": "settings.auth.invitation.lifetime",
+      "path": "auth.invitation.lifetime",
+      "text": "Lifetime of an invitation",
+      "var": "L10nAuthInvitationLifetime"
+    },
+    {
+      "key": "settings.auth.device",
+      "path": "auth.device",
+      "text": "Registered devices",
+      "var": "L10nAuthDevice"
+    },
+    {
+      "key": "settings.auth.device.lifetime",
+      "path": "auth.device.lifetime",
+      "text": "Lifetime of a registered device",
+      "var": "L10nAuthDeviceLifetime"
+    },
+    {
+      "key": "settings.auth.password",
+      "path": "auth.password",
+      "text": "Passwords",
+      "var": "L10nAuthPassword"
+    },
+    {
+      "key": "settings.auth.password.min_length",
+      "path": "auth.password.min_length",
+      "text": "Fewest characters in a password",
+      "var": "L10nAuthPasswordMinLength"
+    },
+    {
+      "key": "settings.auth.password.min_score",
+      "path": "auth.password.min_score",
+      "text": "Least strength a new password needs, 3 or 4",
+      "var": "L10nAuthPasswordMinScore"
+    },
+    {
+      "key": "settings.auth.password.memory",
+      "path": "auth.password.memory",
+      "text": "Memory for each password hash, in MiB",
+      "var": "L10nAuthPasswordMemory"
+    },
+    {
+      "key": "settings.auth.password.time",
+      "path": "auth.password.time",
+      "text": "Passes of each password hash",
+      "var": "L10nAuthPasswordTime"
+    },
+    {
+      "key": "settings.auth.password.concurrency",
+      "path": "auth.password.concurrency",
+      "text": "Password hashes at once",
+      "var": "L10nAuthPasswordConcurrency"
+    },
+    {
+      "key": "settings.auth.throttle",
+      "path": "auth.throttle",
+      "text": "Throttling of wrong proofs",
+      "var": "L10nAuthThrottle"
+    },
+    {
+      "key": "settings.auth.throttle.free",
+      "path": "auth.throttle.free",
+      "text": "Failures before waits start",
+      "var": "L10nAuthThrottleFree"
+    },
+    {
+      "key": "settings.auth.throttle.ceiling",
+      "path": "auth.throttle.ceiling",
+      "text": "Longest wait",
+      "var": "L10nAuthThrottleCeiling"
+    },
+    {
+      "key": "settings.auth.throttle.window",
+      "path": "auth.throttle.window",
+      "text": "Time without a failure after which a counter starts again",
+      "var": "L10nAuthThrottleWindow"
+    },
+    {
+      "key": "settings.auth.cookie",
+      "path": "auth.cookie",
+      "text": "Cookies",
+      "var": "L10nAuthCookie"
+    },
+    {
+      "key": "settings.auth.cookie.insecure",
+      "path": "auth.cookie.insecure",
+      "text": "Drop Secure and the __Host- prefix, for development over plain HTTP",
+      "var": "L10nAuthCookieInsecure"
+    },
+    {
+      "key": "settings.i18n",
+      "path": "i18n",
+      "text": "Translations",
+      "var": "L10nI18n"
+    },
+    {
+      "key": "settings.i18n.default_locale",
+      "path": "i18n.default_locale",
+      "text": "Locale for visitors without a chosen locale; empty means the source locale",
+      "var": "L10nI18nDefaultLocale"
+    },
+    {
+      "key": "settings.server",
+      "path": "server",
+      "text": "Web server",
+      "var": "L10nServer"
+    },
+    {
+      "key": "settings.server.addr",
+      "path": "server.addr",
+      "text": "Listen address",
+      "var": "L10nServerAddr"
+    },
+    {
+      "key": "settings.server.store",
+      "path": "server.store",
+      "text": "Store file",
+      "var": "L10nServerStore"
+    }
+  ],
+  "package": {
+    "dir": "internal/settings",
+    "name": "settings"
+  },
+  "producer": "cfgx"
+}

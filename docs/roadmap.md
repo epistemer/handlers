@@ -117,7 +117,7 @@ M3 and M4 are independent and can run side by side.
 
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
-| ☐ | M5.1 | `examples/shop`: an app on cfgx, i18n, genx, models, errors, auth and handlers, with admin pages and an API | M | CI green on all three OSes; `genxtest.AssertGenerated` |
+| ☑ | M5.1 | `examples/shop`: an app on cfgx, i18n, genx, models, errors, auth and handlers, with admin pages and an API | M | CI green on all three OSes; `genxtest.AssertGenerated` |
 | ☐ | M5.2 | zp, on a copy in a scratch folder: convert the directives, generate, and compare routes, keys and URLs with zp's; time a run. Moving zp is out of scope | S | Every zp route generated with the same method, path and key, or the difference explained; numbers in the status log |
 
 ## M6 — v0.1.0
