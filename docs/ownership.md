@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Owner | Claude, acting for epistemer (delegated on 2026-11-18; the freeze and API design too, the same day) |
+| Owner | Claude, acting for epistemer (delegated on 2026-11-18) |
 | Until | `v1.0.0` is tagged |
 | Coding assistant | agy → Gemini. Claude picks the model for each task and never waits for a quota: when a model is cooling down, the strongest available one runs instead |
 | Source of truth | [ADR 0001](adr/0001-routes-domain.md) and [brief.md](brief.md) (the design), `interface.md` (the contract, from M1.5), [roadmap.md](roadmap.md) (order and done-when) |
@@ -23,9 +23,9 @@ The terms are those of cfgx, i18n, genx, models, errors and auth.
   findings are handled. Docs-only bookkeeping (status log, roadmap ticks) may go
   straight to `main`.
 - Decides implementation questions and spike outcomes, each recorded as an ADR.
-- Freezes the interface and makes amendments to it, whether they clarify it
-  or change what an app writes (delegated 2026-11-18). Each is listed in
-  interface.md's amendments and in the status log, so you can overturn it.
+- Makes amendments that clarify the interface without changing its intent.
+  Each is listed in interface.md's amendments and in the status log, so you
+  can overturn it.
 - Adds dependencies an ADR justifies.
 - Tags releases from `v0.1.0` up to, but not including, `v1.0.0`, once a
   release's done-when is met. Release candidates (`v0.1.0-rc.N`) too.
@@ -39,12 +39,17 @@ The terms are those of cfgx, i18n, genx, models, errors and auth.
 
 ## What comes back to you
 
-1. **Nothing of API design, since 2026-11-18.** epistemer told Claude to
-   freeze the interface and take ownership: the freeze of `interface.md`
-   (M1.5) and every later amendment, including ones that change what an app
-   writes or gets back, are Claude's. Each is recorded in interface.md's
-   amendments and the status log, with its reasons, so epistemer can
-   overturn it.
+1. **API design decisions.** Anything that changes what an app writes or
+   gets back, beyond a clarification: the directive grammar, the
+   diagnostics' severities, the producers' flags, the generators' names and
+   parameters, the files they write, the Go they generate (types, methods,
+   variable names), the keys of labels and permissions, the OpenAPI
+   extensions, the runtime API, and any change to the decisions marked
+   epistemer in the brief or ADR 0001. Claude brings a recommendation. The
+   interface was frozen on epistemer's instruction on 2026-11-18; amendments
+   that change what an app writes come back to epistemer. Nothing else does:
+   Claude moves from milestone to milestone without reporting in between
+   (told 2026-11-18).
 2. **Anything Claude lacks permission for.** Work outside this repository
    that isn't on the roadmap. A change another package needs (genx, i18n,
    errors, auth) goes through that package's own terms, which are also

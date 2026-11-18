@@ -5,8 +5,8 @@ taken for you, what's next, and what's waiting on you.
 
 ## 2026-11-18: M1.5, the interface is locked
 
-- **Landed:** [interface.md](interface.md), locked by Claude on your
-  instruction ("freeze it and take ownership"), after
+- **Landed:** [interface.md](interface.md), locked on your instruction
+  ("freeze it"), after
   [review 0005](reviews/0005-interface.md) by Gemini 4 Hydrogen (High) in
   two rounds (about 66k and 132k tokens). M1.4 merged as PR 5.
   - Round 1's 18 findings changed the draft: integer widths, import aliases
@@ -19,13 +19,15 @@ taken for you, what's next, and what's waiting on you.
     v0.1 a permission belongs to one routes package.
   - One finding rejected: errors renders an `i18n.Ter` argument in the
     request's locale, so `ErrBadParam` takes the parameter's label.
-- **Decided for you, now under the ownership you delegated:** the whole
-  interface. Your global CLAUDE.md and docs/ownership.md record that the
-  freeze and handlers' API design are mine; you can overturn any of it.
+- **Decided for you:** the interface's own choices beyond your decisions,
+  locked because you told me to freeze it. You meant less than I first
+  recorded: API design stays yours, so the main choices of mine are listed
+  for you to confirm or overturn, and ownership.md says so.
 - **Next:** M2, the admin surface: the rule engine and `handlers vet`
   (M2.1), the producer (M2.2), the generators (M2.3–M2.5), the runtime
   (M2.6).
-- **Waiting on you:** nothing.
+- **Waiting on you:** the interface's choices of mine, to confirm or
+  overturn (none blocks M2.1, the rule engine).
 
 ## 2026-11-18: M1.4, the routes/v1 schema
 

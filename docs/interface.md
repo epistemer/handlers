@@ -1,8 +1,8 @@
 # handlers — Interface
 
-> Status: **locked by Claude on 2026-11-18**, acting for epistemer, who
-> delegated the freeze and the package's API design that day. A change to
-> anything here is an amendment (§17). Reviewed before the lock:
+> Status: **locked on 2026-11-18**, by Claude on epistemer's instruction to
+> freeze it. A change to anything here is an amendment (§17); one that
+> changes what an app writes or gets back is epistemer's to decide. Reviewed before the lock:
 > [review 0005](reviews/0005-interface.md).
 >
 > This document says what an app writes and what it gets back. The design

@@ -5,7 +5,7 @@
 | Date | 2026-11-18 |
 | Reviewer | Gemini 4 Hydrogen (High), through agy, in two rounds: the draft (about 66k tokens), then the revision (about 132k) |
 | Under review | [interface.md](../interface.md), `internal/routesv1/rules.md`, `schema/routes.v1.json` |
-| Triage | Claude, who also locked the interface (delegated by epistemer on 2026-11-18) |
+| Triage | Claude, who also locked the interface on epistemer's instruction (2026-11-18) |
 
 ## Round 1: eighteen findings
 
