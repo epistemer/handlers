@@ -19,7 +19,7 @@ taken for you, what's next, and what's waiting on you.
   the handler's package reports only that, not also "can't be read".
 - **Next:** M2.2, `handlers gen`, which also brings `vet`'s comparison across
   packages through the routes files and the baseline warnings.
-- **Waiting on you:** the interface's choices of mine (see the M1.5 entry).
+- **Waiting on you:** nothing.
 
 ## 2026-11-18: M1.5, the interface is locked
 
