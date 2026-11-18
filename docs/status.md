@@ -21,8 +21,9 @@ signatures), then the real `handlers vet` and `handlers gen`. Counts only.
   file is 181 KB.
 - **Decided for you:** nothing.
 - **Next:** M6: README, the skill, the API review and v0.1.0.
-- **Waiting on you:** nothing (see the question about `Register` in the
-  session's report, which doesn't block M6).
+- **Decided by you:** `Register` stays a reserved name; `vet` reports a
+  handler that takes it (2026-11-18).
+- **Waiting on you:** nothing.
 
 ## 2026-11-18: M5.1, the example shop
 
