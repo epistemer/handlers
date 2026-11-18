@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+
+if command -v go >/dev/null 2>&1 && go tool -n handlers >/dev/null 2>&1; then
+  exec go tool handlers vet -hook
+fi
+
+if command -v handlers >/dev/null 2>&1; then
+  exec handlers vet -hook
+fi
+
+exit 0

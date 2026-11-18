@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/epistemer/handlers/cmd/internal/directive"
+	"github.com/epistemer/handlers/cmd/internal/lsp"
 )
 
 func main() {
@@ -34,12 +35,24 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	case "openapi":
 		return runOpenAPI(args[1:], stdout, stderr)
 	case "lsp":
-		fmt.Fprintf(stderr, "handlers: %s is not implemented yet\n", sub)
-		return 2
+		return runLSP(args[1:], stdin, stdout, stderr)
 	default:
 		fmt.Fprintf(stderr, "handlers: unknown command %q\n", sub)
 		return 2
 	}
+}
+
+func runLSP(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("lsp", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "usage: handlers lsp")
+		return 2
+	}
+	return lsp.Run(stdin, stdout)
 }
 
 func runVet(args []string, stdin io.Reader, stdout, stderr io.Writer) int {

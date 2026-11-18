@@ -73,3 +73,84 @@ jobs:
           for m in . cmd cmd/testdata/genxapp testdata/app authguard openapi; do
             (cd "$m" && go test -race ./...)
           done
+
+  vscode:
+    name: VS Code extension
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.x'
+          cache: true
+
+      - name: Build handlers command
+        run: |
+          (cd cmd && go build -o "${{ runner.temp }}/handlers" ./handlers)
+          echo "HANDLERS_BIN=${{ runner.temp }}/handlers" >> "$GITHUB_ENV"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: dev/vscode/package-lock.json
+
+      - name: Install, compile and lint
+        working-directory: dev/vscode
+        run: |
+          npm ci
+          npm run compile
+          npm run lint
+
+      - name: Run extension test
+        working-directory: dev/vscode
+        run: xvfb-run -a npm test
+
+      - name: Package extension (.vsix)
+        working-directory: dev/vscode
+        run: npx --yes @vscode/vsce package
+
+      - name: Upload .vsix artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: handlers-vscode
+          path: dev/vscode/*.vsix
+
+  plugins:
+    name: Agent plugins and hooks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.x'
+          cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Validate Claude Code plugin and marketplace
+        run: |
+          claude plugin validate dev/claude-plugin
+          claude plugin validate .
+
+      - name: Test plugin and extension hooks
+        run: (cd cmd && go test -race -v ./handlers -run TestPluginAndExtensionHooks)

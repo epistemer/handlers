@@ -108,10 +108,10 @@ M3 and M4 are independent and can run side by side.
 
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
-| ☐ | M4.1 | `handlers lsp`: diagnostics, completion, hover, go to definition for `entity` | M | Protocol tests |
-| ☐ | M4.2 | `dev/vscode`: copy the extension without its history, rename, make it a client of `handlers lsp`, update the grammar | S | CI builds the `.vsix` and runs an extension test (`@vscode/test-electron`) that opens a file with a fault and gets its diagnostic |
-| ☐ | M4.3 | `dev/claude-plugin` (the hook; the skill comes in M6.2; no language server, ADR 0004) and `.claude-plugin/marketplace.json` | S | `claude plugin validate` passes in CI; a CI test feeds the hook a PostToolUse payload for a file with a fault and checks its JSON answer |
-| ☐ | M4.4 | `dev/gemini-extension` | S | A CI test feeds its hook a payload for a file with a fault and checks the answer |
+| ☑ | M4.1 | `handlers lsp`: diagnostics, completion, hover, go to definition for `entity` | M | Protocol tests |
+| ☑ | M4.2 | `dev/vscode`: copy the extension without its history, rename, make it a client of `handlers lsp`, update the grammar | S | CI builds the `.vsix` and runs an extension test (`@vscode/test-electron`) that opens a file with a fault and gets its diagnostic |
+| ☑ | M4.3 | `dev/claude-plugin` (the hook; the skill comes in M6.2; no language server, ADR 0004) and `.claude-plugin/marketplace.json` | S | `claude plugin validate` passes in CI; a CI test feeds the hook a PostToolUse payload for a file with a fault and checks its JSON answer |
+| ☑ | M4.4 | `dev/gemini-extension` | S | A CI test feeds its hook a payload for a file with a fault and checks the answer |
 
 ## M5 — An example and zp
 
