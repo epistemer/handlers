@@ -1,0 +1,47 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "package": {
+    "name": "apiroutes",
+    "dir": "internal/api/apiroutes"
+  },
+  "surface": "json",
+  "prefix": "/api/v1",
+  "routes": [
+    {
+      "key": "products.list",
+      "method": "GET",
+      "pattern": "/products",
+      "name": "ProductsList",
+      "var": "L10nProductsList",
+      "text": "List products",
+      "auth": "public",
+      "view": true,
+      "search": true,
+      "operation": "listProducts",
+      "params": []
+    },
+    {
+      "key": "products.create",
+      "method": "POST",
+      "pattern": "/products",
+      "name": "ProductCreate",
+      "var": "L10nProductCreate",
+      "text": "Create product",
+      "auth": "permission",
+      "permission": "products.manage",
+      "view": false,
+      "search": false,
+      "operation": "createProduct",
+      "params": []
+    }
+  ],
+  "permissions": [
+    {
+      "key": "products.manage",
+      "var": "PermProductsManage",
+      "text": "Manage products",
+      "level": "unverified"
+    }
+  ]
+}

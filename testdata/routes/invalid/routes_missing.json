@@ -1,0 +1,11 @@
+{
+  "domain": "routes/v1",
+  "package": {
+    "dir": "internal/shop/shoproutes",
+    "name": "shoproutes"
+  },
+  "permissions": [],
+  "prefix": "/shop",
+  "producer": "handlers",
+  "surface": "html"
+}

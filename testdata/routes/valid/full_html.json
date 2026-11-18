@@ -1,0 +1,118 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "package": {
+    "name": "shoproutes",
+    "dir": "internal/shop/shoproutes"
+  },
+  "surface": "html",
+  "prefix": "/shop",
+  "extra_info": "conformance test",
+  "routes": [
+    {
+      "key": "home",
+      "method": "GET",
+      "pattern": "/",
+      "name": "Home",
+      "var": "L10nHome",
+      "text": "Shop home",
+      "auth": "public",
+      "view": true,
+      "search": false,
+      "params": []
+    },
+    {
+      "key": "orders.list",
+      "method": "GET",
+      "pattern": "/orders",
+      "name": "OrdersList",
+      "var": "L10nOrdersList",
+      "text": "List orders",
+      "auth": "session",
+      "view": true,
+      "search": true,
+      "params": []
+    },
+    {
+      "key": "orders.detail",
+      "method": "GET",
+      "pattern": "/orders/{id}",
+      "name": "OrderDetail",
+      "var": "L10nOrderDetail",
+      "text": "Order detail",
+      "auth": "permission",
+      "permission": "orders.manage",
+      "view": false,
+      "search": false,
+      "entity": "orders.list",
+      "params": [
+        {
+          "name": "id",
+          "go": "orderID",
+          "var": "L10nOrderID",
+          "type": "int64",
+          "import": "",
+          "parse": "int",
+          "kind": "segment",
+          "label": "Order ID"
+        }
+      ]
+    },
+    {
+      "key": "orders.cancel",
+      "method": "POST",
+      "pattern": "/orders/{id}/cancel",
+      "name": "OrderCancel",
+      "var": "L10nOrderCancel",
+      "text": "Cancel order",
+      "auth": "permission",
+      "permission": "orders.manage",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "orderID",
+          "var": "L10nOrderCancelID",
+          "type": "int64",
+          "import": "",
+          "parse": "int",
+          "kind": "segment",
+          "label": "Order ID to cancel"
+        }
+      ]
+    },
+    {
+      "key": "products.files",
+      "method": "GET",
+      "pattern": "/products/{path...}",
+      "name": "ProductFiles",
+      "var": "L10nProductFiles",
+      "text": "Product static assets",
+      "auth": "public",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "path",
+          "go": "filePath",
+          "var": "L10nProductFilePath",
+          "type": "string",
+          "import": "path/filepath",
+          "parse": "text",
+          "kind": "rest",
+          "label": "Asset path",
+          "_extra_param_field": 123
+        }
+      ]
+    }
+  ],
+  "permissions": [
+    {
+      "key": "orders.manage",
+      "var": "PermOrdersManage",
+      "text": "Manage customer orders",
+      "level": "verified"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "package": {
+    "name": "shoproutes",
+    "dir": "."
+  },
+  "surface": "html",
+  "prefix": "",
+  "routes": [
+    {
+      "key": "customers.list",
+      "method": "GET",
+      "pattern": "/customers",
+      "name": "CustomersList",
+      "var": "L10nCustomersList",
+      "text": "List customers",
+      "auth": "session",
+      "view": true,
+      "search": true,
+      "params": []
+    }
+  ],
+  "permissions": []
+}

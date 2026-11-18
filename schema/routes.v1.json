@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/epistemer/handlers/schema/routes.v1.json",
+  "title": "routes/v1",
+  "description": "A package's routes, written by handlers' producers (handlers gen, handlers openapi) and read by its generators. Shape only: the rules across fields are in docs/brief.md §6 and internal/routesv1.Check.",
+  "type": "object",
+  "required": ["domain", "producer", "package", "surface", "prefix", "routes", "permissions"],
+  "properties": {
+    "domain": {"type": "string", "const": "routes/v1"},
+    "producer": {"type": "string", "minLength": 1},
+    "package": {
+      "type": "object",
+      "required": ["name", "dir"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+        "dir": {"type": "string", "minLength": 1}
+      }
+    },
+    "surface": {"type": "string", "enum": ["html", "json"]},
+    "prefix": {"type": "string", "pattern": "^(/[^/]+)*$"},
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "method", "pattern", "name", "var", "text", "auth", "view", "search", "params"],
+        "properties": {
+          "key": {"type": "string", "pattern": "^[a-z0-9][A-Za-z0-9_]*(\\.[a-z0-9][A-Za-z0-9_]*)*$"},
+          "method": {"type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]},
+          "pattern": {"type": "string", "pattern": "^/"},
+          "name": {"type": "string", "pattern": "^[A-Z][A-Za-z0-9_]*$"},
+          "var": {"type": "string", "pattern": "^L10n[A-Za-z0-9_]+$"},
+          "text": {"type": "string", "minLength": 1},
+          "auth": {"type": "string", "enum": ["public", "session", "permission"]},
+          "permission": {"type": "string"},
+          "view": {"type": "boolean"},
+          "search": {"type": "boolean"},
+          "entity": {"type": "string"},
+          "operation": {"type": "string", "minLength": 1},
+          "params": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "go", "var", "type", "import", "parse", "kind", "label"],
+              "properties": {
+                "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+                "go": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+                "var": {"type": "string", "pattern": "^L10n[A-Za-z0-9_]+$"},
+                "type": {"type": "string", "minLength": 1},
+                "import": {"type": "string"},
+                "parse": {"type": "string", "enum": ["string", "int", "uint", "bool", "text"]},
+                "kind": {"type": "string", "enum": ["segment", "rest"]},
+                "label": {"type": "string", "minLength": 1}
+              }
+            }
+          }
+        }
+      }
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "var", "text", "level"],
+        "properties": {
+          "key": {"type": "string", "pattern": "^[a-z0-9][A-Za-z0-9_]*(\\.[a-z0-9][A-Za-z0-9_]*)*$"},
+          "var": {"type": "string", "pattern": "^Perm[A-Za-z0-9_]+$"},
+          "text": {"type": "string", "minLength": 1},
+          "level": {"type": "string", "enum": ["verified", "unverified"]}
+        }
+      }
+    }
+  }
+}
