@@ -512,19 +512,15 @@ func loadGitFile(ref, absFile string) ([]byte, bool) {
 		dir = parent
 	}
 
-	topCmd := exec.Command("git", "-C", dir, "rev-parse", "--show-toplevel")
-	topOut, err := topCmd.Output()
+	// "<ref>:./<path>" is resolved by git relative to the -C directory, so
+	// symlinks (macOS's /var) and drive letters (Windows) don't matter.
+	rel, err := filepath.Rel(dir, absFile)
 	if err != nil {
 		return nil, false
 	}
-	gitRoot := strings.TrimSpace(string(topOut))
-	gitRel, err := filepath.Rel(gitRoot, absFile)
-	if err != nil {
-		return nil, false
-	}
-	gitRel = filepath.ToSlash(gitRel)
+	gitRel := "./" + filepath.ToSlash(rel)
 
-	showCmd := exec.Command("git", "-C", gitRoot, "show", ref+":"+gitRel)
+	showCmd := exec.Command("git", "-C", dir, "show", ref+":"+gitRel)
 	out, err := showCmd.Output()
 	if err != nil {
 		return nil, false
