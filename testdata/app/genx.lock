@@ -2,4 +2,5 @@
 # The files genx wrote, and the generator that wrote each.
 adminroutes/zz_adminroutes.labels.json github.com/epistemer/handlers:labels
 adminroutes/zz_adminroutes_i18n.go github.com/epistemer/i18n:labels
+adminroutes/zz_adminroutes_permissions.go github.com/epistemer/handlers:permissions
 adminroutes/zz_adminroutes_routes.go github.com/epistemer/handlers:routes

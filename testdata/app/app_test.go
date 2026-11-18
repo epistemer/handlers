@@ -1,55 +1,34 @@
 package app_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"app/admin"
 	"app/adminroutes"
 	"app/ids"
-	"github.com/epistemer/errors"
+	"github.com/epistemer/auth"
+	"github.com/epistemer/auth/access"
+	"github.com/epistemer/auth/authtest"
 	"github.com/epistemer/genx/genxtest"
 	"github.com/epistemer/handlers"
+	"github.com/epistemer/handlers/authguard"
+	"github.com/epistemer/handlers/handlerstest"
 	"github.com/epistemer/i18n"
 	"github.com/epistemer/i18n/i18ntest"
+	bolt "go.etcd.io/bbolt"
 )
-
-type fakeGuard struct {
-	session    bool
-	granted    map[string]bool
-	prepared   []handlers.Route
-	lastCheck  handlers.Route
-	sawInCtx   bool
-	checkCount int
-}
-
-func (g *fakeGuard) Prepare(rt handlers.Route) error {
-	g.prepared = append(g.prepared, rt)
-	return nil
-}
-
-func (g *fakeGuard) Check(r *http.Request, rt handlers.Route) error {
-	g.checkCount++
-	g.lastCheck = rt
-	if ctxRt, ok := handlers.From(r.Context()); ok && ctxRt.Key == rt.Key {
-		g.sawInCtx = true
-	}
-	if !g.session {
-		return errors.Key("test.app.no_session", "no session", errors.Unauthenticated)
-	}
-	if rt.Auth == handlers.Permission && !g.granted[rt.Permission] {
-		return errors.Key("test.app.forbidden", "forbidden", errors.Forbidden)
-	}
-	return nil
-}
-
-func (g *fakeGuard) Admit(*http.Request) (func(handlers.Route) bool, error) {
-	return func(handlers.Route) bool { return true }, nil
-}
 
 func TestGenerated(t *testing.T) {
 	genxtest.AssertGenerated(t)
+}
+
+func TestPublicRoutes(t *testing.T) {
+	handlerstest.AssertPublic(t, adminroutes.Routes, "dashboard", "files.serve")
 }
 
 func TestAdminRoutesHTTPAndLabels(t *testing.T) {
@@ -65,9 +44,9 @@ func TestAdminRoutesHTTPAndLabels(t *testing.T) {
 	}
 
 	h := &admin.H{}
-	g := &fakeGuard{
-		session: true,
-		granted: map[string]bool{"orders.manage": true},
+	g := &handlerstest.Guard{
+		Session: true,
+		Granted: map[string]bool{"orders.manage": true},
 	}
 	mux := http.NewServeMux()
 	adminroutes.Register(mux, h, g)
@@ -153,23 +132,32 @@ func TestAdminRoutesHTTPAndLabels(t *testing.T) {
 		}
 	})
 
-	t.Run("handler and guard see the same Route via handlers.From", func(t *testing.T) {
-		g.sawInCtx = false
+	t.Run("handler sees Route via handlers.From and handlerstest.Guard enforces auth", func(t *testing.T) {
 		h.LastRoute = handlers.Route{}
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest("GET", "/admin/orders/42/tok1", nil))
 		if rec.Code != 200 || rec.Body.String() != "order:42:tok1" {
 			t.Fatalf("GET /admin/orders/42/tok1 = (%d, %q)", rec.Code, rec.Body.String())
 		}
-		if !g.sawInCtx {
-			t.Error("guard did not see route in context")
+		if h.LastRoute.Key != "orders.detail" || h.LastRoute.Permission != "orders.manage" || h.LastRoute.Entity != "orders.list" {
+			t.Errorf("handler route = %+v", h.LastRoute)
 		}
-		if g.lastCheck.Key != "orders.detail" || h.LastRoute.Key != "orders.detail" {
-			t.Errorf("guard route=%q handler route=%q", g.lastCheck.Key, h.LastRoute.Key)
+
+		// Denied without permission -> 403; denied without session -> 401.
+		g.Granted = nil
+		rec403 := httptest.NewRecorder()
+		mux.ServeHTTP(rec403, httptest.NewRequest("GET", "/admin/orders/42/tok1", nil))
+		if rec403.Code != 403 {
+			t.Errorf("without permission = %d, want 403", rec403.Code)
 		}
-		if g.lastCheck.Permission != h.LastRoute.Permission || g.lastCheck.Entity != h.LastRoute.Entity {
-			t.Errorf("guard route %+v != handler route %+v", g.lastCheck, h.LastRoute)
+		g.Session = false
+		rec401 := httptest.NewRecorder()
+		mux.ServeHTTP(rec401, httptest.NewRequest("GET", "/admin/orders", nil))
+		if rec401.Code != 401 {
+			t.Errorf("without session = %d, want 401", rec401.Code)
 		}
+		g.Session = true
+		g.Granted = map[string]bool{"orders.manage": true}
 	})
 
 	t.Run("URL builders escape segments and preserve rest slashes", func(t *testing.T) {
@@ -218,4 +206,76 @@ func TestAdminRoutesHTTPAndLabels(t *testing.T) {
 			t.Errorf("L10n lookup fr = %q", got)
 		}
 	})
+}
+
+func TestAdminRoutesWithAuthguard(t *testing.T) {
+	k := authtest.New(t)
+	db, err := bolt.Open(filepath.Join(t.TempDir(), "access.db"), 0o600, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	ac, err := access.New(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	const pw = "orange tiger juggles 47 lamps"
+	k.AddUser("sara", auth.User{ID: "u1", Name: "sara"}, "sara@toyshop.example")
+	if err := k.Auth.SetPassword(ctx, "u1", pw); err != nil {
+		t.Fatal(err)
+	}
+	grp, err := ac.CreateGroup(ctx, "Managers")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ac.Grant(ctx, grp.ID, adminroutes.PermOrdersManage); err != nil {
+		t.Fatal(err)
+	}
+	if err := ac.Join(ctx, "u1", grp.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := k.Auth.SignIn(ctx, "sara", auth.Cookie())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f, err = k.Auth.Prove(ctx, f.Token, auth.Password(pw)); err != nil {
+		t.Fatal(err)
+	}
+	k.Clock.Advance(time.Minute)
+	if _, err := k.Auth.Challenge(ctx, f.Token, auth.MethodEmailCode); err != nil {
+		t.Fatal(err)
+	}
+	m, _ := k.LastMessage("sara@toyshop.example")
+	if f, err = k.Auth.Prove(ctx, f.Token, auth.EmailCode(m.Code)); err != nil {
+		t.Fatal(err)
+	}
+	res, err := k.Auth.Finish(ctx, f.Token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cw := httptest.NewRecorder()
+	res.Write(cw)
+	cookie := cw.Result().Cookies()[0]
+
+	mux := http.NewServeMux()
+	adminroutes.Register(mux, &admin.H{}, authguard.New(k.Auth, ac))
+	srv := k.Auth.Load(auth.Cookie())(mux)
+
+	// Unauthenticated -> 401; authenticated with generated PermOrdersManage -> 200.
+	recAnon := httptest.NewRecorder()
+	srv.ServeHTTP(recAnon, httptest.NewRequest("GET", "https://shop.example/admin/orders/7/tok", nil))
+	if recAnon.Code != 401 {
+		t.Errorf("anon = %d, want 401", recAnon.Code)
+	}
+
+	req := httptest.NewRequest("GET", "https://shop.example/admin/orders/7/tok", nil)
+	req.AddCookie(cookie)
+	recAuth := httptest.NewRecorder()
+	srv.ServeHTTP(recAuth, req)
+	if recAuth.Code != 200 || recAuth.Body.String() != "order:7:tok" {
+		t.Errorf("authed = (%d, %q), want (200, order:7:tok)", recAuth.Code, recAuth.Body.String())
+	}
 }

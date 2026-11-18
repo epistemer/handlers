@@ -1,0 +1,53 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "internal/billing",
+  "package": {
+    "name": "billingroutes",
+    "dir": "internal/billing/billingroutes"
+  },
+  "surface": "html",
+  "prefix": "/billing",
+  "routes": [
+    {
+      "key": "categories.manage",
+      "method": "GET",
+      "pattern": "/categories",
+      "name": "Categories",
+      "var": "L10nCategories",
+      "text": "Manage categories",
+      "auth": "permission",
+      "permission": "categories.manage",
+      "view": true,
+      "search": false,
+      "params": []
+    },
+    {
+      "key": "orders.refund",
+      "method": "POST",
+      "pattern": "/refund",
+      "name": "Refund",
+      "var": "L10nRefund",
+      "text": "Refund orders",
+      "auth": "permission",
+      "permission": "orders.refund",
+      "view": false,
+      "search": false,
+      "params": []
+    }
+  ],
+  "permissions": [
+    {
+      "key": "categories.manage",
+      "var": "PermCategoriesManage",
+      "text": "Manage categories",
+      "level": "verified"
+    },
+    {
+      "key": "orders.refund",
+      "var": "PermOrdersRefund",
+      "text": "Refund orders",
+      "level": "unverified"
+    }
+  ]
+}

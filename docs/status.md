@@ -3,6 +3,25 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M2.5, permissions, `authguard` and `handlerstest`
+
+- **Landed:** the `permissions` generator (`access.Permission` per
+  permission, `auth.Unverified` where declared, a key in two routes files
+  refused); the `authguard` module (Prepare refuses an undeclared
+  permission, Check returns auth's own refusals, Admit memoizes per
+  permission under a mutex); `handlerstest` (a fake guard and
+  `AssertPublic`). Tests with authtest: 401 without a session, 403 without
+  the permission or a verified session, 200 with them, unverified
+  permissions, the refusal in the JSON envelope, and the app module wired
+  through the generated permissions and `authguard`. Gemini 4 Hydrogen
+  (High) wrote it from a spec (about 320k tokens); Claude reviewed it,
+  `authguard` line by line.
+- **Decided for you:** an unknown `Auth` panics in the guards too (§12.2);
+  `Admit` returns no error in this version and logs a non-refusal error
+  once, treating it as a refusal, because it checks lazily.
+- **Next:** M2.6, `Table` and `Search`.
+- **Waiting on you:** nothing.
+
 ## 2026-11-18: M2.3 and M2.4, the runtime and the `routes` and `labels` generators
 
 - **Landed:** the runtime package (interface §11.1–11.3 and §12: routes,

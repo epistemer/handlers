@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -51,12 +53,15 @@ func TestGeneratorsGolden(t *testing.T) {
 			in := genxtest.Input{Path: inPath}
 			routesFiles := genxtest.Render(t, ".", "routes", in)
 			labelsFiles := genxtest.Render(t, ".", "labels", in)
+			permFiles := genxtest.Render(t, ".", "permissions", in)
 
 			// Second render must produce the exact same bytes.
 			routesFiles2 := genxtest.Render(t, ".", "routes", in)
 			labelsFiles2 := genxtest.Render(t, ".", "labels", in)
+			permFiles2 := genxtest.Render(t, ".", "permissions", in)
 			assertMapsEqual(t, "routes second render", routesFiles, routesFiles2)
 			assertMapsEqual(t, "labels second render", labelsFiles, labelsFiles2)
+			assertMapsEqual(t, "permissions second render", permFiles, permFiles2)
 
 			if name == "api" {
 				if len(routesFiles) != 0 {
@@ -68,6 +73,17 @@ func TestGeneratorsGolden(t *testing.T) {
 
 			if len(labelsFiles) != 1 {
 				t.Fatalf("expected 1 labels file, got %v", mapKeys(labelsFiles))
+			}
+
+			switch name {
+			case "empty", "strings_only":
+				if len(permFiles) != 0 {
+					t.Fatalf("expected no permissions file, got %v", mapKeys(permFiles))
+				}
+			default:
+				if len(permFiles) != 1 {
+					t.Fatalf("expected 1 permissions file, got %v", mapKeys(permFiles))
+				}
 			}
 
 			// Every labels output must pass i18n's labels generator without error.
@@ -85,11 +101,14 @@ func TestGeneratorsGolden(t *testing.T) {
 			}
 			_ = genxtest.Render(t, i18nDir, "labels", i18nInputs...)
 
-			got := make(map[string][]byte, len(routesFiles)+len(labelsFiles))
+			got := make(map[string][]byte, len(routesFiles)+len(labelsFiles)+len(permFiles))
 			for k, v := range routesFiles {
 				got[k] = v
 			}
 			for k, v := range labelsFiles {
+				got[k] = v
+			}
+			for k, v := range permFiles {
 				got[k] = v
 			}
 
@@ -164,4 +183,124 @@ func mapKeys(m map[string][]byte) []string {
 	}
 	slices.Sort(keys)
 	return keys
+}
+
+type fatalRecorder struct {
+	testing.TB
+	msg string
+}
+
+func (r *fatalRecorder) Helper() {}
+
+func (r *fatalRecorder) Fatalf(format string, args ...any) {
+	r.msg = fmt.Sprintf(format, args...)
+	runtime.Goexit()
+}
+
+func (r *fatalRecorder) Fatal(args ...any) {
+	r.msg = fmt.Sprint(args...)
+	runtime.Goexit()
+}
+
+func renderFails(t *testing.T, fn func(testing.TB)) string {
+	t.Helper()
+	rec := &fatalRecorder{TB: t}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		fn(rec)
+	}()
+	<-done
+	return rec.msg
+}
+
+func TestPermissionsTwoFilesError(t *testing.T) {
+	tmpDir := t.TempDir()
+	doc := func(dir, pkg string) string {
+		return fmt.Sprintf(`{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": %q,
+  "package": {"name": %q, "dir": %q},
+  "surface": "html",
+  "prefix": "/%s",
+  "routes": [
+    {
+      "key": "orders.manage",
+      "method": "GET",
+      "pattern": "/",
+      "name": "Orders",
+      "var": "L10nOrders",
+      "text": "Manage orders",
+      "auth": "permission",
+      "permission": "orders.manage",
+      "view": false,
+      "search": false,
+      "params": []
+    }
+  ],
+  "permissions": [
+    {
+      "key": "orders.manage",
+      "var": "PermOrdersManage",
+      "text": "Manage orders",
+      "level": "verified"
+    }
+  ]
+}
+`, dir, pkg, dir, pkg)
+	}
+
+	aPath := filepath.Join(tmpDir, "a", "zz_aroutes.routes.json")
+	bPath := filepath.Join(tmpDir, "b", "zz_broutes.routes.json")
+	for _, f := range []struct {
+		path string
+		body string
+	}{
+		{aPath, doc("internal/a", "aroutes")},
+		{bPath, doc("internal/b", "broutes")},
+	} {
+		if err := os.MkdirAll(filepath.Dir(f.path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(f.path, []byte(f.body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Pass bPath before aPath to confirm output reports dirs in path order.
+	got := renderFails(t, func(tb testing.TB) {
+		genxtest.Render(tb, ".", "permissions",
+			genxtest.Input{Path: bPath},
+			genxtest.Input{Path: aPath})
+	})
+	want := `permission "orders.manage" is in internal/a and internal/b; a permission belongs to one routes package`
+	if !strings.Contains(got, want) {
+		t.Fatalf("error = %q, want substring %q", got, want)
+	}
+}
+
+func TestPermissionsUnknownLevelError(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "zz_bad.routes.json")
+	body := `{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "internal/bad",
+  "package": {"name": "badroutes", "dir": "internal/bad"},
+  "surface": "html",
+  "prefix": "/bad",
+  "routes": [],
+  "permissions": [
+    {"key": "x.y", "var": "PermXY", "text": "XY", "level": "admin"}
+  ]
+}`
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got := renderFails(t, func(tb testing.TB) {
+		genxtest.Render(tb, ".", "permissions", genxtest.Input{Path: p})
+	})
+	if !strings.Contains(got, "permissions: unknown level admin") {
+		t.Fatalf("error = %q, want unknown level", got)
+	}
 }
