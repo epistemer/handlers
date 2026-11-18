@@ -1,0 +1,9 @@
+version: 1
+producers:
+  - name: admin-routes
+    run: [go, run, github.com/epistemer/handlers/cmd/handlers, gen, -prefix, /admin, -out, adminroutes, ./admin]
+    check: [go, run, github.com/epistemer/handlers/cmd/handlers, gen, -check, -prefix, /admin, -out, adminroutes, ./admin]
+    emits: [adminroutes/zz_adminroutes.routes.json]
+use:
+  - github.com/epistemer/handlers: [routes, labels]
+  - github.com/epistemer/i18n: [labels]

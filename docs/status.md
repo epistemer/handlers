@@ -3,6 +3,28 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M2.3 and M2.4, the runtime and the `routes` and `labels` generators
+
+- **Landed:** the runtime package (interface §11.1–11.3 and §12: routes,
+  the context, guards, options, writers, statuses, `Mount` for generated
+  code, parameter binding and URL escaping), and `genx.meta.yaml` with the
+  `routes` generator (admin pages; the API's `Mount` waits for M3) and the
+  `labels` generator. Golden files for every parse kind, typed parameters
+  with aliases, the root pattern and an empty package; i18n's own `labels`
+  generator accepts the emitted files. A nested app module generates,
+  compiles and serves through `adminroutes.Register`: 400 with the
+  parameter's translated label, 404 under the prefix, the route in the
+  context before the guard, panics without a guard, escaped URL builders.
+  Gemini 4 Hydrogen (High) wrote it from a spec (about 360k tokens); Claude
+  reviewed it.
+- **Decided for you:** a text type in a `{name...}` wildcard builds its URL
+  with `Rest(Text(p))`; `Surface.String` and `Auth.String` panic on unknown
+  values (§12.2); the root module requires genx v0.2.0, for `genxtest` in
+  its tests only (apps don't build it).
+- **Next:** M2.5 (`permissions`, `authguard`, `handlerstest`), then M2.6
+  (`Table` and `Search`).
+- **Waiting on you:** nothing.
+
 ## 2026-11-18: M2.2, `handlers gen`
 
 - **Landed:** `handlers gen` writes `zz_<package>.routes.json` from a handler

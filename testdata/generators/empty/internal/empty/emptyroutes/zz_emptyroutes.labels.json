@@ -1,0 +1,9 @@
+{
+  "domain": "labels/v1",
+  "labels": [],
+  "package": {
+    "dir": "internal/empty/emptyroutes",
+    "name": "emptyroutes"
+  },
+  "producer": "handlers"
+}

@@ -1,0 +1,13 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "internal/empty",
+  "package": {
+    "name": "emptyroutes",
+    "dir": "internal/empty/emptyroutes"
+  },
+  "surface": "html",
+  "prefix": "/empty",
+  "routes": [],
+  "permissions": []
+}

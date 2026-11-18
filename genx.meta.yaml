@@ -1,0 +1,104 @@
+version: 1
+
+generators:
+  routes:
+    doc: route table, Handler interface, Register, and URL builders for HTML routes
+    needs: [routes/v1]
+    units: |
+      def parse_bits:
+        if . == "int8" or . == "uint8" then 8
+        elif . == "int16" or . == "uint16" then 16
+        elif . == "int32" or . == "uint32" then 32
+        elif . == "int64" or . == "uint64" then 64
+        else 0
+        end;
+
+      def auth_const:
+        if . == "public" then "handlers.Public"
+        elif . == "session" then "handlers.Session"
+        elif . == "permission" then "handlers.Permission"
+        else error("routes: unknown auth \(.)")
+        end;
+
+      def url_parts($params):
+        if . == "/" then
+          [{is_lit: true, lit: "/"}]
+        else
+          reduce (ltrimstr("/") | split("/"))[] as $seg (
+            {lit: "", parts: []};
+            if ($seg | (startswith("{") and endswith("}"))) then
+              ($seg | ltrimstr("{") | rtrimstr("}") | rtrimstr("...")) as $wname
+              | ($params | map(select(.name == $wname)) | .[0]) as $p
+              | if $p == null then error("routes: wildcard \($seg) has no param") else . end
+              | {
+                  lit: "",
+                  parts: (.parts + [
+                    {is_lit: true, lit: (.lit + "/")},
+                    {is_lit: false, index: $p.index, parse: $p.parse, is_rest: $p.is_rest, is_int: $p.is_int, is_uint: $p.is_uint}
+                  ])
+                }
+            else
+              .lit += ("/" + $seg)
+            end
+          )
+          | if .lit != "" then .parts + [{is_lit: true, lit: .lit}] else .parts end
+        end;
+
+      .["routes/v1"][]
+      | select(.surface == "html")
+      | . as $doc
+      | [.routes | to_entries[] | .key as $ri | .value as $r |
+          [ $r.params | to_entries[] | {
+              index: .key,
+              name: .value.name,
+              type: .value.type,
+              var: .value.var,
+              parse: .value.parse,
+              is_rest: (.value.kind == "rest"),
+              is_int: (.value.parse | startswith("int")),
+              is_uint: (.value.parse | startswith("uint")),
+              bits: (.value.parse | parse_bits)
+            } ] as $params
+          | {
+              index: $ri,
+              key: $r.key,
+              method: $r.method,
+              pattern: $r.pattern,
+              name: $r.name,
+              var: $r.var,
+              auth_const: ($r.auth | auth_const),
+              permission: ($r.permission // ""),
+              view: $r.view,
+              search: $r.search,
+              entity: ($r.entity // ""),
+              params: $params,
+              url_parts: ($r.pattern | url_parts($params))
+            }
+        ] as $routes
+      | {
+          package: $doc.package,
+          prefix: $doc.prefix,
+          has_strconv: ([ $doc.routes[].params[] | select(.parse == "bool" or (.parse | startswith("int")) or (.parse | startswith("uint"))) ] | length) > 0,
+          imports: ([ $doc.routes[].params[] | select(.import != "") | {alias: .alias, path: .import} ] | unique_by(.path) | sort_by(.path)),
+          routes: $routes
+        }
+    out: '"\(.package.dir)/zz_\(.package.name)_routes.go"'
+    template: routes.go.tmpl
+
+  labels:
+    doc: labels/v1 file for every route and parameter in a routes/v1 file
+    needs: [routes/v1]
+    emits: labels/v1
+    units: |
+      .["routes/v1"][]
+      | {
+          domain: "labels/v1",
+          producer: "handlers",
+          package: .package,
+          labels: [
+            .routes[] as $r
+            | {key: ("route." + $r.key), text: $r.text, var: $r.var, path: ("route." + $r.key)},
+              ($r.params[] | {key: ("route_param." + $r.key + "." + .name), text: .label, var: .var, path: ("route_param." + $r.key + "." + .name)})
+          ]
+        }
+    out: '"\(.package.dir)/zz_\(.package.name).labels.json"'

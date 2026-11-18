@@ -1,0 +1,59 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "api/openapi.yaml",
+  "package": {
+    "name": "apiroutes",
+    "dir": "internal/api/apiroutes"
+  },
+  "surface": "json",
+  "prefix": "/api/v1",
+  "routes": [
+    {
+      "key": "products.list",
+      "method": "GET",
+      "pattern": "/products",
+      "name": "ProductsList",
+      "var": "L10nProductsList",
+      "text": "List products",
+      "auth": "public",
+      "view": true,
+      "search": true,
+      "operation": "listProducts",
+      "params": []
+    },
+    {
+      "key": "products.get",
+      "method": "GET",
+      "pattern": "/products/{id}",
+      "name": "ProductsGet",
+      "var": "L10nProductsGet",
+      "text": "Get product",
+      "auth": "permission",
+      "permission": "products.read",
+      "view": false,
+      "search": false,
+      "operation": "getProduct",
+      "params": [
+        {
+          "name": "id",
+          "go": "id",
+          "var": "L10nProductsGetId",
+          "type": "int64",
+          "import": "",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Product ID"
+        }
+      ]
+    }
+  ],
+  "permissions": [
+    {
+      "key": "products.read",
+      "var": "PermProductsRead",
+      "text": "Read products",
+      "level": "verified"
+    }
+  ]
+}
