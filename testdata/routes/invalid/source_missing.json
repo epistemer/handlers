@@ -1,0 +1,119 @@
+{
+  "domain": "routes/v1",
+  "extra_info": "conformance test",
+  "package": {
+    "dir": "internal/shop/shoproutes",
+    "name": "shoproutes"
+  },
+  "permissions": [
+    {
+      "key": "orders.manage",
+      "level": "verified",
+      "text": "Manage customer orders",
+      "var": "PermOrdersManage"
+    }
+  ],
+  "prefix": "/shop",
+  "producer": "handlers",
+  "routes": [
+    {
+      "auth": "public",
+      "key": "home",
+      "method": "GET",
+      "name": "Home",
+      "params": [],
+      "pattern": "/",
+      "search": false,
+      "text": "Shop home",
+      "var": "L10nHome",
+      "view": true
+    },
+    {
+      "auth": "session",
+      "key": "orders.list",
+      "method": "GET",
+      "name": "OrdersList",
+      "params": [],
+      "pattern": "/orders",
+      "search": true,
+      "text": "List orders",
+      "var": "L10nOrdersList",
+      "view": true
+    },
+    {
+      "auth": "permission",
+      "entity": "orders.list",
+      "key": "orders.detail",
+      "method": "GET",
+      "name": "OrderDetail",
+      "params": [
+        {
+          "alias": "shop",
+          "go": "orderID",
+          "import": "example.com/shop/internal/shop",
+          "kind": "segment",
+          "label": "Order ID",
+          "name": "id",
+          "parse": "int64",
+          "type": "shop.OrderID",
+          "var": "L10nOrderID"
+        }
+      ],
+      "pattern": "/orders/{id}",
+      "permission": "orders.manage",
+      "search": false,
+      "text": "Order detail",
+      "var": "L10nOrderDetail",
+      "view": false
+    },
+    {
+      "auth": "permission",
+      "key": "orders.cancel",
+      "method": "POST",
+      "name": "OrderCancel",
+      "params": [
+        {
+          "go": "orderID",
+          "import": "",
+          "kind": "segment",
+          "label": "Order ID to cancel",
+          "name": "id",
+          "parse": "int",
+          "type": "int64",
+          "var": "L10nOrderCancelID"
+        }
+      ],
+      "pattern": "/orders/{id}/cancel",
+      "permission": "orders.manage",
+      "search": false,
+      "text": "Cancel order",
+      "var": "L10nOrderCancel",
+      "view": false
+    },
+    {
+      "auth": "public",
+      "key": "products.files",
+      "method": "GET",
+      "name": "ProductFiles",
+      "params": [
+        {
+          "_extra_param_field": 123,
+          "go": "filePath",
+          "import": "",
+          "kind": "rest",
+          "label": "Asset path",
+          "name": "path",
+          "parse": "text",
+          "type": "string",
+          "var": "L10nProductFilePath"
+        }
+      ],
+      "pattern": "/products/{path...}",
+      "search": false,
+      "text": "Product static assets",
+      "var": "L10nProductFiles",
+      "view": false
+    }
+  ],
+  "surface": "html"
+}

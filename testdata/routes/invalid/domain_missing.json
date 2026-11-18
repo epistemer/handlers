@@ -13,6 +13,7 @@
   ],
   "prefix": "/shop",
   "producer": "handlers",
+  "source": "internal/shop",
   "routes": [
     {
       "auth": "permission",

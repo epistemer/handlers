@@ -1,6 +1,6 @@
 # routes/v1: the rules Check enforces
 
-The draft for the freeze (roadmap M1.5); interface.md will take these rules over.
+docs/interface.md §8 makes these rules part of the contract.
 
 `internal/routesv1.Check(v any) error` validates one decoded routes/v1 document
 (`json.Unmarshal` into `any`). It returns every problem joined with
@@ -10,10 +10,12 @@ the JSON path: `domain`, `package.name`, `routes[2].params[0].kind`,
 
 ## Shape (also in schema/routes.v1.json)
 
-- Document: object. Required: domain, producer, package, surface, prefix, routes, permissions.
+- Document: object. Required: domain, producer, source, package, surface, prefix, routes, permissions.
   Unknown extra fields are allowed everywhere (a later minor version may add them).
 - `domain`: string, exactly "routes/v1"; another `routes/vN` is `want "routes/v1", got "routes/v2"`.
 - `producer`: non-empty string.
+- `source`: non-empty string: the handler package's directory (html) or the spec's path
+  (json), relative to the module root, so `handlers vet` can pair a package with its file.
 - `package`: object with `name` (a Go identifier, not `_`) and `dir` (non-empty, slash-separated,
   relative, clean: `.` or no `.`/`..` elements, no leading or trailing `/`, no `//`).
 - `surface`: "html" or "json". Anything else: `unknown surface "x"` (fail closed).
@@ -35,8 +37,10 @@ Route: required key, method, pattern, name, var, text, auth, view, search, param
   non-empty string; required when surface is json, absent when html.
 - `params`: array, in signature order. Each param requires name, go, var, type, import,
   parse, kind, label: `name` and `go` Go identifiers; `var` a Go identifier starting with
-  `L10n`; `type` non-empty; `import` a string ("" for none); `parse` one of string int
-  uint bool text; `kind` segment or rest; `label` non-empty.
+  `L10n`; `type` non-empty; `import` a string ("" for none); `alias` present exactly when
+  `import` isn't "", a Go identifier, and the qualifier `type` starts with (`shop.OrderID`
+  with alias `shop`); `parse` one of string bool text int int8 int16 int32 int64 uint
+  uint8 uint16 uint32 uint64 (the underlying type's width); `kind` segment or rest; `label` non-empty.
 
 Permission: required key, var, text, level. `key` as a route key; `var` a Go identifier
 starting with `Perm`; `text` non-empty; `level` verified or unverified.
@@ -57,9 +61,13 @@ starting with `Perm`; `text` non-empty; `level` verified or unverified.
    least one route (`permissions[2]: no route uses "x"`).
 10. Fail closed: an unknown auth, surface, parse, kind or level is an error, never a default.
 11. A route's `name` becomes a package-level identifier of the generated package, so it
-    is none of the names that package declares (`Handler`, `Register`, `Routes`, `ByKey`,
-    `L10n`) and no `var` of the document: `routes[0].name: "Register" is also a name the
+    is none of the names that package declares (`Handler`, `Register`, `Mount`, `Routes`,
+    `ByKey`, `Prefix`, `L10n`) and no `var` of the document: `routes[0].name: "Register" is also a name the
     generated package declares`, `routes[0].name: "PermOrdersManage" is also permissions[0].var`.
+
+12. An `alias` names one import path, and an import path has one alias:
+    `routes[1].params[0].alias: "shop" also names "example.com/shop/internal/shop"`,
+    `routes[1].params[0].alias: "example.com/shop/internal/shop" is already imported as "shop"`.
 
 ## Conformance files
 

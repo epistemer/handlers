@@ -4,10 +4,11 @@
   "title": "routes/v1",
   "description": "A package's routes, written by handlers' producers (handlers gen, handlers openapi) and read by its generators. Shape only: the rules across fields are in docs/brief.md §6 and internal/routesv1.Check.",
   "type": "object",
-  "required": ["domain", "producer", "package", "surface", "prefix", "routes", "permissions"],
+  "required": ["domain", "producer", "source", "package", "surface", "prefix", "routes", "permissions"],
   "properties": {
     "domain": {"type": "string", "const": "routes/v1"},
     "producer": {"type": "string", "minLength": 1},
+    "source": {"type": "string", "minLength": 1},
     "package": {
       "type": "object",
       "required": ["name", "dir"],
@@ -47,7 +48,8 @@
                 "var": {"type": "string", "pattern": "^L10n[A-Za-z0-9_]+$"},
                 "type": {"type": "string", "minLength": 1},
                 "import": {"type": "string"},
-                "parse": {"type": "string", "enum": ["string", "int", "uint", "bool", "text"]},
+                "alias": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+                "parse": {"type": "string", "enum": ["string", "bool", "text", "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64"]},
                 "kind": {"type": "string", "enum": ["segment", "rest"]},
                 "label": {"type": "string", "minLength": 1}
               }

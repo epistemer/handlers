@@ -1,5 +1,7 @@
 # neozp `handlers`: design brief
 
+> **History.** [ADR 0001](adr/0001-routes-domain.md), ADRs 0002–0004 and [interface.md](interface.md) replace this brief. The spikes and reviews changed several things after it was written, so where they differ, they are right. Kept as the record of what was known before the work began.
+
 > Written on 2026-11-18 in a planning session with epistemer, for the Claude Code session that starts `github.com/epistemer/handlers`. Decisions marked **epistemer** were made that day. Decisions marked **(Claude)** were settled while writing this brief and can be overturned before the interface is locked. zp appears only as counts and shapes, so this file can be committed as `docs/brief.md`.
 
 ## 0. How to use this brief

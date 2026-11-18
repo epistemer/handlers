@@ -3,9 +3,33 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M1.5, the interface is locked
+
+- **Landed:** [interface.md](interface.md), locked by Claude on your
+  instruction ("freeze it and take ownership"), after
+  [review 0005](reviews/0005-interface.md) by Gemini 4 Hydrogen (High) in
+  two rounds (about 66k and 132k tokens). M1.4 merged as PR 5.
+  - Round 1's 18 findings changed the draft: integer widths, import aliases
+    and `source` in `routes/v1` (with checker rules and fixtures); a
+    catch-all that answers 404 only, under a prefix; `openapi.Mount` with a
+    `register` callback that checks completeness itself; a mapping table for
+    API path parameters; generated code that can't be shadowed by parameter
+    names; one handler type per package; a mux and `Load` per surface.
+  - Round 2 caught a flaw in sharing permissions across packages, so in
+    v0.1 a permission belongs to one routes package.
+  - One finding rejected: errors renders an `i18n.Ter` argument in the
+    request's locale, so `ErrBadParam` takes the parameter's label.
+- **Decided for you, now under the ownership you delegated:** the whole
+  interface. Your global CLAUDE.md and docs/ownership.md record that the
+  freeze and handlers' API design are mine; you can overturn any of it.
+- **Next:** M2, the admin surface: the rule engine and `handlers vet`
+  (M2.1), the producer (M2.2), the generators (M2.3–M2.5), the runtime
+  (M2.6).
+- **Waiting on you:** nothing.
+
 ## 2026-11-18: M1.4, the routes/v1 schema
 
-- **Landed in [PR 5](https://github.com/epistemer/handlers/pull/5),** merging once CI is green: `schema/routes.v1.json`, `internal/routesv1.Check` with its
+- **Landed in [PR 5](https://github.com/epistemer/handlers/pull/5),** merged: `schema/routes.v1.json`, `internal/routesv1.Check` with its
   rules in `internal/routesv1/rules.md`, and `testdata/routes` (4 valid, 43
   invalid files, each with its exact message). Gemini 3.8 Flash (High) wrote
   it from a rule list in a worktree outside the repository (about 370k
