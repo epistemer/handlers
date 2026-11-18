@@ -1,0 +1,48 @@
+{
+  "scopeName": "h-directives.go",
+  "injectionSelector": "L:source.go",
+  "patterns": [
+    {
+      "name": "meta.h-directive.param.line.go",
+      "match": "^(\\s*//)(h):(param)(?:\\s+(\\S+)(?:\\s+(label)(?:\\s+([^\\n]*))?)?)?$",
+      "captures": {
+        "1": {
+          "name": "comment.line.double-slash.go"
+        },
+        "2": {
+          "name": "keyword.other.h-directive.go"
+        },
+        "3": {
+          "name": "entity.name.tag.h-directive.go"
+        },
+        "4": {
+          "name": "variable.parameter.h-directive.go"
+        },
+        "5": {
+          "name": "keyword.other.h-directive.param-label.go"
+        },
+        "6": {
+          "name": "string.unquoted.h-directive.value.go"
+        }
+      }
+    },
+    {
+      "name": "meta.h-directive.line.go",
+      "match": "^(\\s*//)(h):(key|method|path|desc|auth|perm|view|search|entity)(?:\\s+([^\\n]*))?$",
+      "captures": {
+        "1": {
+          "name": "comment.line.double-slash.go"
+        },
+        "2": {
+          "name": "keyword.other.h-directive.go"
+        },
+        "3": {
+          "name": "entity.name.tag.h-directive.go"
+        },
+        "4": {
+          "name": "string.unquoted.h-directive.value.go"
+        }
+      }
+    }
+  ]
+}

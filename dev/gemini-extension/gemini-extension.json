@@ -1,0 +1,6 @@
+{
+  "name": "handlers",
+  "version": "0.1.0",
+  "description": "Route directive checks (handlers vet) for Go handler packages",
+  "contextFileName": "GEMINI.md"
+}

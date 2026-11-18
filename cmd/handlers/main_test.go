@@ -56,15 +56,17 @@ func TestHandlersSubcommands(t *testing.T) {
 		t.Errorf("no args exit code = %d, want 2", code)
 	}
 
-	for _, sub := range []string{"lsp"} {
-		code, _, stderr := runBin(t, bin, "", "", sub)
-		if code != 2 {
-			t.Errorf("%s exit code = %d, want 2", sub, code)
-		}
-		want := "handlers: " + sub + " is not implemented yet"
-		if !strings.Contains(stderr, want) {
-			t.Errorf("%s stderr = %q, want %q", sub, stderr, want)
-		}
+	code, _, stderr := runBin(t, bin, "", "", "unknown")
+	if code != 2 {
+		t.Errorf("unknown exit code = %d, want 2", code)
+	}
+	if !strings.Contains(stderr, "unknown command") {
+		t.Errorf("unknown stderr = %q, want unknown command", stderr)
+	}
+
+	code, _, _ = runBin(t, bin, "", "", "lsp", "extra")
+	if code != 2 {
+		t.Errorf("lsp with extra arg exit code = %d, want 2", code)
 	}
 }
 

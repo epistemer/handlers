@@ -1,0 +1,17 @@
+{
+  "name": "epistemer-handlers",
+  "description": "Plugins for github.com/epistemer/handlers",
+  "owner": {
+    "name": "epistemer"
+  },
+  "plugins": [
+    {
+      "name": "handlers",
+      "source": {
+        "source": "git-subdir",
+        "url": "epistemer/handlers",
+        "path": "dev/claude-plugin"
+      }
+    }
+  ]
+}

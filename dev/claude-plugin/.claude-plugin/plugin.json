@@ -1,0 +1,10 @@
+{
+  "name": "handlers",
+  "version": "0.1.0",
+  "description": "Route directive checks (handlers vet) for Go handler packages",
+  "author": {
+    "name": "epistemer"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/epistemer/handlers"
+}

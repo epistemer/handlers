@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "AfterTool": [
+      {
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "name": "handlers-vet",
+            "type": "command",
+            "command": "\"${extensionPath}/bin/handlers-hook\"",
+            "timeout": 30000,
+            "description": "Check Go handler //h: route directives with handlers vet"
+          }
+        ]
+      }
+    ]
+  }
+}

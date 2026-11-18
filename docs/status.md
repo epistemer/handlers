@@ -3,6 +3,26 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M4, the editor and agent tools
+
+- **Landed:** `handlers lsp` (cmd/internal/lsp, no library: framing,
+  lifecycle, UTF-8 or UTF-16 positions, syntax pass on change, both passes
+  on save with stale type results dropped, diagnostics for open documents
+  only, completion, hover, definition for `h:entity`); `dev/vscode`, the old
+  extension turned into a thin client of the server, with an extension test
+  that sees a duplicate key's diagnostic; `dev/claude-plugin` (the
+  PostToolUse hook, falling back from `go tool handlers` to `handlers` on
+  PATH to nothing) and the repository's marketplace, both passing `claude
+  plugin validate`; `dev/gemini-extension` (Gemini CLI 0.64's `AfterTool`
+  hook takes the same payload field and answer, so `vet -hook` serves it
+  unchanged). CI gains a VS Code job (the `.vsix` as an artifact) and a
+  plugins job. Gemini 4 Hydrogen (High) wrote it from a spec (about 480k
+  tokens); Claude reviewed it.
+- **Decided for you:** diagnostics span from their column to the end of the
+  line; on save the server publishes once, after the type pass.
+- **Next:** M5, the example app and the comparison with zp.
+- **Waiting on you:** nothing.
+
 ## 2026-11-18: M3, the API surface
 
 - **Landed:** `handlers openapi` (every §7.2 check with its message, §7.1's
