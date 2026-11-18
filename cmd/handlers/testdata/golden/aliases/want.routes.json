@@ -1,0 +1,57 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "aliases",
+  "package": {
+    "name": "aliasesroutes",
+    "dir": "aliasesroutes"
+  },
+  "surface": "html",
+  "prefix": "",
+  "routes": [
+    {
+      "key": "orders.show",
+      "method": "GET",
+      "pattern": "/orders/{id}/{tok}",
+      "name": "Show",
+      "var": "L10nShow",
+      "text": "Show order",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "id",
+          "var": "L10nShowId",
+          "type": "ext.OrderID",
+          "import": "golden/a/ext",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Order ID",
+          "alias": "ext"
+        },
+        {
+          "name": "tok",
+          "go": "tok",
+          "var": "L10nShowTok",
+          "type": "ext2.Token",
+          "import": "golden/b/ext",
+          "parse": "text",
+          "kind": "segment",
+          "label": "Tok",
+          "alias": "ext2"
+        }
+      ],
+      "permission": "orders.show"
+    }
+  ],
+  "permissions": [
+    {
+      "key": "orders.show",
+      "var": "PermOrdersShow",
+      "text": "Show order",
+      "level": "verified"
+    }
+  ]
+}

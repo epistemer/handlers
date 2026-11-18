@@ -2,7 +2,12 @@ module github.com/epistemer/handlers/cmd
 
 go 1.26.0
 
-require golang.org/x/tools v0.53.0
+require (
+	github.com/epistemer/handlers v0.0.0
+	golang.org/x/tools v0.53.0
+)
+
+replace github.com/epistemer/handlers => ../
 
 require (
 	golang.org/x/mod v0.43.0 // indirect

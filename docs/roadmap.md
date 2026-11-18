@@ -90,7 +90,7 @@ M3 and M4 are independent and can run side by side.
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
 | ☑ | M2.1 | `internal/directive`, the rule engine, and `handlers vet` | M | Every §5.3 diagnostic tested on toy packages, zp's faults among them |
-| ☐ | M2.2 | `handlers gen`, the directive producer, with `-check` and the removed-key warning (`-baseline <git ref>`) | M | `genxtest.AssertGenerated` in a nested module; the warning's tests, against the file and against a git ref |
+| ☑ | M2.2 | `handlers gen`, the directive producer, with `-check` and the removed-key warning (`-baseline <git ref>`) | M | `genxtest.AssertGenerated` in a nested module; the warning's tests, against the file and against a git ref |
 | ☐ | M2.3 | `routes` generator: interface, `Register`, binding, URL builders, the route table | M | Golden files; httptest of binding, 400, 404 and 405 in both formats, `{$}` at the root, `rest` parameters in URL builders, route in context before the guard, panic without a guard |
 | ☐ | M2.4 | `labels` generator | S | Conformance passes; `i18ntest` shows a translation on a route and a parameter |
 | ☐ | M2.5 | `permissions` generator, `handlers/authguard` and `handlers/handlerstest` | M | `authtest`: 403 without the permission, 200 with it; `session`, `unverified` and `public`; refusals in the surface's format; a key declared by two packages stops the generator; an undeclared permission stops `Register`; `Admit`; the fake guard and the assertion |

@@ -38,10 +38,14 @@ func (d Diagnostic) String() string {
 
 // Param describes a path parameter of a handler method.
 type Param struct {
-	Name     string
-	Label    string
-	LabelSet bool
-	Pos      token.Position
+	Name       string
+	Label      string
+	LabelSet   bool
+	ImportPath string // "" for predeclared types
+	PkgName    string // "" for predeclared types
+	TypeName   string // "<pkgname>.<Name>" or predeclared name
+	Parse      string // "text" or underlying basic type name
+	Pos        token.Position
 }
 
 // Route describes a validated handler method and its directives.
