@@ -56,11 +56,11 @@ The failure shapes this design has to make impossible:
 | D3 | API | Spec-first: one OpenAPI file is the source | epistemer |
 | D4 | Permissions | The package declares `auth/access` permissions for routes and guards them with auth | epistemer |
 | D5 | Editor and agents | The VS Code extension moves into `dev/vscode` and reports faults while typing; a Claude Code plugin and a Gemini CLI extension sit beside it | epistemer |
-| D6 | Pipeline | Two producers (`handlers gen`, `handlers openapi`) write `routes/v1`; trivial generators `routes`, `labels` and `permissions` read it | (Claude) |
-| D7 | Domain owner | `routes/v1` lives in this repository (schema and conformance files) until a second package produces or consumes it; then it moves to genx | (Claude) |
+| D6 | Pipeline | Two producers (`handlers gen`, `handlers openapi`) write `routes/v1`; trivial generators `routes`, `labels` and `permissions` read it | (Claude), accepted with the plan on 2026-11-18 (ADR 0001) |
+| D7 | Domain owner | `routes/v1` lives in this repository (schema and conformance files) until a second package produces or consumes it; then it moves to genx | (Claude), accepted with the plan on 2026-11-18 (ADR 0001) |
 | D8 | Router | `net/http` `ServeMux` patterns, as auth's D21. No third-party router | (Claude) |
 | D9 | Handler shape | `func (h *H) X(w http.ResponseWriter, r *http.Request, <params>) error`; parameters come from the signature | (Claude) |
-| D10 | Route meta | None. A generated route table replaces the protobuf meta: search joins `route.*` labels to it by key (§9). genx needs no `meta` on `labels/v1` | (Claude), explained to epistemer on 2026-11-18 |
+| D10 | Route meta | None. A generated route table replaces the protobuf meta: search joins `route.*` labels to it by key (§9). genx needs no `meta` on `labels/v1` | (Claude), explained to epistemer and accepted with the plan on 2026-11-18 (ADR 0001) |
 | D11 | Auth levels | `public`, `session`, `unverified`, and the default: the route's permission at `Verified`. zp's `root` is dropped: `access.Root` already holds every permission | epistemer (2026-11-18) |
 | D12 | Fail closed | The route is in the context before the guard. `Register` panics when a guarded route has no guard, and the guard refuses a permission that isn't declared | (Claude) |
 | D13 | API server | Chosen by spike S2 among ogen, oapi-codegen's strict `std-http` server, and oapi-codegen's types with this package's own `routes` template | (Claude), spike |
@@ -112,32 +112,37 @@ func (h *H) Category(w http.ResponseWriter, r *http.Request, id int64) error {
 | `key` | `[a-z0-9_]+(\.[a-z0-9_]+)*` | required |
 | `method` | `GET POST PUT PATCH DELETE` (any case) | required |
 | `path` | a `ServeMux` path; its wildcards must match the signature's parameters | required |
-| `desc` | free text, one line | the key made readable, with a warning |
-| `auth` | `public session unverified` | the route's permission at `Verified` |
+| `desc` | free text, one line, not empty | the key made readable, with a warning |
+| `auth` | `public`, `session` (signed in, no permission), `unverified` (the route's permission, declared at `auth.Unverified`) | the route's permission at `auth.Verified` |
 | `perm` | a permission key | the route key |
-| `view`, `search` | none | off |
+| `view`, `search` | none: a value is an error | off |
 | `entity` | another route's key | none |
 | `param` | `<name> label <text>` | the parameter's name made readable |
 
+A route's parameters keep the handler signature's order.
+
 ### 5.3 Diagnostics
 
-Every diagnostic has a position (`file:line:col`, as `go vet` prints) and a stable message, tested word for word.
+Every diagnostic has a position (`file:line:col`, as `go vet` prints) and a stable message, tested word for word. The engine scans every comment of a file, not only the doc comments of functions, so a block of directives a blank line away from its function is an error, not lost.
 
 **Errors** (the producer writes nothing):
 - an unknown directive, or a near-miss (`// h:`, `//H:`, `//h key`, `//p[...]`), with the fix;
-- a directive given twice on one handler, or a bad value;
+- a directive given twice on one handler, or a bad value (a value on a flag, an empty `desc`);
+- a block of directives that isn't the doc comment of a function;
 - a missing `key`, `method` or `path`;
 - a duplicate key, or a duplicate method and pattern;
-- two patterns `ServeMux` would refuse as conflicting;
+- a pattern `ServeMux` refuses, or two it would refuse as conflicting. The engine registers every pattern into a scratch `ServeMux` and turns its panic into the diagnostic, so it agrees with Go's rules (partial-segment wildcards, a wildcard named twice, conflicts) by construction. `handlers vet` given several packages checks their patterns together;
 - a wildcard without a parameter, or a parameter without a wildcard;
-- a parameter type the binder can't parse (supported: strings, integers, booleans, named types over them, and `encoding.TextUnmarshaler`);
+- a parameter type the binder can't parse. Supported: strings, integers, booleans, named types over them, and types whose pointer implements `encoding.TextUnmarshaler` and whose value implements `encoding.TextMarshaler`, so URL builders can format them;
+- a parameter type declared in the handler's own package, which would make the generated package import it (§6);
 - `entity` or `param` naming something that doesn't exist;
+- `perm` on a route whose `auth` is `public` or `session`;
 - a directive on a function that isn't a handler (wrong signature, unexported, not a method).
 
 **Warnings** (on stderr; `-strict` turns them into errors, for CI):
 - a missing `desc`;
-- a key in the committed `routes/v1` file that is no longer declared: its translations and permission grants are orphaned;
-- `perm` naming a permission that only this route uses.
+- a route key, permission key or parameter label that the baseline has and the source no longer declares: its translations and permission grants are orphaned. The baseline is the committed `routes/v1` file, or with `-baseline <git ref>` that file at the ref, which is how CI sees a removal the developer already regenerated;
+- `perm` naming a permission that only this route uses (often a typo).
 
 ## 6. `routes/v1`
 
@@ -148,22 +153,26 @@ A sketch; the schema is M1.4's.
   "domain": "routes/v1",
   "producer": "handlers",
   "package": {"name": "adminroutes", "dir": "internal/admin/adminroutes"},
-  "handler": {"import": "example.com/shop/internal/admin", "type": "H"},
   "surface": "html",
   "prefix": "/admin",
   "routes": [{
     "key": "categories.profile", "method": "GET", "pattern": "/categories/{id}",
-    "name": "Category", "text": "Category detail",
+    "name": "Category", "var": "L10nCategory", "text": "Category detail",
     "auth": "permission", "permission": "categories.manage",
     "view": false, "search": false, "entity": "categories.search",
-    "params": [{"name": "id", "go": "id", "type": "int64", "parse": "int", "label": "Category ID"}]
-  }]
+    "params": [{"name": "id", "go": "id", "var": "L10nCategoryID",
+                "type": "int64", "import": "", "parse": "int", "kind": "segment",
+                "label": "Category ID"}]
+  }],
+  "permissions": [{"key": "categories.manage", "var": "PermCategoriesManage",
+                   "text": "Manage categories", "level": "verified"}]
 }
 ```
 
-- Producers resolve every Go name (`name`, `go`, the types) and give string literals as JSON, which is valid Go: templates only render (genx ADR 0001 §7).
-- The generated code goes into its own package, as zp's did, so templates can import the URL builders without importing the handlers.
-- Within a major version, fields are only added.
+- Producers resolve every Go name (`name`, `var`, `go`, the types and their `import` paths) and every derived value: the deduplicated `permissions` with their text and level, a parameter's `kind` (`segment` or `rest` for `{path...}`). Templates only render (genx ADR 0001 §7).
+- Templates write every string literal with the built-in `printf "%q"`, which always gives valid Go. JSON escaping isn't relied on.
+- The generated package never imports the handler package: `Register` takes the `Handler` interface, and parameter types from the handler's package are refused (§5.3). An app that wants the compile-time check writes `var _ adminroutes.Handler = (*H)(nil)` in the handler package.
+- Within a major version, fields are only added. A generator, `Register` and every `Guard` fail closed on an `auth` or `surface` value they don't know: they error or panic, never fall through to a default.
 
 ## 7. Generated Go (`routes`)
 
@@ -188,6 +197,10 @@ func ByKey(key string) (handlers.Route, bool)
 
 - A parameter that doesn't parse is `handlers.ErrBadParam` (kind `Invalid`, 400).
 - A handler's error goes to the error writer (D14).
+- The pattern `/` under a prefix is registered as `{$}`, so it doesn't catch the whole subtree.
+- `Register` adds a catch-all under the prefix, so an unknown path (404) or a known path with another method (405, with `Allow`) is answered by the error writer in the surface's format, not by `ServeMux`'s plain text.
+- URL builders escape a `segment` parameter with `url.PathEscape` and a `rest` parameter segment by segment, keeping its slashes.
+- The full runtime API (`Guard`, `Option`, the context helper, binding helpers, error-writer options) is written at the freeze.
 
 ## 8. Permissions (`permissions`)
 
@@ -196,50 +209,51 @@ package adminroutes
 
 var (
 	PermCategoriesManage = access.Permission("categories.manage", "Manage categories")
-	PermOrdersRefund     = access.Permission("orders.refund", "Refund orders", auth.Verified)
+	PermOrdersRefund     = access.Permission("orders.refund", "Refund orders", auth.Unverified)
 )
 ```
 
-- One permission per guarded route, keyed by the route key, with the route's text and the level its `auth` names.
-- `//h:perm` lets routes share one permission, such as a form page and the action it posts to. A shared permission's text is the first route's `desc` unless the routes agree on another. Census S1 counts the page/action pairs and decides whether pairing is the default.
-- `access.Permission` registers the i18n key `permission.<key>` itself, so these texts aren't in the labels file.
+- One permission per guarded route, keyed by the route key, with the route's text. `unverified` declares it at `auth.Unverified`; the default is `auth.Verified`.
+- `//h:perm` lets routes share one permission, such as a form page and the action it posts to. The producer resolves its text: the first route's `desc` unless the routes agree on another. Census S1 counts the page/action pairs and decides whether pairing is the default.
+- The generator reads every `routes/v1` file of the app together and stops with an error when two packages declare one permission key, instead of leaving it to `access.Permission`'s panic at startup.
+- `access.Permission` registers the i18n key `permission.<key>` itself, so permission texts are the one generated text that isn't in a labels file. auth owns that key, and declaring through it is how auth's permissions are declared.
 - `authguard.New(a *auth.Auth, ac *access.Access) handlers.Guard`:
-  - `public`: no guard;
-  - `session`: `a.Require()`;
-  - `unverified`: `a.Require(auth.Unverified)`;
-  - a permission: `a.Require(ac.Can(p))`, which also enforces the permission's level (auth A18).
+  - `public`: no check;
+  - `session`: `a.Check(ctx)`, a verified session;
+  - a permission: `a.Check(ctx, ac.Can(p))`, which also enforces the permission's level (auth A18).
 
-  It finds `p` by key among `access.Permissions()`. A key that isn't declared stops `Register`.
-- `handlerstest` asserts that every non-public route of a table is guarded and that every permission it names is declared.
+  It uses `Check` rather than `Require`'s middleware, so a refusal (401 or 403) goes through handlers' error writer and gets the surface's format: an HTML page or the JSON envelope. It finds `p` by key among `access.Permissions()`. A key that isn't declared stops `Register`.
+- The app wraps the mux with `a.Load(...)`, as auth requires, so `Check` finds the session in the context.
+- `Guard` also admits routes for a request in bulk: `Admit(r *http.Request) (func(handlers.Route) bool, error)` reads the session once and checks each distinct permission at most once, memoized (`ac.Check`, one bbolt read each). `Search` uses it. If M2.6's benchmark shows those reads matter, a bulk read of a user's permissions is an amendment to ask of auth.
+- `handlerstest` gives a fake guard, and asserts that every non-public route of a table is guarded and that every permission it names is declared.
 
 ## 9. Labels and search
 
 - `labels` emits `labels/v1`:
   - `route.<key>`, with the route's text and variable `L10n<Name>`;
-  - `route_param.<key>.<param>`, with the parameter's label and variable `L10n<Name><Param>`.
+  - `route_param.<key>.<param>`, with the parameter's label and its variable.
 
-  i18n's `labels` generator writes the Go. There is no `meta`.
-- `handlers.Search(tr, code, table, q)` runs one `tr.Search` over the prefix `route.` with `Contains` set to the query. Its `Match` looks each key up in the generated table and keeps the routes the query asks for (searchable, view, entity) that the guard admits for the request.
-- **Cost.** `Search` walks the prefix in one bbolt read transaction and unmarshals each catalog entry; that walk is the same with or without meta and dominates. zp's way added a protobuf decode per entry. The table lookup is a Go map access of tens of nanoseconds, so the join costs less than the decode. M2.6 benchmarks it on 300 routes.
+  The producer resolves both variable names. i18n's `labels` generator writes the Go. There is no `meta`.
+- `handlers.Search(r, g, tr, code, table, q)` calls `g.Admit(r)` once, then runs one `tr.Search` over the prefix `route.` with `Contains` set to the query. Its `Match` looks each key up in the generated table and keeps the routes the query asks for (searchable, view, entity) that the admit check passes.
+- **Cost.** `tr.Search` walks the prefix in one bbolt read transaction and unmarshals each catalog entry; that walk is the same with or without meta and dominates. zp's way added a protobuf decode per entry. Here each entry costs a map lookup in the table and a memoized permission check, and the session is read once per query. M2.6 benchmarks the whole call, admit check included, on 300 routes: under 1 ms on the development machine.
 
 ## 10. The API
 
-- One committed `openapi.yaml`. `servers[0].url` gives the mount prefix (`/api/v1`), and the server is mounted with it: no text substitution.
+- One committed `openapi.yaml`. The mount prefix is the path of `servers[0].url`, parsed as a URL (`https://host/api/v1` and `/api/v1` both give `/api/v1`; no `servers` gives none). No text substitution.
+- The OpenAPI version is pinned by S2: 3.0 is the baseline, 3.1 if the chosen generator supports it.
 - `handlers openapi` reads the spec and writes `routes/v1` with `surface: json`. It checks that:
   - every operation has a unique `operationId`;
   - every security requirement names a declared scheme;
   - every `x-permission` is a valid key;
   - every operation's error responses use the spec's `Error` schema, `{code, message}`.
-- Guards come from the spec:
-  - `security: []` is `public`;
-  - a bearer scheme is `session`;
-  - `x-permission: <key>` names the permission, whose default is the route key.
-
-  The route key is `x-route-key` or else the `operationId` made dotted (`placeOrder` → `place_order`), with a prefix the producer is given (`api.`).
+- Guards come from the spec, failing closed:
+  - an operation's own `security`, else the spec's top-level `security`; an operation with neither is an error;
+  - `security: []` is `public`, and `x-permission` beside it is an error;
+  - a bearer scheme is the route's permission: `x-permission: <key>`, defaulting to the route key. `x-auth: session` opts out to a signed-in session with no permission.
+- The route key is `x-route-key`, else derived from the `operationId`: split at case changes (a run of capitals is one word: `getUserID` → `get_user_id`), at `-` and `_`, lowercased and joined with `_`, then prefixed with what the producer is given (`api.`). Two operations deriving one key is an error. An `operationId` is already the API's public name, so tying the key to it adds no new churn; `x-route-key` pins a key across a rename.
 - The typed server comes from the generator spike S2 picks; that spike also decides whether `routes` renders the API's registration too. Whatever wins, the server must:
-  - run on `net/http`;
+  - run on `net/http`, with **one path matcher**: each operation registered on the app's `ServeMux` with the route-into-context, guard and error-writer chain, or found from `r.Pattern` before the guard. A second router behind the mux would let the two disagree on paths;
   - send errors through D14's JSON writer;
-  - run the guard from the route table;
   - validate requests against the spec;
   - map money to a decimal type;
   - accept multipart bodies.
@@ -251,19 +265,22 @@ var (
 | Path | What |
 |---|---|
 | `cmd/handlers lsp` | A language server over the rule engine: diagnostics as you type, completion of directives, values and parameter names, hover with the directive's doc, go to definition for `entity` keys |
-| `dev/vscode` | zp's extension (TextMate grammar and completions), imported with `git subtree` to keep its history and renamed. It becomes a thin client of `handlers lsp`; its completions move into the server, so the two can't drift. CI builds the `.vsix` as an artifact, never committed |
-| `dev/claude-plugin` | A Claude Code plugin: `.lsp.json` runs `handlers lsp` on `.go` files, so Claude sees diagnostics after each edit; `hooks/hooks.json` has a PostToolUse hook on `Edit\|Write` that runs `handlers vet` on the edited file and answers `{"decision": "block", "reason": …}` when it fails, which shows the faults beside the edit without undoing it; `skills/handlers/` is the package's skill. `.claude-plugin/marketplace.json` at the repository root, with a `git-subdir` source, makes it installable with `claude plugin install handlers@epistemer-handlers` |
+| `dev/vscode` | zp's extension (TextMate grammar and completions), copied without its history and renamed. It becomes a thin client of `handlers lsp`; its completions move into the server, so the two can't drift. CI builds the `.vsix` as an artifact, never committed |
+| `dev/claude-plugin` | A Claude Code plugin: `.lsp.json` runs `handlers lsp` on `.go` files, so Claude sees diagnostics after each edit; `hooks/hooks.json` has a PostToolUse hook on `Edit\|Write` that runs `handlers vet` on the edited file's package and answers `{"decision": "block", "reason": …}` when it fails, which shows the faults beside the edit without undoing it; from M6.2, `skills/handlers/` is the package's skill. `.claude-plugin/marketplace.json` at the repository root, with a `git-subdir` source, makes it installable with `claude plugin install handlers@epistemer-handlers` |
 | `dev/gemini-extension` | A Gemini CLI extension with the same `vet` hook and a context file, for work delegated to agy |
 
-Whether a second language server can attach to `.go` beside gopls in Claude Code is unverified; S3 tests it, and if it can't, the hook carries the checks alone.
+- The engine has two passes. The syntax pass reads only the AST: grammar, values, duplicates, wildcards against parameter names, patterns, `entity`. It runs on every change, also on a buffer that doesn't compile. The type pass type-checks the package for parameter types; the language server runs it on save, debounced and cached.
+- Whether a second language server can attach to `.go` beside gopls in Claude Code is unverified; S3 tests it, and if it can't, the hook carries the checks alone.
 
 ## 12. Tests
 
 - Each generator is golden-tested with `genxtest.Render` and `RenderParams`. A second run gives the same bytes, and every labels file passes genx's conformance files.
 - Every diagnostic has a test with its exact message. zp's real faults are rebuilt in a toy package: a duplicate key, a gofmt'd `// p[...]`, a parameter whose name differs from its wildcard, two conflicting patterns.
+- Every module (the root, `authguard`, the nested test module, the example) runs its tests with the race detector in CI.
 - A nested test module compiles and vets the generated code, and checks with `httptest`:
   - a bad parameter gives 400;
-  - an unknown route gives 404 as HTML and as JSON;
+  - an unknown route gives 404 and a wrong method 405, as HTML and as JSON;
+  - a refusal from the guard gives 401 or 403 in the surface's format;
   - with `authtest`, a missing permission gives 403 and a granted one 200;
   - a public route needs no session;
   - `Register` without a guard panics.
@@ -291,9 +308,9 @@ Breadcrumbs from a `parent` directive; nav and menu metadata; API keys; a client
 |---|---|---|
 | A zp route shape the new grammar can't express, or a pattern `ServeMux` refuses | Medium / medium | S1 runs every route through the draft rules |
 | No OpenAPI generator meets §10 without patches | Low / high | S2's kill criterion: if none does, `routes` renders the API too, over oapi-codegen's types |
-| A language server on every keystroke is slow on a large package | Low / medium | S3 measures it on 200+ routes |
+| A language server on every keystroke is slow on a large package | Medium / medium | The syntax pass alone runs on change (§11); S3 measures both passes on 200+ routes |
 | Permission per route gives too many to manage | Medium / low | S1's count; `//h:perm`; groups in `auth/access` |
-| Key renames orphan grants and translations | Medium / high | D16's warning, and the committed `routes/v1` diff in review |
+| Key renames orphan grants and translations | Medium / high | D16's warning against a git baseline in CI, and the committed `routes/v1` diff in review |
 
 ## 16. Roadmap
 
