@@ -1,0 +1,34 @@
+{
+  "domain": "labels/v1",
+  "labels": [
+    {
+      "key": "route.root",
+      "path": "route.root",
+      "text": "Public root",
+      "var": "L10nRoot"
+    },
+    {
+      "key": "route.docs.page",
+      "path": "route.docs.page",
+      "text": "Documentation page",
+      "var": "L10nDocsPage"
+    },
+    {
+      "key": "route_param.docs.page.slug",
+      "path": "route_param.docs.page.slug",
+      "text": "Slug",
+      "var": "L10nDocsPageSlug"
+    },
+    {
+      "key": "route_param.docs.page.rest",
+      "path": "route_param.docs.page.rest",
+      "text": "Subpath",
+      "var": "L10nDocsPageRest"
+    }
+  ],
+  "package": {
+    "dir": ".",
+    "name": "pubroutes"
+  },
+  "producer": "handlers"
+}

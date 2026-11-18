@@ -1,0 +1,145 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "internal/shop",
+  "package": {
+    "name": "shoproutes",
+    "dir": "internal/shop/shoproutes"
+  },
+  "surface": "html",
+  "prefix": "/shop",
+  "routes": [
+    {
+      "key": "home",
+      "method": "GET",
+      "pattern": "/",
+      "name": "Home",
+      "var": "L10nHome",
+      "text": "Shop home",
+      "auth": "public",
+      "view": true,
+      "search": false,
+      "params": []
+    },
+    {
+      "key": "orders.list",
+      "method": "GET",
+      "pattern": "/orders",
+      "name": "OrdersList",
+      "var": "L10nOrdersList",
+      "text": "List orders",
+      "auth": "session",
+      "view": true,
+      "search": true,
+      "params": []
+    },
+    {
+      "key": "orders.detail",
+      "method": "GET",
+      "pattern": "/orders/{id}",
+      "name": "OrderDetail",
+      "var": "L10nOrderDetail",
+      "text": "Order detail",
+      "auth": "permission",
+      "permission": "orders.manage",
+      "view": false,
+      "search": false,
+      "entity": "orders.list",
+      "params": [
+        {
+          "name": "id",
+          "go": "id",
+          "var": "L10nOrderDetailId",
+          "type": "shop.OrderID",
+          "import": "example.com/shop/internal/shop",
+          "alias": "shop",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Order ID"
+        }
+      ]
+    },
+    {
+      "key": "orders.cancel",
+      "method": "POST",
+      "pattern": "/orders/{id}/cancel",
+      "name": "OrderCancel",
+      "var": "L10nOrderCancel",
+      "text": "Cancel order",
+      "auth": "permission",
+      "permission": "orders.manage",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "id",
+          "var": "L10nOrderCancelId",
+          "type": "shop.OrderID",
+          "import": "example.com/shop/internal/shop",
+          "alias": "shop",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Order ID"
+        }
+      ]
+    },
+    {
+      "key": "files.serve",
+      "method": "GET",
+      "pattern": "/files/{path...}",
+      "name": "FilesServe",
+      "var": "L10nFilesServe",
+      "text": "Serve files",
+      "auth": "public",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "path",
+          "go": "path",
+          "var": "L10nFilesServePath",
+          "type": "string",
+          "import": "",
+          "parse": "string",
+          "kind": "rest",
+          "label": "File path"
+        }
+      ]
+    },
+    {
+      "key": "items.kinds",
+      "method": "PUT",
+      "pattern": "/kinds/{s}/{b}/{t}/{i}/{i8}/{i16}/{i32}/{i64}/{u}/{u8}/{u16}/{u32}/{u64}",
+      "name": "ItemsKinds",
+      "var": "L10nItemsKinds",
+      "text": "Every parse kind",
+      "auth": "session",
+      "view": false,
+      "search": false,
+      "params": [
+        {"name": "s", "go": "s", "var": "L10nItemsKindsS", "type": "string", "import": "", "parse": "string", "kind": "segment", "label": "S"},
+        {"name": "b", "go": "b", "var": "L10nItemsKindsB", "type": "bool", "import": "", "parse": "bool", "kind": "segment", "label": "B"},
+        {"name": "t", "go": "t", "var": "L10nItemsKindsT", "type": "ids.Token", "import": "example.com/shop/ids", "alias": "ids", "parse": "text", "kind": "segment", "label": "T"},
+        {"name": "i", "go": "i", "var": "L10nItemsKindsI", "type": "int", "import": "", "parse": "int", "kind": "segment", "label": "I"},
+        {"name": "i8", "go": "i8", "var": "L10nItemsKindsI8", "type": "int8", "import": "", "parse": "int8", "kind": "segment", "label": "I8"},
+        {"name": "i16", "go": "i16", "var": "L10nItemsKindsI16", "type": "int16", "import": "", "parse": "int16", "kind": "segment", "label": "I16"},
+        {"name": "i32", "go": "i32", "var": "L10nItemsKindsI32", "type": "int32", "import": "", "parse": "int32", "kind": "segment", "label": "I32"},
+        {"name": "i64", "go": "i64", "var": "L10nItemsKindsI64", "type": "int64", "import": "", "parse": "int64", "kind": "segment", "label": "I64"},
+        {"name": "u", "go": "u", "var": "L10nItemsKindsU", "type": "uint", "import": "", "parse": "uint", "kind": "segment", "label": "U"},
+        {"name": "u8", "go": "u8", "var": "L10nItemsKindsU8", "type": "uint8", "import": "", "parse": "uint8", "kind": "segment", "label": "U8"},
+        {"name": "u16", "go": "u16", "var": "L10nItemsKindsU16", "type": "uint16", "import": "", "parse": "uint16", "kind": "segment", "label": "U16"},
+        {"name": "u32", "go": "u32", "var": "L10nItemsKindsU32", "type": "uint32", "import": "", "parse": "uint32", "kind": "segment", "label": "U32"},
+        {"name": "u64", "go": "u64", "var": "L10nItemsKindsU64", "type": "uint64", "import": "", "parse": "uint64", "kind": "segment", "label": "U64"}
+      ]
+    }
+  ],
+  "permissions": [
+    {
+      "key": "orders.manage",
+      "var": "PermOrdersManage",
+      "text": "Manage orders",
+      "level": "verified"
+    }
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "admin",
+  "package": {
+    "name": "adminroutes",
+    "dir": "adminroutes"
+  },
+  "surface": "html",
+  "prefix": "/admin",
+  "routes": [
+    {
+      "key": "dashboard",
+      "method": "GET",
+      "pattern": "/",
+      "name": "Dashboard",
+      "var": "L10nDashboard",
+      "text": "Dashboard",
+      "auth": "public",
+      "view": true,
+      "search": false,
+      "params": []
+    },
+    {
+      "key": "orders.list",
+      "method": "GET",
+      "pattern": "/orders",
+      "name": "Orders",
+      "var": "L10nOrders",
+      "text": "List orders",
+      "auth": "session",
+      "view": true,
+      "search": true,
+      "params": []
+    },
+    {
+      "key": "orders.detail",
+      "method": "GET",
+      "pattern": "/orders/{id}/{tok}",
+      "name": "Order",
+      "var": "L10nOrder",
+      "text": "Order detail",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "id",
+          "var": "L10nOrderId",
+          "type": "ids.OrderID",
+          "import": "app/ids",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Order ID",
+          "alias": "ids"
+        },
+        {
+          "name": "tok",
+          "go": "tok",
+          "var": "L10nOrderTok",
+          "type": "ids.Token",
+          "import": "app/ids",
+          "parse": "text",
+          "kind": "segment",
+          "label": "Access token",
+          "alias": "ids"
+        }
+      ],
+      "permission": "orders.manage",
+      "entity": "orders.list"
+    },
+    {
+      "key": "orders.cancel",
+      "method": "POST",
+      "pattern": "/orders/{id}/cancel",
+      "name": "OrderCancel",
+      "var": "L10nOrderCancel",
+      "text": "Cancel order",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "id",
+          "var": "L10nOrderCancelId",
+          "type": "ids.OrderID",
+          "import": "app/ids",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Order ID",
+          "alias": "ids"
+        }
+      ],
+      "permission": "orders.manage"
+    },
+    {
+      "key": "files.serve",
+      "method": "GET",
+      "pattern": "/files/{path...}",
+      "name": "Files",
+      "var": "L10nFiles",
+      "text": "Serve files",
+      "auth": "public",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "path",
+          "go": "path",
+          "var": "L10nFilesPath",
+          "type": "string",
+          "import": "",
+          "parse": "string",
+          "kind": "rest",
+          "label": "File path"
+        }
+      ]
+    },
+    {
+      "key": "flags.set",
+      "method": "POST",
+      "pattern": "/flags/{ok}/{n}",
+      "name": "Flags",
+      "var": "L10nFlags",
+      "text": "Set flags",
+      "auth": "session",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "ok",
+          "go": "ok",
+          "var": "L10nFlagsOk",
+          "type": "bool",
+          "import": "",
+          "parse": "bool",
+          "kind": "segment",
+          "label": "Enabled"
+        },
+        {
+          "name": "n",
+          "go": "n",
+          "var": "L10nFlagsN",
+          "type": "uint16",
+          "import": "",
+          "parse": "uint16",
+          "kind": "segment",
+          "label": "Count"
+        }
+      ]
+    }
+  ],
+  "permissions": [
+    {
+      "key": "orders.manage",
+      "var": "PermOrdersManage",
+      "text": "Orders Manage",
+      "level": "verified"
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "pub",
+  "package": {
+    "name": "pubroutes",
+    "dir": "."
+  },
+  "surface": "html",
+  "prefix": "",
+  "routes": [
+    {
+      "key": "root",
+      "method": "GET",
+      "pattern": "/",
+      "name": "Root",
+      "var": "L10nRoot",
+      "text": "Public root",
+      "auth": "public",
+      "view": true,
+      "search": false,
+      "params": []
+    },
+    {
+      "key": "docs.page",
+      "method": "GET",
+      "pattern": "/docs/{slug}/{rest...}",
+      "name": "DocsPage",
+      "var": "L10nDocsPage",
+      "text": "Documentation page",
+      "auth": "public",
+      "view": true,
+      "search": true,
+      "params": [
+        {
+          "name": "slug",
+          "go": "slug",
+          "var": "L10nDocsPageSlug",
+          "type": "string",
+          "import": "",
+          "parse": "string",
+          "kind": "segment",
+          "label": "Slug"
+        },
+        {
+          "name": "rest",
+          "go": "rest",
+          "var": "L10nDocsPageRest",
+          "type": "string",
+          "import": "",
+          "parse": "string",
+          "kind": "rest",
+          "label": "Subpath"
+        }
+      ]
+    }
+  ],
+  "permissions": []
+}

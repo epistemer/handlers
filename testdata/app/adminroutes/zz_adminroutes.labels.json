@@ -1,0 +1,82 @@
+{
+  "domain": "labels/v1",
+  "labels": [
+    {
+      "key": "route.dashboard",
+      "path": "route.dashboard",
+      "text": "Dashboard",
+      "var": "L10nDashboard"
+    },
+    {
+      "key": "route.orders.list",
+      "path": "route.orders.list",
+      "text": "List orders",
+      "var": "L10nOrders"
+    },
+    {
+      "key": "route.orders.detail",
+      "path": "route.orders.detail",
+      "text": "Order detail",
+      "var": "L10nOrder"
+    },
+    {
+      "key": "route_param.orders.detail.id",
+      "path": "route_param.orders.detail.id",
+      "text": "Order ID",
+      "var": "L10nOrderId"
+    },
+    {
+      "key": "route_param.orders.detail.tok",
+      "path": "route_param.orders.detail.tok",
+      "text": "Access token",
+      "var": "L10nOrderTok"
+    },
+    {
+      "key": "route.orders.cancel",
+      "path": "route.orders.cancel",
+      "text": "Cancel order",
+      "var": "L10nOrderCancel"
+    },
+    {
+      "key": "route_param.orders.cancel.id",
+      "path": "route_param.orders.cancel.id",
+      "text": "Order ID",
+      "var": "L10nOrderCancelId"
+    },
+    {
+      "key": "route.files.serve",
+      "path": "route.files.serve",
+      "text": "Serve files",
+      "var": "L10nFiles"
+    },
+    {
+      "key": "route_param.files.serve.path",
+      "path": "route_param.files.serve.path",
+      "text": "File path",
+      "var": "L10nFilesPath"
+    },
+    {
+      "key": "route.flags.set",
+      "path": "route.flags.set",
+      "text": "Set flags",
+      "var": "L10nFlags"
+    },
+    {
+      "key": "route_param.flags.set.ok",
+      "path": "route_param.flags.set.ok",
+      "text": "Enabled",
+      "var": "L10nFlagsOk"
+    },
+    {
+      "key": "route_param.flags.set.n",
+      "path": "route_param.flags.set.n",
+      "text": "Count",
+      "var": "L10nFlagsN"
+    }
+  ],
+  "package": {
+    "dir": "adminroutes",
+    "name": "adminroutes"
+  },
+  "producer": "handlers"
+}

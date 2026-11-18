@@ -1,0 +1,28 @@
+{
+  "domain": "labels/v1",
+  "labels": [
+    {
+      "key": "route.products.list",
+      "path": "route.products.list",
+      "text": "List products",
+      "var": "L10nProductsList"
+    },
+    {
+      "key": "route.products.get",
+      "path": "route.products.get",
+      "text": "Get product",
+      "var": "L10nProductsGet"
+    },
+    {
+      "key": "route_param.products.get.id",
+      "path": "route_param.products.get.id",
+      "text": "Product ID",
+      "var": "L10nProductsGetId"
+    }
+  ],
+  "package": {
+    "dir": "internal/api/apiroutes",
+    "name": "apiroutes"
+  },
+  "producer": "handlers"
+}
