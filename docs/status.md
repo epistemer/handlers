@@ -44,8 +44,7 @@ taken for you, what's next, and what's waiting on you.
 - **Next:** M2, the admin surface: the rule engine and `handlers vet`
   (M2.1), the producer (M2.2), the generators (M2.3–M2.5), the runtime
   (M2.6).
-- **Waiting on you:** the interface's choices of mine, to confirm or
-  overturn (none blocks M2.1, the rule engine).
+- **Waiting on you:** nothing; you kept all ten defaults the same day.
 
 ## 2026-11-18: M1.4, the routes/v1 schema
 
