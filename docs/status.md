@@ -3,6 +3,24 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: v0.1.0
+
+- **Landed:** M5 and M6 (PR 13), with a fix found on Go 1.26: oapi-codegen
+  compresses its embedded spec differently per Go version, so the example
+  compares the decompressed spec. The tag `v0.1.0` on main (c0d6494);
+  `authguard`, `openapi` and `cmd` now require it with no `replace`, and once
+  that merges, the tags `authguard/v0.1.0`, `openapi/v0.1.0` and
+  `cmd/v0.1.0`. The skill `~/.claude/skills/handlers/` describes v0.1.0, and
+  your global CLAUDE.md names the release.
+- **Reviewed:** each piece by the other model family as it landed (Gemini
+  wrote, Claude reviewed), and the API review (docs/api-review.md) before
+  the tag; no separate release-wide review.
+- **Decided for you:** nothing new.
+- **Next:** the roadmap has no milestone after v0.1.0: its backlog
+  (breadcrumbs, menus, API keys, shared permissions, OpenAPI 3.1, generated
+  validators) waits for an app to ask, and v1.0.0 is your call.
+- **Waiting on you:** nothing.
+
 ## 2026-11-18: M5.2, zp's admin routes through handlers
 
 On a scratch copy: zp's 217 annotated handlers turned into stub methods

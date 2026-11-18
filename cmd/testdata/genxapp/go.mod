@@ -14,7 +14,7 @@ tool (
 require github.com/epistemer/genx v0.2.0
 
 require (
-	github.com/epistemer/handlers v0.0.0 // indirect
+	github.com/epistemer/handlers v0.1.0 // indirect
 	github.com/epistemer/handlers/cmd v0.0.0 // indirect
 	github.com/getkin/kin-openapi v0.153.0 // indirect
 	github.com/go-openapi/jsonpointer v0.22.5 // indirect
