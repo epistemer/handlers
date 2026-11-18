@@ -81,7 +81,8 @@ func Types(dir string, pkg *Package) ([]Diagnostic, error) {
 	recvPtr := types.NewPointer(recvObj.Type())
 
 	var diags []Diagnostic
-	for _, r := range pkg.Routes {
+	for ri := range pkg.Routes {
+		r := &pkg.Routes[ri]
 		if len(r.Params) == 0 {
 			continue
 		}
@@ -103,7 +104,8 @@ func Types(dir string, pkg *Package) ([]Diagnostic, error) {
 		}
 
 		sigParams := sig.Params()
-		for i, p := range r.Params {
+		for i := range r.Params {
+			p := &r.Params[i]
 			pt := sigParams.At(2 + i).Type()
 			typeName := types.TypeString(pt, types.RelativeTo(lpkg.Types))
 
@@ -123,7 +125,9 @@ func Types(dir string, pkg *Package) ([]Diagnostic, error) {
 						Severity: Error,
 						Message:  fmt.Sprintf("parameter %s: a {%s...} wildcard needs a string type", p.Name, restName),
 					})
+					continue
 				}
+				recordParamType(p, pt, lpkg.Types)
 				continue
 			}
 
@@ -133,12 +137,74 @@ func Types(dir string, pkg *Package) ([]Diagnostic, error) {
 					Severity: Error,
 					Message:  fmt.Sprintf("parameter %s: type %s can't be read from a path", p.Name, typeName),
 				})
+				continue
 			}
+
+			recordParamType(p, pt, lpkg.Types)
 		}
 	}
 
 	sortDiagnostics(diags)
 	return diags, nil
+}
+
+func recordParamType(p *Param, pt types.Type, pkg *types.Package) {
+	u := types.Unalias(pt)
+	switch t := u.(type) {
+	case *types.Named:
+		if obj := t.Obj(); obj != nil && obj.Pkg() != nil {
+			p.ImportPath = obj.Pkg().Path()
+			p.PkgName = obj.Pkg().Name()
+			p.TypeName = p.PkgName + "." + obj.Name()
+		} else {
+			p.TypeName = types.TypeString(pt, types.RelativeTo(pkg))
+		}
+	case *types.Basic:
+		p.ImportPath = ""
+		p.PkgName = ""
+		p.TypeName = t.Name()
+	default:
+		p.TypeName = types.TypeString(pt, types.RelativeTo(pkg))
+	}
+
+	if implementsTextCodec(pt) {
+		p.Parse = "text"
+		return
+	}
+	if b, ok := pt.Underlying().(*types.Basic); ok {
+		p.Parse = basicParseName(b.Kind())
+	}
+}
+
+func basicParseName(k types.BasicKind) string {
+	switch k {
+	case types.String:
+		return "string"
+	case types.Bool:
+		return "bool"
+	case types.Int:
+		return "int"
+	case types.Int8:
+		return "int8"
+	case types.Int16:
+		return "int16"
+	case types.Int32:
+		return "int32"
+	case types.Int64:
+		return "int64"
+	case types.Uint:
+		return "uint"
+	case types.Uint8:
+		return "uint8"
+	case types.Uint16:
+		return "uint16"
+	case types.Uint32:
+		return "uint32"
+	case types.Uint64:
+		return "uint64"
+	default:
+		return ""
+	}
 }
 
 func isDeclaredInPackage(t types.Type, pkg *types.Package) bool {

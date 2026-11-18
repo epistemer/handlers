@@ -3,6 +3,23 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M2.2, `handlers gen`
+
+- **Landed:** `handlers gen` writes `zz_<package>.routes.json` from a handler
+  package: names, aliases (numbered on a clash), integer widths and text
+  types from the type pass, permissions deduplicated with their text and
+  level, every file checked by `routesv1.Check`; `-check`, `-strict`, and the
+  removal warnings against the file on disk or a git ref. `vet` now reads
+  every committed routes file and compares keys, permissions and prefixed
+  patterns across packages, a vetted package standing in for its own file.
+  Golden files, and `genxtest.AssertGenerated` in a nested app module that
+  CI runs. Gemini 4 Hydrogen (Medium) wrote it from a spec (about 210k
+  tokens); Claude reviewed it.
+- **Decided for you:** `gen -strict` with warnings writes nothing, as
+  interface §5.1 says (the spec had said otherwise).
+- **Next:** M2.3–M2.5, the generators.
+- **Waiting on you:** nothing.
+
 ## 2026-11-18: M2.1, the rule engine and `handlers vet`
 
 - **Landed:** the command's module `cmd/` (golang.org/x/tools only), with

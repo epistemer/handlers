@@ -1,0 +1,26 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "admin",
+  "package": {
+    "name": "adminroutes",
+    "dir": "adminroutes"
+  },
+  "surface": "html",
+  "prefix": "/admin",
+  "routes": [
+    {
+      "key": "dashboard",
+      "method": "GET",
+      "pattern": "/",
+      "name": "Dashboard",
+      "var": "L10nDashboard",
+      "text": "Dashboard",
+      "auth": "public",
+      "view": true,
+      "search": false,
+      "params": []
+    }
+  ],
+  "permissions": []
+}

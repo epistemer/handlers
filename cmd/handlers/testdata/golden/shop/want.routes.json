@@ -1,0 +1,123 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "shop",
+  "package": {
+    "name": "shoproutes",
+    "dir": "shoproutes"
+  },
+  "surface": "html",
+  "prefix": "/admin",
+  "routes": [
+    {
+      "key": "categories.list",
+      "method": "GET",
+      "pattern": "/categories",
+      "name": "ListCategories",
+      "var": "L10nListCategories",
+      "text": "List categories",
+      "auth": "public",
+      "view": true,
+      "search": true,
+      "params": []
+    },
+    {
+      "key": "categories.profile",
+      "method": "GET",
+      "pattern": "/categories/{id}",
+      "name": "Category",
+      "var": "L10nCategory",
+      "text": "Category detail",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "id",
+          "var": "L10nCategoryId",
+          "type": "int64",
+          "import": "",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Category ID"
+        }
+      ],
+      "permission": "categories.manage",
+      "entity": "categories.list"
+    },
+    {
+      "key": "categories.update",
+      "method": "POST",
+      "pattern": "/categories/{id}/files/{rest...}",
+      "name": "UpdateCategoryFiles",
+      "var": "L10nUpdateCategoryFiles",
+      "text": "Update category files",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "id",
+          "var": "L10nUpdateCategoryFilesId",
+          "type": "int64",
+          "import": "",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Category ID"
+        },
+        {
+          "name": "rest",
+          "go": "rest",
+          "var": "L10nUpdateCategoryFilesRest",
+          "type": "string",
+          "import": "",
+          "parse": "string",
+          "kind": "rest",
+          "label": "File Path"
+        }
+      ],
+      "permission": "categories.manage"
+    },
+    {
+      "key": "session.me",
+      "method": "GET",
+      "pattern": "/me",
+      "name": "Me",
+      "var": "L10nMe",
+      "text": "Current session",
+      "auth": "session",
+      "view": false,
+      "search": false,
+      "params": []
+    },
+    {
+      "key": "auth.verify",
+      "method": "POST",
+      "pattern": "/verify",
+      "name": "Verify",
+      "var": "L10nVerify",
+      "text": "Verify account",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [],
+      "permission": "auth.verify"
+    }
+  ],
+  "permissions": [
+    {
+      "key": "categories.manage",
+      "var": "PermCategoriesManage",
+      "text": "Categories Manage",
+      "level": "verified"
+    },
+    {
+      "key": "auth.verify",
+      "var": "PermAuthVerify",
+      "text": "Verify account",
+      "level": "unverified"
+    }
+  ]
+}

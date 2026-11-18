@@ -147,3 +147,44 @@ func assertDiagnostics(t *testing.T, caseDir string, diags []directive.Diagnosti
 		}
 	}
 }
+
+func TestTypesParamInfo(t *testing.T) {
+	dir := filepath.Join("testdata", "types", "clean")
+	b, err := os.ReadFile(filepath.Join(dir, "handlers.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkg, diags := directive.Syntax(map[string][]byte{filepath.Join(dir, "handlers.go"): b})
+	if len(diags) != 0 {
+		t.Fatalf("unexpected syntax diags: %v", diags)
+	}
+	tDiags, err := directive.Types(dir, pkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tDiags) != 0 {
+		t.Fatalf("unexpected type diags: %v", tDiags)
+	}
+	if len(pkg.Routes) != 1 {
+		t.Fatalf("routes = %d, want 1", len(pkg.Routes))
+	}
+	want := []struct {
+		name, imp, pkgName, typeName, parse string
+	}{
+		{"id", "", "", "int64", "int64"},
+		{"flag", "", "", "bool", "bool"},
+		{"u", "", "", "uint32", "uint32"},
+		{"cid", "toy/ext", "ext", "ext.CustomID", "text"},
+		{"rest", "toy/ext", "ext", "ext.Slug", "string"},
+	}
+	got := pkg.Routes[0].Params
+	if len(got) != len(want) {
+		t.Fatalf("params = %d, want %d", len(got), len(want))
+	}
+	for i, w := range want {
+		p := got[i]
+		if p.Name != w.name || p.ImportPath != w.imp || p.PkgName != w.pkgName || p.TypeName != w.typeName || p.Parse != w.parse {
+			t.Errorf("param[%d] = %+v, want %+v", i, p, w)
+		}
+	}
+}

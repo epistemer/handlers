@@ -1,0 +1,87 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "clean",
+  "package": {
+    "name": "cleanroutes",
+    "dir": "cleanroutes"
+  },
+  "surface": "html",
+  "prefix": "",
+  "routes": [
+    {
+      "key": "items.show",
+      "method": "GET",
+      "pattern": "/items/{id}/{flag}/{u}/{cid}/{rest...}",
+      "name": "Show",
+      "var": "L10nShow",
+      "text": "Show",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "id",
+          "var": "L10nShowId",
+          "type": "int64",
+          "import": "",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Id"
+        },
+        {
+          "name": "flag",
+          "go": "flag",
+          "var": "L10nShowFlag",
+          "type": "bool",
+          "import": "",
+          "parse": "bool",
+          "kind": "segment",
+          "label": "Flag"
+        },
+        {
+          "name": "u",
+          "go": "u",
+          "var": "L10nShowU",
+          "type": "uint32",
+          "import": "",
+          "parse": "uint32",
+          "kind": "segment",
+          "label": "U"
+        },
+        {
+          "name": "cid",
+          "go": "cid",
+          "var": "L10nShowCid",
+          "type": "ext.CustomID",
+          "import": "toy/ext",
+          "parse": "text",
+          "kind": "segment",
+          "label": "Cid",
+          "alias": "ext"
+        },
+        {
+          "name": "rest",
+          "go": "rest",
+          "var": "L10nShowRest",
+          "type": "ext.Slug",
+          "import": "toy/ext",
+          "parse": "string",
+          "kind": "rest",
+          "label": "Rest",
+          "alias": "ext"
+        }
+      ],
+      "permission": "items.show"
+    }
+  ],
+  "permissions": [
+    {
+      "key": "items.show",
+      "var": "PermItemsShow",
+      "text": "Show",
+      "level": "verified"
+    }
+  ]
+}

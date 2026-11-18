@@ -29,7 +29,9 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	switch sub {
 	case "vet":
 		return runVet(args[1:], stdin, stdout, stderr)
-	case "gen", "openapi", "lsp":
+	case "gen":
+		return runGen(args[1:], stdout, stderr)
+	case "openapi", "lsp":
 		fmt.Fprintf(stderr, "handlers: %s is not implemented yet\n", sub)
 		return 2
 	default:
@@ -43,7 +45,7 @@ func runVet(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	strict := fs.Bool("strict", false, "treat warnings as errors")
 	hook := fs.Bool("hook", false, "run as a Claude Code PostToolUse hook")
-	_ = fs.String("baseline", "", "git ref baseline (ignored in M2.1)")
+	baseline := fs.String("baseline", "", "git ref baseline for removal warnings")
 
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -66,14 +68,39 @@ func runVet(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 
 	var allDiags []directive.Diagnostic
+	var vetted []vettedPkg
 	for _, dir := range dirs {
-		diags, err := checkPackageDir(dir)
+		pkg, diags, err := analyzePackageDir(dir)
 		if err != nil {
 			fmt.Fprintf(stderr, "handlers vet: %v\n", err)
 			return 1
 		}
 		allDiags = append(allDiags, diags...)
+		vetted = append(vetted, vettedPkg{
+			dir: dir,
+			pkg: pkg,
+		})
 	}
+
+	var fallback string
+	if len(dirs) > 0 {
+		fallback = dirs[0]
+	}
+	if modRoot, err := findModuleRootFromCwdOr(fallback); err == nil {
+		for i := range vetted {
+			if rel, err := relSlash(modRoot, vetted[i].dir); err == nil {
+				vetted[i].relDir = rel
+			}
+		}
+		crossDiags, err := crossVet(modRoot, vetted, *baseline)
+		if err != nil {
+			fmt.Fprintf(stderr, "handlers vet: %v\n", err)
+			return 1
+		}
+		allDiags = append(allDiags, crossDiags...)
+	}
+
+	sortDiags(allDiags)
 
 	hasFail := false
 	for _, d := range allDiags {
@@ -181,9 +208,14 @@ func expandPackages(patterns []string) ([]string, error) {
 }
 
 func checkPackageDir(dir string) ([]directive.Diagnostic, error) {
+	_, diags, err := analyzePackageDir(dir)
+	return diags, err
+}
+
+func analyzePackageDir(dir string) (*directive.Package, []directive.Diagnostic, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	files := make(map[string][]byte)
 	for _, entry := range entries {
@@ -200,23 +232,28 @@ func checkPackageDir(dir string) ([]directive.Diagnostic, error) {
 		}
 		b, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		files[filepath.Join(dir, name)] = b
 	}
 
 	if len(files) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	pkg, diags := directive.Syntax(files)
 	if len(pkg.Routes) > 0 {
 		tDiags, err := directive.Types(dir, pkg)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		diags = append(diags, tDiags...)
 	}
+	sortDiags(diags)
+	return pkg, diags, nil
+}
+
+func sortDiags(diags []directive.Diagnostic) {
 	sort.Slice(diags, func(i, j int) bool {
 		a, b := diags[i], diags[j]
 		if a.Pos.Filename != b.Pos.Filename {
@@ -230,5 +267,4 @@ func checkPackageDir(dir string) ([]directive.Diagnostic, error) {
 		}
 		return a.Message < b.Message
 	})
-	return diags, nil
 }
