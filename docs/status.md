@@ -8,9 +8,9 @@ taken for you, what's next, and what's waiting on you.
 - **Landed:** M5 and M6 (PR 13), with a fix found on Go 1.26: oapi-codegen
   compresses its embedded spec differently per Go version, so the example
   compares the decompressed spec. The tag `v0.1.0` on main (c0d6494);
-  `authguard`, `openapi` and `cmd` now require it with no `replace`, and once
-  that merges, the tags `authguard/v0.1.0`, `openapi/v0.1.0` and
-  `cmd/v0.1.0`. The skill `~/.claude/skills/handlers/` describes v0.1.0, and
+  `authguard`, `openapi` and `cmd` require it with no `replace` (PR 14),
+  tagged `authguard/v0.1.0`, `openapi/v0.1.0` and `cmd/v0.1.0` (52f4f1d). A
+  fresh module fetches all four from the proxy and runs `go tool handlers`. The skill `~/.claude/skills/handlers/` describes v0.1.0, and
   your global CLAUDE.md names the release.
 - **Reviewed:** each piece by the other model family as it landed (Gemini
   wrote, Claude reviewed), and the API review (docs/api-review.md) before
