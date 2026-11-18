@@ -1,0 +1,2 @@
+handlers.go:12:1: h:perm needs a permission route, not auth public
+handlers.go:20:1: h:perm needs a permission route, not auth session

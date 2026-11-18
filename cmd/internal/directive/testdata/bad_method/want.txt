@@ -1,0 +1,1 @@
+handlers.go:8:1: h:method: "HEAD" is not GET, POST, PUT, PATCH or DELETE

@@ -1,0 +1,1 @@
+handlers.go:10:1: missing h:desc; the label is "Categories Profile" (warning)

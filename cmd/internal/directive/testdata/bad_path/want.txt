@@ -1,0 +1,4 @@
+handlers.go:9:1: h:path: "items" must start with "/"
+handlers.go:15:1: h:path: "/items/" must not end with "/"
+handlers.go:21:1: h:path: "/items/{$}":*
+handlers.go:27:1: h:path: "/items/{id}/{id}":*

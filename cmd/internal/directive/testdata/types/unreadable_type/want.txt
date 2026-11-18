@@ -1,0 +1,2 @@
+handlers.go:11:58: parameter score: type float64 can't be read from a path
+handlers.go:11:73: parameter ptr: type uintptr can't be read from a path

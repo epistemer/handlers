@@ -1,0 +1,3 @@
+handlers.go:8:1: missing h:key
+handlers.go:8:1: missing h:method
+handlers.go:8:1: missing h:path

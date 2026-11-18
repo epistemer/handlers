@@ -1,0 +1,2 @@
+handlers.go:13:1: keys "a.b" and "a_b" both give the Go name PermAB
+handlers.go:29:1: keys "c.one" and "c.two" both give the Go name L10nFooBar

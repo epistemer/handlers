@@ -1,0 +1,4 @@
+handlers.go:11:1: TopLevel isn't a handler: not a method
+handlers.go:17:1: unexported isn't a handler: not exported
+handlers.go:23:1: BadArgs isn't a handler: the first parameters must be http.ResponseWriter and *http.Request
+handlers.go:29:1: BadRet isn't a handler: it must return error

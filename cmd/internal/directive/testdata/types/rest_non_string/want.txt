@@ -1,0 +1,1 @@
+handlers.go:11:57: parameter rest: a {rest...} wildcard needs a string type

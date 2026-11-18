@@ -1,0 +1,2 @@
+handlers.go:8:1: h:key given twice
+handlers.go:13:1: h:param id given twice

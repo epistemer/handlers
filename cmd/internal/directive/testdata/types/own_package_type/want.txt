@@ -1,0 +1,1 @@
+handlers.go:13:58: parameter id: type LocalID is declared in this package; declare it in another so the generated package can import it
