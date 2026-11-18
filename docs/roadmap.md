@@ -93,8 +93,8 @@ M3 and M4 are independent and can run side by side.
 | ☑ | M2.2 | `handlers gen`, the directive producer, with `-check` and the removed-key warning (`-baseline <git ref>`) | M | `genxtest.AssertGenerated` in a nested module; the warning's tests, against the file and against a git ref |
 | ☑ | M2.3 | `routes` generator: interface, `Register`, binding, URL builders, the route table | M | Golden files; httptest of binding, 400, 404 and 405 in both formats, `{$}` at the root, `rest` parameters in URL builders, route in context before the guard, panic without a guard |
 | ☑ | M2.4 | `labels` generator | S | Conformance passes; `i18ntest` shows a translation on a route and a parameter |
-| ☐ | M2.5 | `permissions` generator, `handlers/authguard` and `handlers/handlerstest` | M | `authtest`: 403 without the permission, 200 with it; `session`, `unverified` and `public`; refusals in the surface's format; a key declared by two packages stops the generator; an undeclared permission stops `Register`; `Admit`; the fake guard and the assertion |
-| ☐ | M2.6 | Runtime: declared errors, the HTML and JSON error writers, `Search` | S | Tests; a benchmark of `Search` with its admit check on 300 routes, under 1 ms on the development machine, in the status log |
+| ☑ | M2.5 | `permissions` generator, `handlers/authguard` and `handlers/handlerstest` | M | `authtest`: 403 without the permission, 200 with it; `session`, `unverified` and `public`; refusals in the surface's format; a key declared by two packages stops the generator; an undeclared permission stops `Register`; `Admit`; the fake guard and the assertion |
+| ☑ | M2.6 | Runtime: declared errors, the HTML and JSON error writers, `Search` | S | Tests; a benchmark of `Search` with its admit check on 300 routes, under 1 ms on the development machine, in the status log |
 
 ## M3 — The API
 

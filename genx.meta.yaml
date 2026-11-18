@@ -102,3 +102,32 @@ generators:
           ]
         }
     out: '"\(.package.dir)/zz_\(.package.name).labels.json"'
+
+  permissions:
+    doc: auth/access permissions declared by routes/v1 files
+    needs: [routes/v1]
+    units: |
+      def is_unverified:
+        if . == "verified" then false
+        elif . == "unverified" then true
+        else error("permissions: unknown level \(.)")
+        end;
+
+      .["routes/v1"] as $docs
+      | ([ $docs | to_entries[] | .key as $idx | .value.package.dir as $dir | ([.value.permissions[].key] | unique)[] | {key: ., dir: $dir, idx: $idx} ]
+         | group_by(.key)
+         | map(select(length > 1) | sort_by(.idx))
+         | first // null) as $dup
+      | if $dup != null then
+          error("permission \"\($dup[0].key)\" is in \($dup[0].dir) and \($dup[1].dir); a permission belongs to one routes package")
+        else . end
+      | $docs[]
+      | select((.permissions | length) > 0)
+      | . as $doc
+      | {
+          package: $doc.package,
+          has_unverified: ([ $doc.permissions[] | select((.level | is_unverified)) ] | length) > 0,
+          permissions: [ $doc.permissions[] | {key: .key, var: .var, text: .text, unverified: (.level | is_unverified)} ]
+        }
+    out: '"\(.package.dir)/zz_\(.package.name)_permissions.go"'
+    template: permissions.go.tmpl

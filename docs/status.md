@@ -3,6 +3,42 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M2.6, `Table` and `Search`; M2 is done
+
+- **Landed:** `NewTable`, `ByKey`, `Routes` and `Search` (interface §11.7,
+  §14): one `tr.Search` over `route.` in the request's locale, a match on
+  the text or source text ignoring case, `Only`, the guard's `Admit`, and
+  `Limit`. The benchmark answers the cost question from the plan: 300 routes,
+  a third of them matching, take **0.56 ms** a search (185 KB, 3,317
+  allocations) on the development machine, under M2.6's 1 ms budget; the
+  bbolt walk dominates, as predicted. Gemini 3.8 Flash (High) wrote it from a
+  spec (about 310k tokens); Claude reviewed it.
+- **Decided for you:** a request without a locale searches in the
+  translator's default locale.
+- **Next:** M3, the API surface (the OpenAPI producer, the `openapi`
+  adapter, `Mount`), and M4, the editor and agent tools, which can run side
+  by side.
+- **Waiting on you:** nothing.
+
+## 2026-11-18: M2.5, permissions, `authguard` and `handlerstest`
+
+- **Landed:** the `permissions` generator (`access.Permission` per
+  permission, `auth.Unverified` where declared, a key in two routes files
+  refused); the `authguard` module (Prepare refuses an undeclared
+  permission, Check returns auth's own refusals, Admit memoizes per
+  permission under a mutex); `handlerstest` (a fake guard and
+  `AssertPublic`). Tests with authtest: 401 without a session, 403 without
+  the permission or a verified session, 200 with them, unverified
+  permissions, the refusal in the JSON envelope, and the app module wired
+  through the generated permissions and `authguard`. Gemini 4 Hydrogen
+  (High) wrote it from a spec (about 320k tokens); Claude reviewed it,
+  `authguard` line by line.
+- **Decided for you:** an unknown `Auth` panics in the guards too (§12.2);
+  `Admit` returns no error in this version and logs a non-refusal error
+  once, treating it as a refusal, because it checks lazily.
+- **Next:** M2.6, `Table` and `Search`.
+- **Waiting on you:** nothing.
+
 ## 2026-11-18: M2.3 and M2.4, the runtime and the `routes` and `labels` generators
 
 - **Landed:** the runtime package (interface §11.1–11.3 and §12: routes,

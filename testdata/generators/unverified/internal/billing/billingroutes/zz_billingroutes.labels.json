@@ -1,0 +1,22 @@
+{
+  "domain": "labels/v1",
+  "labels": [
+    {
+      "key": "route.categories.manage",
+      "path": "route.categories.manage",
+      "text": "Manage categories",
+      "var": "L10nCategories"
+    },
+    {
+      "key": "route.orders.refund",
+      "path": "route.orders.refund",
+      "text": "Refund orders",
+      "var": "L10nRefund"
+    }
+  ],
+  "package": {
+    "dir": "internal/billing/billingroutes",
+    "name": "billingroutes"
+  },
+  "producer": "handlers"
+}

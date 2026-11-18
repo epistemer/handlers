@@ -44,32 +44,32 @@ jobs:
 
       - name: Build
         run: |
-          for m in . cmd cmd/testdata/genxapp testdata/app; do
+          for m in . cmd cmd/testdata/genxapp testdata/app authguard; do
             (cd "$m" && go build ./...)
           done
 
       - name: Run go vet
         run: |
-          for m in . cmd cmd/testdata/genxapp testdata/app; do
+          for m in . cmd cmd/testdata/genxapp testdata/app authguard; do
             (cd "$m" && go vet ./...)
           done
 
       - name: Run staticcheck
         if: matrix.os == 'ubuntu-latest' && matrix.go == '1.27.x'
         run: |
-          for m in . cmd cmd/testdata/genxapp testdata/app; do
+          for m in . cmd cmd/testdata/genxapp testdata/app authguard; do
             (cd "$m" && go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 ./...)
           done
 
       - name: Check go.mod is tidy
         if: matrix.os == 'ubuntu-latest' && matrix.go == '1.26.x'
         run: |
-          for m in . cmd cmd/testdata/genxapp testdata/app; do
+          for m in . cmd cmd/testdata/genxapp testdata/app authguard; do
             (cd "$m" && go mod tidy -diff)
           done
 
       - name: Run tests
         run: |
-          for m in . cmd cmd/testdata/genxapp testdata/app; do
+          for m in . cmd cmd/testdata/genxapp testdata/app authguard; do
             (cd "$m" && go test -race ./...)
           done
