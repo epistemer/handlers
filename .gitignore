@@ -1,0 +1,10 @@
+# Build and test output
+*.exe
+*.test
+/coverage.out
+/handlers
+
+# Editor tool builds
+dev/vscode/node_modules/
+dev/vscode/out/
+*.vsix
