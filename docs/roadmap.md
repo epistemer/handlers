@@ -81,7 +81,7 @@ M3 and M4 are independent and can run side by side.
 |---|----|------|------|-----------|
 | ☑ | M1.1 | **S1: zp census.** On a copy of zp in a scratch folder, run every admin route through the draft rules of brief §5: directive shapes, how many fail which check, wildcard conversions and `ServeMux` conflicts, parameter types, auth levels, page/action pairs (Q1) | M | [ADR 0002](adr/0002-spike-s1-census.md) with counts only. Every zp route expressible, or the grammar amended |
 | ☑ | M1.2 | **S2: the API server.** ogen, oapi-codegen's strict `std-http` server, and oapi-codegen's types with this package's `routes` template, on a toy spec with zp's shapes (decimal money, multipart, bearer, the error envelope, a `/api/v1` prefix, request validation, OpenAPI 3.0 and 3.1) | M | [ADR 0003](adr/0003-spike-s2-api-server.md) picks one against brief §10 and pins the OpenAPI version. **Kill criterion:** if none meets §10 without patching generated code, or none keeps one path matcher with the route in the context before the guard, `routes` renders the API over oapi-codegen's types |
-| ☐ | M1.3 | **S3: editors and agents.** A Go LSP library; a prototype of the engine's two passes (brief §11) timed on a generated 200-route package; the Claude Code plugin's LSP beside gopls and its PostToolUse hook, end to end | S | ADR 0004 with the timings; Q6 answered |
+| ☑ | M1.3 | **S3: editors and agents.** A Go LSP library; a prototype of the engine's two passes (brief §11) timed on a generated 200-route package; the Claude Code plugin's LSP beside gopls and its PostToolUse hook, end to end | S | [ADR 0004](adr/0004-spike-s3-editors-and-agents.md) with the timings; Q6 answered |
 | ☑ | M1.4 | `routes/v1`: JSON schema and conformance files (valid, and one invalid file per rule with its message), as genx's `testdata/labels/` | S | Files merged, with a test that reads them |
 | ☐ | M1.5 | **Freeze the interface.** `docs/interface.md`: the grammar, every diagnostic with its severity and message, the producers' flags, the generators and their parameters, the files they write, the generated Go, keys and permission defaults, the OpenAPI extensions, the runtime API | M | Locked by epistemer |
 
@@ -110,7 +110,7 @@ M3 and M4 are independent and can run side by side.
 |---|----|------|------|-----------|
 | ☐ | M4.1 | `handlers lsp`: diagnostics, completion, hover, go to definition for `entity` | M | Protocol tests |
 | ☐ | M4.2 | `dev/vscode`: copy the extension without its history, rename, make it a client of `handlers lsp`, update the grammar | S | CI builds the `.vsix` and runs an extension test (`@vscode/test-electron`) that opens a file with a fault and gets its diagnostic |
-| ☐ | M4.3 | `dev/claude-plugin` (LSP and hook; the skill comes in M6.2) and `.claude-plugin/marketplace.json` | S | `claude plugin validate` passes in CI; a CI test feeds the hook a PostToolUse payload for a file with a fault and checks its JSON answer |
+| ☐ | M4.3 | `dev/claude-plugin` (the hook; the skill comes in M6.2; no language server, ADR 0004) and `.claude-plugin/marketplace.json` | S | `claude plugin validate` passes in CI; a CI test feeds the hook a PostToolUse payload for a file with a fault and checks its JSON answer |
 | ☐ | M4.4 | `dev/gemini-extension` | S | A CI test feeds its hook a payload for a file with a fault and checks the answer |
 
 ## M5 — An example and zp
@@ -134,9 +134,11 @@ M3 and M4 are independent and can run side by side.
 2. Nav and menu metadata.
 3. API keys, once auth covers them.
 4. A client SDK pipeline from the one spec.
-5. `routes/v1` and a `permissions/v1` domain in genx, when a second package
+5. A gopls proxy as the Claude Code plugin's language server, if Claude Code
+   keeps giving an extension to one server (ADR 0004).
+6. `routes/v1` and a `permissions/v1` domain in genx, when a second package
    uses them.
-6. A golangci-lint plugin over the rule engine.
+7. A golangci-lint plugin over the rule engine.
 
 ## Risks
 

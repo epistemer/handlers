@@ -126,7 +126,7 @@ A route's parameters keep the handler signature's order.
 Every diagnostic has a position (`file:line:col`, as `go vet` prints) and a stable message, tested word for word. The engine scans every comment of a file, not only the doc comments of functions, so a block of directives a blank line away from its function is an error, not lost.
 
 **Errors** (the producer writes nothing):
-- an unknown directive, or a near-miss (`// h:`, `//H:`, `//h key`, `//p[...]`), with the fix;
+- an unknown directive, or a near-miss, with the fix. A near-miss is a comment line that, after `//`, has optional spaces, `h` or `H`, optional spaces and a `:` (`// h:key`, `//H:key`, `//h :key`); or `//`, optional spaces, `h`, one space and a directive name (`//h key …`); or `//`, optional spaces and `p[` (zp's old parameter form). Ordinary comments, such as `// Handler serves…`, never match;
 - a directive given twice on one handler, or a bad value (a flag's value other than `true`, an empty `desc`, a path without a leading `/` or with a trailing one);
 - two keys of one package whose Go names come out the same (`pricingPlans`, `pricing_plans`);
 - a block of directives that isn't the doc comment of a function;
@@ -268,11 +268,11 @@ var (
 |---|---|
 | `cmd/handlers lsp` | A language server over the rule engine: diagnostics as you type, completion of directives, values and parameter names, hover with the directive's doc, go to definition for `entity` keys |
 | `dev/vscode` | zp's extension (TextMate grammar and completions), copied without its history and renamed. It becomes a thin client of `handlers lsp`; its completions move into the server, so the two can't drift. CI builds the `.vsix` as an artifact, never committed |
-| `dev/claude-plugin` | A Claude Code plugin: `.lsp.json` runs `handlers lsp` on `.go` files, so Claude sees diagnostics after each edit; `hooks/hooks.json` has a PostToolUse hook on `Edit\|Write` that runs `handlers vet` on the edited file's package and answers `{"decision": "block", "reason": …}` when it fails, which shows the faults beside the edit without undoing it; from M6.2, `skills/handlers/` is the package's skill. `.claude-plugin/marketplace.json` at the repository root, with a `git-subdir` source, makes it installable with `claude plugin install handlers@epistemer-handlers` |
+| `dev/claude-plugin` | A Claude Code plugin: `hooks/hooks.json` has a PostToolUse hook on `Edit\|Write` that runs `handlers vet` on the edited file's package and answers `{"decision": "block", "reason": …}` when it fails, which shows the faults beside the edit without undoing it; from M6.2, `skills/handlers/` is the package's skill. It ships no language server: Claude Code gives `.go` to one server, and that should stay gopls (ADR 0004). `.claude-plugin/marketplace.json` at the repository root, with a `git-subdir` source, makes it installable with `claude plugin install handlers@epistemer-handlers` |
 | `dev/gemini-extension` | A Gemini CLI extension with the same `vet` hook and a context file, for work delegated to agy |
 
 - The engine has two passes. The syntax pass reads only the AST: grammar, values, duplicates, wildcards against parameter names, patterns, `entity`. It runs on every change, also on a buffer that doesn't compile. The type pass type-checks the package for parameter types; the language server runs it on save, debounced and cached.
-- Whether a second language server can attach to `.go` beside gopls in Claude Code is unverified; S3 tests it, and if it can't, the hook carries the checks alone.
+- The syntax pass takes about 3 ms on 200 routes and the type pass about 300 ms (ADR 0004). `handlers lsp` has no LSP library: it implements the few messages it uses.
 
 ## 12. Tests
 
@@ -298,7 +298,7 @@ var (
 | Q3 | Keep the `h:` prefix? | Yes: habit, and the extension's grammar | the freeze |
 | Q4 | Where the generated Go goes | A sibling package, `dir` and `package` parameters as in models | the freeze |
 | Q5 | Does the API use the third-party server, or this package's `routes` template over third-party types? | Answered by ADR 0003: oapi-codegen's strict server, through handlers' adapter | S2 |
-| Q6 | A second language server on `.go` in Claude Code | Ship it if S3 shows it attaches; otherwise only the hook | S3 |
+| Q6 | A second language server on `.go` in Claude Code | Answered by ADR 0004: only the hook; Claude Code gives `.go` to one server | S3 |
 
 ## 14. Out of v0.1
 

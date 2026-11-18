@@ -3,6 +3,33 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M1's three spikes
+
+- **Landed:** [ADR 0002](adr/0002-spike-s1-census.md),
+  [ADR 0003](adr/0003-spike-s2-api-server.md) and
+  [ADR 0004](adr/0004-spike-s3-editors-and-agents.md), each reviewed by
+  Gemini 3.8 Flash (High) ([0002](reviews/0002-s1-census.md),
+  [0003](reviews/0003-s2-api-server.md), [0004](reviews/0004-s3-editors.md);
+  about 160k, 190k and 63k tokens). Argon was cooling down all session.
+  - **S1:** all 217 zp admin routes are expressible; the rules catch real
+    faults in 7 declarations. The grammar gains camelCase key segments (with
+    a Go-name collision check), `true` as a flag value, and slash rules.
+  - **S2:** the API uses oapi-codegen's strict `std-http` server, registered
+    on the app's `ServeMux` through handlers' adapter, with the route in the
+    context, the guard, then kin-openapi's validation, before binding. ogen
+    lost on its second router. Validation costs about 20 µs a request.
+    OpenAPI 3.0.
+  - **S3:** the syntax pass takes 3 ms on 200 routes, and a change gets its
+    diagnostics in 5.5 ms; the type pass takes 0.3 s warm with real
+    dependencies, so it runs on save. The language server takes no library.
+    Claude Code gives `.go` to one language server (its debug log says so),
+    so the plugin ships the hook, which reached the model in every run.
+- **Decided for you:** everything above; each ADR names what stays yours at
+  the freeze (the grammar, what an app writes).
+- **Next:** M1.4, the `routes/v1` schema and conformance files, then the
+  interface draft for your freeze (M1.5).
+- **Waiting on you:** nothing yet; the freeze comes with M1.5.
+
 ## 2026-11-18: M0, the repository and the design review
 
 - **Landed:** the repository (go.mod, MIT, CI, ownership delegated today),
