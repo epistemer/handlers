@@ -7,5 +7,6 @@
   "permissions": [],
   "prefix": "/shop",
   "producer": "handlers",
+  "source": "internal/shop",
   "surface": "html"
 }

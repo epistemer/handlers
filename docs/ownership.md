@@ -45,8 +45,11 @@ The terms are those of cfgx, i18n, genx, models, errors and auth.
    parameters, the files they write, the Go they generate (types, methods,
    variable names), the keys of labels and permissions, the OpenAPI
    extensions, the runtime API, and any change to the decisions marked
-   epistemer in the brief or ADR 0001. Claude brings a recommendation. **The
-   freeze of `interface.md` (M1.5) is yours.**
+   epistemer in the brief or ADR 0001. Claude brings a recommendation. The
+   interface was frozen on epistemer's instruction on 2026-11-18; amendments
+   that change what an app writes come back to epistemer. Nothing else does:
+   Claude moves from milestone to milestone without reporting in between
+   (told 2026-11-18).
 2. **Anything Claude lacks permission for.** Work outside this repository
    that isn't on the roadmap. A change another package needs (genx, i18n,
    errors, auth) goes through that package's own terms, which are also

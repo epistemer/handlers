@@ -15,6 +15,7 @@
   ],
   "prefix": "/shop",
   "producer": "handlers",
+  "source": "internal/shop",
   "routes": [
     {
       "auth": "public",
@@ -98,7 +99,7 @@
         {
           "_extra_param_field": 123,
           "go": "filePath",
-          "import": "path/filepath",
+          "import": "",
           "kind": "rest",
           "label": "Asset path",
           "name": "path",

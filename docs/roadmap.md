@@ -6,7 +6,7 @@
 > | Document | Answers |
 > |----------|---------|
 > | [ADR 0001](adr/0001-routes-domain.md), from [brief.md](brief.md) | *What* gets generated, and why that way |
-> | `interface.md` (written in M1.5) | *What* an app writes and gets back |
+> | [interface.md](interface.md) (locked 2026-11-18) | *What* an app writes and gets back |
 > | this file | *In what order*, and *when each piece counts as done* |
 
 ## What gets built
@@ -83,7 +83,7 @@ M3 and M4 are independent and can run side by side.
 | ☑ | M1.2 | **S2: the API server.** ogen, oapi-codegen's strict `std-http` server, and oapi-codegen's types with this package's `routes` template, on a toy spec with zp's shapes (decimal money, multipart, bearer, the error envelope, a `/api/v1` prefix, request validation, OpenAPI 3.0 and 3.1) | M | [ADR 0003](adr/0003-spike-s2-api-server.md) picks one against brief §10 and pins the OpenAPI version. **Kill criterion:** if none meets §10 without patching generated code, or none keeps one path matcher with the route in the context before the guard, `routes` renders the API over oapi-codegen's types |
 | ☑ | M1.3 | **S3: editors and agents.** A Go LSP library; a prototype of the engine's two passes (brief §11) timed on a generated 200-route package; the Claude Code plugin's LSP beside gopls and its PostToolUse hook, end to end | S | [ADR 0004](adr/0004-spike-s3-editors-and-agents.md) with the timings; Q6 answered |
 | ☑ | M1.4 | `routes/v1`: JSON schema and conformance files (valid, and one invalid file per rule with its message), as genx's `testdata/labels/` | S | Files merged, with a test that reads them |
-| ☐ | M1.5 | **Freeze the interface.** `docs/interface.md`: the grammar, every diagnostic with its severity and message, the producers' flags, the generators and their parameters, the files they write, the generated Go, keys and permission defaults, the OpenAPI extensions, the runtime API | M | Locked by epistemer |
+| ☑ | M1.5 | **Freeze the interface.** `docs/interface.md`: the grammar, every diagnostic with its severity and message, the producers' flags, the generators and their parameters, the files they write, the generated Go, keys and permission defaults, the OpenAPI extensions, the runtime API | M | Locked on epistemer's instruction, 2026-11-18 ([interface.md](interface.md), [review 0005](reviews/0005-interface.md)) |
 
 ## M2 — Admin routes
 

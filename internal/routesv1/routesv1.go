@@ -87,6 +87,15 @@ func Check(v any) error {
 		add("producer", "must not be empty")
 	}
 
+	// source: required non-empty string, the handler package or the spec
+	if raw, ok := obj["source"]; !ok {
+		add("source", "required")
+	} else if s, ok := raw.(string); !ok {
+		add("source", "must be a string")
+	} else if s == "" {
+		add("source", "must not be empty")
+	}
+
 	// package: required object
 	if raw, ok := obj["package"]; !ok {
 		add("package", "required")
@@ -159,6 +168,39 @@ func Check(v any) error {
 		}
 	}
 
+	// Rule 12: an alias names one import path, and an import path has one
+	// alias.
+	if routesRaw, ok := obj["routes"].([]any); ok {
+		pathOf := map[string]string{}  // alias -> import
+		aliasOf := map[string]string{} // import -> alias
+		for i, item := range routesRaw {
+			r, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			params, _ := r["params"].([]any)
+			for j, pi := range params {
+				p, ok := pi.(map[string]any)
+				if !ok {
+					continue
+				}
+				imp, _ := p["import"].(string)
+				alias, _ := p["alias"].(string)
+				if imp == "" || alias == "" {
+					continue
+				}
+				loc := fmt.Sprintf("routes[%d].params[%d].alias", i, j)
+				if prev, ok := pathOf[alias]; ok && prev != imp {
+					add(loc, fmt.Sprintf("%q also names %q", alias, prev))
+				} else if prev, ok := aliasOf[imp]; ok && prev != alias {
+					add(loc, fmt.Sprintf("%q is already imported as %q", imp, prev))
+				} else {
+					pathOf[alias], aliasOf[imp] = imp, alias
+				}
+			}
+		}
+	}
+
 	// Rule 11: route names are package-level identifiers of the generated
 	// package, beside its fixed names and the variables of this document.
 	if routesRaw, ok := obj["routes"].([]any); ok {
@@ -194,7 +236,7 @@ func Check(v any) error {
 
 // reservedNames are the identifiers every generated routes package
 // declares, which a route's name must not take.
-var reservedNames = []string{"Handler", "Register", "Routes", "ByKey", "L10n"}
+var reservedNames = []string{"Handler", "Register", "Mount", "Routes", "ByKey", "Prefix", "L10n"}
 
 func checkPackage(pkg map[string]any, add func(loc, msg string)) {
 	if raw, ok := pkg["name"]; !ok {
@@ -658,11 +700,28 @@ func checkParam(
 		add(pLoc+".type", "must not be empty")
 	}
 
-	// import: string ("" for none)
+	// import: string ("" for none); alias: the qualifier the type uses,
+	// present exactly when import isn't ""
+	importPath := ""
 	if raw, ok := p["import"]; !ok {
 		add(pLoc+".import", "required")
-	} else if _, ok := raw.(string); !ok {
+	} else if s, ok := raw.(string); !ok {
 		add(pLoc+".import", "must be a string")
+	} else {
+		importPath = s
+	}
+	if raw, ok := p["alias"]; ok {
+		if s, ok := raw.(string); !ok {
+			add(pLoc+".alias", "must be a string")
+		} else if importPath == "" {
+			add(pLoc+".alias", "must be absent without an import")
+		} else if !token.IsIdentifier(s) || s == "_" {
+			add(pLoc+".alias", fmt.Sprintf("%q is not a Go identifier", s))
+		} else if t, ok := p["type"].(string); ok && !strings.HasPrefix(t, s+".") {
+			add(pLoc+".type", fmt.Sprintf("%q must be qualified by its alias %q", t, s))
+		}
+	} else if importPath != "" {
+		add(pLoc+".alias", "required with an import")
 	}
 
 	// parse: one of string int uint bool text
@@ -672,7 +731,7 @@ func checkParam(
 		add(pLoc+".parse", "must be a string")
 	} else {
 		switch s {
-		case "string", "int", "uint", "bool", "text":
+		case "string", "bool", "text", "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64":
 			// valid
 		default:
 			add(pLoc+".parse", fmt.Sprintf("unknown parse %q", s))

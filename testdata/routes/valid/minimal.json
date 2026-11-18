@@ -1,6 +1,7 @@
 {
   "domain": "routes/v1",
   "producer": "handlers",
+  "source": "internal/shop",
   "package": {
     "name": "shoproutes",
     "dir": "internal/shop/shoproutes"

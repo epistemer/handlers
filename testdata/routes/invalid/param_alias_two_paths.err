@@ -1,0 +1,1 @@
+routes[3].params[0].alias: "shop" also names "example.com/shop/internal/shop"
