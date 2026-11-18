@@ -109,13 +109,13 @@ func (h *H) Category(w http.ResponseWriter, r *http.Request, id int64) error {
 
 | Directive | Value | Default |
 |---|---|---|
-| `key` | `[a-z0-9_]+(\.[a-z0-9_]+)*` | required |
+| `key` | dot-separated segments, each `[a-z0-9][A-Za-z0-9_]*`: snake case or camelCase (ADR 0002) | required |
 | `method` | `GET POST PUT PATCH DELETE` (any case) | required |
-| `path` | a `ServeMux` path; its wildcards must match the signature's parameters | required |
+| `path` | a `ServeMux` path that starts with `/` and, unless it is the root, doesn't end with one; its wildcards must match the signature's parameters by name. The pattern is the prefix followed by the path | required |
 | `desc` | free text, one line, not empty | the key made readable, with a warning |
 | `auth` | `public`, `session` (signed in, no permission), `unverified` (the route's permission, declared at `auth.Unverified`) | the route's permission at `auth.Verified` |
 | `perm` | a permission key | the route key |
-| `view`, `search` | none: a value is an error | off |
+| `view`, `search` | none, or `true`; any other value, `false` included, is an error (ADR 0002) | off |
 | `entity` | another route's key | none |
 | `param` | `<name> label <text>` | the parameter's name made readable |
 
@@ -127,7 +127,8 @@ Every diagnostic has a position (`file:line:col`, as `go vet` prints) and a stab
 
 **Errors** (the producer writes nothing):
 - an unknown directive, or a near-miss (`// h:`, `//H:`, `//h key`, `//p[...]`), with the fix;
-- a directive given twice on one handler, or a bad value (a value on a flag, an empty `desc`);
+- a directive given twice on one handler, or a bad value (a flag's value other than `true`, an empty `desc`, a path without a leading `/` or with a trailing one);
+- two keys of one package whose Go names come out the same (`pricingPlans`, `pricing_plans`);
 - a block of directives that isn't the doc comment of a function;
 - a missing `key`, `method` or `path`;
 - a duplicate key, or a duplicate method and pattern;
