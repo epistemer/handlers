@@ -137,6 +137,7 @@ func TestOpenAPI72Rows(t *testing.T) {
 		{"op_id_not_ident.yaml", `GET /orders: operationId "list-orders" is not a Go identifier`},
 		{"dup_go_name.yaml", `POST /orders: operationId "GetOrder" gives the Go name GetOrder, also from GET /orders`},
 		{"reserved_op_name.yaml", `GET /routes: Routes is a name the generated package declares`},
+		{"perm_go_name.yaml", `GET /orders/all: keys "orders.readAll" and "orders.read_all" both give the Go name PermOrdersReadAll`},
 		{"no_security.yaml", `GET /orders: no security; write security: [] for a public operation`},
 		{"optional_security.yaml", `GET /orders: optional security isn't supported`},
 		{"unknown_scheme.yaml", `GET /orders: security names undeclared scheme "missingAuth"`},

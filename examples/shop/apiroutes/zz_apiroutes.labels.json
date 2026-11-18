@@ -1,0 +1,46 @@
+{
+  "domain": "labels/v1",
+  "labels": [
+    {
+      "key": "route.api.sign_in",
+      "path": "route.api.sign_in",
+      "text": "Sign in",
+      "var": "L10nSignIn"
+    },
+    {
+      "key": "route.api.sign_in_code",
+      "path": "route.api.sign_in_code",
+      "text": "Verify sign-in code",
+      "var": "L10nSignInCode"
+    },
+    {
+      "key": "route.api.get_me",
+      "path": "route.api.get_me",
+      "text": "Current session user",
+      "var": "L10nGetMe"
+    },
+    {
+      "key": "route.api.list_orders",
+      "path": "route.api.list_orders",
+      "text": "List orders",
+      "var": "L10nListOrders"
+    },
+    {
+      "key": "route.api.get_order",
+      "path": "route.api.get_order",
+      "text": "Get order",
+      "var": "L10nGetOrder"
+    },
+    {
+      "key": "route_param.api.get_order.orderId",
+      "path": "route_param.api.get_order.orderId",
+      "text": "Order Id",
+      "var": "L10nGetOrderOrderId"
+    }
+  ],
+  "package": {
+    "dir": "apiroutes",
+    "name": "apiroutes"
+  },
+  "producer": "handlers"
+}

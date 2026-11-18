@@ -3,6 +3,46 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M5.2, zp's admin routes through handlers
+
+On a scratch copy: zp's 217 annotated handlers turned into stub methods
+with the new directive form (wildcards `{x}`, `//h:param`, `net/http`
+signatures), then the real `handlers vet` and `handlers gen`. Counts only.
+
+- **vet** (1.1 s) reported what ADR 0002 predicted: the duplicate key and
+  pattern, 4 paths without their slash, the wildcard named apart from its
+  parameter, 63 missing descriptions. And one more: a handler named
+  `Register`, which the generated package's own `Register` would clash with.
+- After fixing those in the copy (renaming that handler `SignUp`), **gen**
+  (0.7 s) wrote 216 routes: **the same 216 keys as zp**, none missing either
+  way; **212 of zp's 217 URL builders give the same path**, the other 5 being
+  zp's 4 slashless URLs (zp builds `/adminproviders/…`) and the duplicate;
+  206 permissions and 10 public routes, as the census counted. The routes
+  file is 181 KB.
+- **Decided for you:** nothing.
+- **Next:** M6: README, the skill, the API review and v0.1.0.
+- **Decided by you:** `Register` stays a reserved name; `vet` reports a
+  handler that takes it (2026-11-18).
+- **Waiting on you:** nothing.
+
+## 2026-11-18: M5.1, the example shop
+
+- **Landed:** `examples/shop`, an app on cfgx, i18n, genx, models (a real
+  sqlc producer without `check`, so CI trusts the committed request, as in
+  models' example), errors, auth and handlers: admin pages with a page and
+  action sharing `orders.manage`, an API from an OpenAPI file through
+  oapi-codegen (run by `go:generate`, with a test that its output is
+  current) and `apiroutes.Mount`, a search page, settings, and real sign-in
+  flows with a code. Its tests cover 401/403/200 on both surfaces, a bad
+  parameter's French label, schema failures without echoed values, search
+  hiding what a user can't open, `vet -strict` and `AssertGenerated`. Gemini
+  4 Hydrogen (High) wrote it (about 950k tokens over two rounds); Claude
+  reviewed it and sent back a fake `go version` producer.
+- **Decided for you:** oapi-codegen runs from `go:generate`, not genx: it
+  doesn't produce a genx domain, so a genx entry would need a fake emit.
+- **Next:** M5.2, the comparison with zp on a scratch copy.
+- **Waiting on you:** nothing.
+
 ## 2026-11-18: M4, the editor and agent tools
 
 - **Landed:** `handlers lsp` (cmd/internal/lsp, no library: framing,

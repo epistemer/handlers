@@ -767,3 +767,4 @@ client SDK pipeline; a language server in the Claude Code plugin.
 
 - **A1** (2026-11-18, M3, Claude): `Mount.HandleHTTP` and `Mount.Writer`, plumbing for §11.5; apps don't call them.
 - **A2** (2026-11-18, M3, Claude): §3.3's example calls oapi-codegen's `GetSpec`, which replaces the deprecated `GetSwagger` in v2.8.
+- **A3** (2026-11-18, M6, Claude), clarifications found by the API review: a `-key-prefix` that isn't a key is a usage error (`handlers openapi: -key-prefix "<v>" is not a key`, exit 2), not a spec diagnostic; `authguard`'s `Admit` checks lazily, so its error is always nil and a failure to read a permission is logged once and refuses; a routes package with no routes registers no catch-all, since its table carries no prefix.

@@ -117,15 +117,15 @@ M3 and M4 are independent and can run side by side.
 
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
-| ☐ | M5.1 | `examples/shop`: an app on cfgx, i18n, genx, models, errors, auth and handlers, with admin pages and an API | M | CI green on all three OSes; `genxtest.AssertGenerated` |
-| ☐ | M5.2 | zp, on a copy in a scratch folder: convert the directives, generate, and compare routes, keys and URLs with zp's; time a run. Moving zp is out of scope | S | Every zp route generated with the same method, path and key, or the difference explained; numbers in the status log |
+| ☑ | M5.1 | `examples/shop`: an app on cfgx, i18n, genx, models, errors, auth and handlers, with admin pages and an API | M | CI green on all three OSes; `genxtest.AssertGenerated` |
+| ☑ | M5.2 | zp, on a copy in a scratch folder: convert the directives, generate, and compare routes, keys and URLs with zp's; time a run. Moving zp is out of scope | S | Every zp route generated with the same method, path and key, or the difference explained; numbers in the status log |
 
 ## M6 — v0.1.0
 
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
-| ☐ | M6.1 | README quickstart: add handlers to an app on genx, i18n and auth | S | A CI job runs the quickstart's commands in a fresh module and builds it |
-| ☐ | M6.2 | The `handlers` skill: its source in `dev/claude-plugin/skills/handlers/`, installed to `~/.claude/skills/handlers/` | S | Written against the frozen interface; `claude plugin validate` passes |
+| ☑ | M6.1 | README quickstart: add handlers to an app on genx, i18n and auth | S | A CI job runs the quickstart's commands in a fresh module and builds it |
+| ☑ | M6.2 | The `handlers` skill: its source in `dev/claude-plugin/skills/handlers/`, installed to `~/.claude/skills/handlers/` | S | Written against the frozen interface; `claude plugin validate` passes |
 | ☐ | M6.3 | `docs/api-review.md`, cross-model review of the release, CHANGELOG, tag `v0.1.0` | S | Tag pushed |
 
 ## After v0.1.0 (backlog)

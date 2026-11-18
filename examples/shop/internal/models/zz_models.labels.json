@@ -1,0 +1,88 @@
+{
+  "domain": "labels/v1",
+  "labels": [
+    {
+      "key": "enum.order_status.pending",
+      "path": "enum.order_status.pending",
+      "text": "pending",
+      "var": "L10nOrderStatusPending"
+    },
+    {
+      "key": "enum.order_status.paid",
+      "path": "enum.order_status.paid",
+      "text": "paid",
+      "var": "L10nOrderStatusPaid"
+    },
+    {
+      "key": "enum.order_status.shipped",
+      "path": "enum.order_status.shipped",
+      "text": "shipped",
+      "var": "L10nOrderStatusShipped"
+    },
+    {
+      "key": "enum.order_status.cancelled",
+      "path": "enum.order_status.cancelled",
+      "text": "cancelled",
+      "var": "L10nOrderStatusCancelled"
+    },
+    {
+      "key": "table.shop_product",
+      "path": "table.shop_product",
+      "text": "Product",
+      "var": "L10nProduct"
+    },
+    {
+      "key": "table.shop_product.Product_Id",
+      "path": "table.shop_product.id",
+      "text": "ID",
+      "var": "L10nProduct_Id"
+    },
+    {
+      "key": "table.shop_product.Product_Sku",
+      "path": "table.shop_product.sku",
+      "text": "SKU",
+      "var": "L10nProduct_Sku"
+    },
+    {
+      "key": "table.shop_product.Product_Name",
+      "path": "table.shop_product.name",
+      "text": "Name",
+      "var": "L10nProduct_Name"
+    },
+    {
+      "key": "table.shop_product.Product_Price",
+      "path": "table.shop_product.price",
+      "text": "Price",
+      "var": "L10nProduct_Price"
+    },
+    {
+      "key": "table.shop_order",
+      "path": "table.shop_order",
+      "text": "Order",
+      "var": "L10nOrder"
+    },
+    {
+      "key": "table.shop_order.Order_Id",
+      "path": "table.shop_order.id",
+      "text": "ID",
+      "var": "L10nOrder_Id"
+    },
+    {
+      "key": "table.shop_order.Order_Status",
+      "path": "table.shop_order.status",
+      "text": "Status",
+      "var": "L10nOrder_Status"
+    },
+    {
+      "key": "table.shop_order.Order_Total",
+      "path": "table.shop_order.total",
+      "text": "Total",
+      "var": "L10nOrder_Total"
+    }
+  ],
+  "package": {
+    "dir": "internal/models",
+    "name": "models"
+  },
+  "producer": "models"
+}

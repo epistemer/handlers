@@ -1,0 +1,13 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "db/schema.sql"
+    queries: "db/query.sql"
+    gen:
+      go:
+        package: "models"
+        out: "internal/models"
+        emit_all_enum_values: true
+      json:
+        out: "internal/models"
+        filename: "codegen_request.json"

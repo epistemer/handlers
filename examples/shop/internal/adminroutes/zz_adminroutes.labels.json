@@ -1,0 +1,88 @@
+{
+  "domain": "labels/v1",
+  "labels": [
+    {
+      "key": "route.sign_in",
+      "path": "route.sign_in",
+      "text": "Sign in",
+      "var": "L10nSignInPage"
+    },
+    {
+      "key": "route.sign_in.submit",
+      "path": "route.sign_in.submit",
+      "text": "Submit sign-in",
+      "var": "L10nSignInSubmit"
+    },
+    {
+      "key": "route.sign_in.code",
+      "path": "route.sign_in.code",
+      "text": "Verify sign-in code",
+      "var": "L10nSignInCode"
+    },
+    {
+      "key": "route.dashboard",
+      "path": "route.dashboard",
+      "text": "Dashboard",
+      "var": "L10nDashboard"
+    },
+    {
+      "key": "route.products.list",
+      "path": "route.products.list",
+      "text": "Products",
+      "var": "L10nProducts"
+    },
+    {
+      "key": "route.products.profile",
+      "path": "route.products.profile",
+      "text": "Product profile",
+      "var": "L10nProduct"
+    },
+    {
+      "key": "route_param.products.profile.id",
+      "path": "route_param.products.profile.id",
+      "text": "Product ID",
+      "var": "L10nProductId"
+    },
+    {
+      "key": "route.orders.list",
+      "path": "route.orders.list",
+      "text": "Orders",
+      "var": "L10nOrders"
+    },
+    {
+      "key": "route.orders.detail",
+      "path": "route.orders.detail",
+      "text": "Order detail",
+      "var": "L10nOrder"
+    },
+    {
+      "key": "route_param.orders.detail.id",
+      "path": "route_param.orders.detail.id",
+      "text": "Order ID",
+      "var": "L10nOrderId"
+    },
+    {
+      "key": "route.orders.cancel",
+      "path": "route.orders.cancel",
+      "text": "Cancel order",
+      "var": "L10nOrderCancel"
+    },
+    {
+      "key": "route_param.orders.cancel.id",
+      "path": "route_param.orders.cancel.id",
+      "text": "Order ID",
+      "var": "L10nOrderCancelId"
+    },
+    {
+      "key": "route.search",
+      "path": "route.search",
+      "text": "Search",
+      "var": "L10nSearch"
+    }
+  ],
+  "package": {
+    "dir": "internal/adminroutes",
+    "name": "adminroutes"
+  },
+  "producer": "handlers"
+}

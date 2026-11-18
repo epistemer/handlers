@@ -272,7 +272,12 @@ func analyzeOpenAPI(spec *openapi3.T, sourceRel, pkgName, outRel, keyPrefix stri
 	for _, info := range ops {
 		if info.auth == "permission" && info.permKey != "" {
 			pb.add(info.permKey, info.label, false)
-			permVars[permGoName(info.permKey)] = info.permKey
+			gn := permGoName(info.permKey)
+			if prev, clash := permVars[gn]; clash && prev != info.permKey {
+				addErr(info.loc, fmt.Sprintf("keys %q and %q both give the Go name %s", prev, info.permKey, gn))
+			} else {
+				permVars[gn] = info.permKey
+			}
 		}
 		if info.goName != "" && info.routeKey != "" {
 			rVar := "L10n" + info.goName

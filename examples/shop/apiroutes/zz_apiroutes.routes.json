@@ -1,0 +1,99 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "api/openapi.yaml",
+  "package": {
+    "name": "apiroutes",
+    "dir": "apiroutes"
+  },
+  "surface": "json",
+  "prefix": "/api/v1",
+  "routes": [
+    {
+      "key": "api.sign_in",
+      "method": "POST",
+      "pattern": "/auth/sign-in",
+      "name": "SignIn",
+      "var": "L10nSignIn",
+      "text": "Sign in",
+      "auth": "public",
+      "view": false,
+      "search": false,
+      "params": [],
+      "operation": "signIn"
+    },
+    {
+      "key": "api.sign_in_code",
+      "method": "POST",
+      "pattern": "/auth/sign-in/code",
+      "name": "SignInCode",
+      "var": "L10nSignInCode",
+      "text": "Verify sign-in code",
+      "auth": "public",
+      "view": false,
+      "search": false,
+      "params": [],
+      "operation": "signInCode"
+    },
+    {
+      "key": "api.get_me",
+      "method": "GET",
+      "pattern": "/me",
+      "name": "GetMe",
+      "var": "L10nGetMe",
+      "text": "Current session user",
+      "auth": "session",
+      "view": false,
+      "search": false,
+      "params": [],
+      "operation": "getMe"
+    },
+    {
+      "key": "api.list_orders",
+      "method": "GET",
+      "pattern": "/orders",
+      "name": "ListOrders",
+      "var": "L10nListOrders",
+      "text": "List orders",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [],
+      "permission": "orders.read",
+      "operation": "listOrders"
+    },
+    {
+      "key": "api.get_order",
+      "method": "GET",
+      "pattern": "/orders/{orderId}",
+      "name": "GetOrder",
+      "var": "L10nGetOrder",
+      "text": "Get order",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "orderId",
+          "go": "orderId",
+          "var": "L10nGetOrderOrderId",
+          "type": "int64",
+          "import": "",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Order Id"
+        }
+      ],
+      "permission": "orders.read",
+      "operation": "getOrder"
+    }
+  ],
+  "permissions": [
+    {
+      "key": "orders.read",
+      "var": "PermOrdersRead",
+      "text": "Orders Read",
+      "level": "verified"
+    }
+  ]
+}
