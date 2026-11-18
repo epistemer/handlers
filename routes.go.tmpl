@@ -9,6 +9,10 @@ import (
 {{- end}}
 
 	handlers "github.com/epistemer/handlers"
+{{- if .is_json}}
+	openapi "github.com/epistemer/handlers/openapi"
+	openapi3 "github.com/getkin/kin-openapi/openapi3"
+{{- end}}
 {{- range .imports}}
 	{{.alias}} {{printf "%q" .path}}
 {{- end}}
@@ -19,13 +23,14 @@ const Prefix = {{printf "%q" .prefix}}
 
 // Routes is the package's route table, in declaration order.
 var Routes = []handlers.Route{
+{{- $surface := .surface_const}}
 {{- range .routes}}
 	{
 		Key: {{printf "%q" .key}},
 		Method: {{printf "%q" .method}},
 		Prefix: Prefix,
 		Pattern: {{printf "%q" .pattern}},
-		Surface: handlers.HTML,
+		Surface: {{$surface}},
 		Auth: {{.auth_const}},
 {{- if .permission}}
 		Permission: {{printf "%q" .permission}},
@@ -35,6 +40,9 @@ var Routes = []handlers.Route{
 		Searchable: {{.search}},
 {{- if .entity}}
 		Entity: {{printf "%q" .entity}},
+{{- end}}
+{{- if .operation}}
+		Operation: {{printf "%q" .operation}},
 {{- end}}
 {{- if .params}}
 		Params: []handlers.Param{
@@ -59,6 +67,15 @@ func ByKey(key string) (handlers.Route, bool) {
 {{- end}}
 	return handlers.Route{}, false
 }
+{{- if .is_json}}
+
+// Mount registers the API's routes on mux through the router it passes to
+// register, which hands it to oapi-codegen's HandlerWithOptions. When
+// register returns, Mount panics if a route of the table wasn't registered.
+func Mount(mux *http.ServeMux, g handlers.Guard, spec *openapi3.T, register func(rt *openapi.Router), opts ...handlers.Option) {
+	openapi.Mount(mux, Routes, g, spec, register, opts...)
+}
+{{- else}}
 
 // Handler is the interface the handler package implements.
 type Handler interface {
@@ -109,6 +126,7 @@ func Register(mux *http.ServeMux, h Handler, g handlers.Guard, opts ...handlers.
 {{- end}}
 	m.Done()
 }
+{{- end}}
 {{- range .routes}}
 
 // {{.name}} returns the URL path for {{.key}}.

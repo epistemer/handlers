@@ -13,6 +13,12 @@ generators:
         else 0
         end;
 
+      def surface_const:
+        if . == "html" then "handlers.HTML"
+        elif . == "json" then "handlers.JSON"
+        else error("routes: unknown surface \(.)")
+        end;
+
       def auth_const:
         if . == "public" then "handlers.Public"
         elif . == "session" then "handlers.Session"
@@ -45,7 +51,6 @@ generators:
         end;
 
       .["routes/v1"][]
-      | select(.surface == "html")
       | . as $doc
       | [.routes | to_entries[] | .key as $ri | .value as $r |
           [ $r.params | to_entries[] | {
@@ -71,6 +76,7 @@ generators:
               view: $r.view,
               search: $r.search,
               entity: ($r.entity // ""),
+              operation: ($r.operation // ""),
               params: $params,
               url_parts: ($r.pattern | url_parts($params))
             }
@@ -78,6 +84,8 @@ generators:
       | {
           package: $doc.package,
           prefix: $doc.prefix,
+          is_json: ($doc.surface == "json"),
+          surface_const: ($doc.surface | surface_const),
           has_strconv: ([ $doc.routes[].params[] | select(.parse == "bool" or (.parse | startswith("int")) or (.parse | startswith("uint"))) ] | length) > 0,
           imports: ([ $doc.routes[].params[] | select(.import != "") | {alias: .alias, path: .import} ] | unique_by(.path) | sort_by(.path)),
           routes: $routes

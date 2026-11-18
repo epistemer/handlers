@@ -1,0 +1,84 @@
+openapi: 3.0.3
+info:
+  title: Features test
+  version: 1.0.0
+security:
+  - bearer: []
+paths:
+  /:
+    get:
+      operationId: root
+      security: []
+      summary: API Root
+      responses:
+        "200": {description: ok}
+  /users/{userID}/items/{itemNum}/{flag}/{code}:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+      - name: itemNum
+        in: path
+        required: true
+        schema: {type: integer}
+    get:
+      operationId: getUserID
+      x-label: Custom Item Label
+      x-permission: items.read
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          x-label: Overridden User
+          schema: {type: string, format: uuid}
+        - name: flag
+          in: path
+          required: true
+          schema: {type: boolean}
+        - name: code
+          in: path
+          required: true
+          schema: {type: integer, format: int32}
+      responses:
+        "200": {description: ok}
+        "400": {$ref: "#/components/responses/Error"}
+    delete:
+      operationId: deleteItem
+      x-route-key: items.remove
+      x-permission: items.read
+      parameters:
+        - name: flag
+          in: path
+          required: true
+          schema: {type: boolean}
+        - name: code
+          in: path
+          required: true
+          schema: {type: integer, format: int32}
+      responses:
+        "204": {description: deleted}
+        "5XX":
+          description: server error
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+components:
+  securitySchemes:
+    bearer: {type: http, scheme: bearer}
+  parameters:
+    UserID:
+      name: userID
+      in: path
+      required: true
+      schema: {type: string}
+  responses:
+    Error:
+      description: error
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: {type: string}
+        message: {type: string}

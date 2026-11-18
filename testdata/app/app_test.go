@@ -1,15 +1,22 @@
 package app_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"app/admin"
 	"app/adminroutes"
+	"app/apigen"
+	"app/apiroutes"
 	"app/ids"
 	"github.com/epistemer/auth"
 	"github.com/epistemer/auth/access"
@@ -18,8 +25,10 @@ import (
 	"github.com/epistemer/handlers"
 	"github.com/epistemer/handlers/authguard"
 	"github.com/epistemer/handlers/handlerstest"
+	"github.com/epistemer/handlers/openapi"
 	"github.com/epistemer/i18n"
 	"github.com/epistemer/i18n/i18ntest"
+	"github.com/shopspring/decimal"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -278,4 +287,251 @@ func TestAdminRoutesWithAuthguard(t *testing.T) {
 	if recAuth.Code != 200 || recAuth.Body.String() != "order:7:tok" {
 		t.Errorf("authed = (%d, %q), want (200, order:7:tok)", recAuth.Code, recAuth.Body.String())
 	}
+}
+
+type toyAPI struct {
+	lastRoute handlers.Route
+	uploaded  string
+}
+
+func (a *toyAPI) SignIn(ctx context.Context, req apigen.SignInRequestObject) (apigen.SignInResponseObject, error) {
+	rt, _ := handlers.From(ctx)
+	a.lastRoute = rt
+	tok := "tok-ok"
+	return apigen.SignIn200JSONResponse{Token: &tok}, nil
+}
+
+func (a *toyAPI) ListOrders(ctx context.Context, req apigen.ListOrdersRequestObject) (apigen.ListOrdersResponseObject, error) {
+	rt, _ := handlers.From(ctx)
+	a.lastRoute = rt
+	return apigen.ListOrders200JSONResponse{}, nil
+}
+
+func (a *toyAPI) PlaceOrder(ctx context.Context, req apigen.PlaceOrderRequestObject) (apigen.PlaceOrderResponseObject, error) {
+	rt, _ := handlers.From(ctx)
+	a.lastRoute = rt
+	return apigen.PlaceOrder201JSONResponse{
+		Id:     1,
+		Status: apigen.Open,
+		Total:  decimal.RequireFromString("3.1"),
+	}, nil
+}
+
+func (a *toyAPI) GetOrder(ctx context.Context, req apigen.GetOrderRequestObject) (apigen.GetOrderResponseObject, error) {
+	rt, _ := handlers.From(ctx)
+	a.lastRoute = rt
+	return apigen.GetOrder200JSONResponse{
+		Id:     req.OrderId,
+		Status: apigen.Paid,
+		Total:  decimal.RequireFromString("3.1"),
+	}, nil
+}
+
+func (a *toyAPI) UploadReceipt(ctx context.Context, req apigen.UploadReceiptRequestObject) (apigen.UploadReceiptResponseObject, error) {
+	rt, _ := handlers.From(ctx)
+	a.lastRoute = rt
+	var parts []string
+	for {
+		part, err := req.Body.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		b, err := io.ReadAll(part)
+		if err != nil {
+			return nil, err
+		}
+		parts = append(parts, part.FormName()+"="+string(b))
+	}
+	a.uploaded = strings.Join(parts, ",")
+	return apigen.UploadReceipt204Response{}, nil
+}
+
+func TestAPIRoutesADR0003(t *testing.T) {
+	handlerstest.AssertPublic(t, apiroutes.Routes, "api.sign_in")
+	if got := apiroutes.GetOrder(42); got != "/api/v1/orders/42" {
+		t.Errorf("GetOrder(42) = %q", got)
+	}
+	if apiPerm := apiroutes.PermOrdersRead; apiPerm.Key() != "orders.read" {
+		t.Errorf("PermOrdersRead key = %q", apiPerm.Key())
+	}
+
+	spec, err := apigen.GetSpec()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	impl := &toyAPI{}
+	g := &handlerstest.Guard{
+		Session: true,
+		Granted: map[string]bool{
+			"orders.read":     true,
+			"api.get_order":   true,
+			"api.place_order": true,
+		},
+	}
+
+	apiMux := http.NewServeMux()
+	apiroutes.Mount(apiMux, g, spec, func(rt *openapi.Router) {
+		apigen.HandlerWithOptions(
+			apigen.NewStrictHandlerWithOptions(impl, nil, apigen.StrictHTTPServerOptions{
+				RequestErrorHandlerFunc:  rt.RequestError,
+				ResponseErrorHandlerFunc: rt.WriteError,
+			}),
+			apigen.StdHTTPServerOptions{
+				BaseURL:          apiroutes.Prefix,
+				BaseRouter:       rt,
+				ErrorHandlerFunc: rt.RequestError,
+			},
+		)
+	}, handlers.WithMaxBody(512))
+
+	decodeErr := func(t *testing.T, rec *httptest.ResponseRecorder) (string, string) {
+		t.Helper()
+		var body struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+			t.Fatalf("unmarshal error json %q: %v", rec.Body.String(), err)
+		}
+		return body.Code, body.Message
+	}
+
+	t.Run("bad path parameter without session -> 401 before binding", func(t *testing.T) {
+		g.Session = false
+		rec := httptest.NewRecorder()
+		apiMux.ServeHTTP(rec, httptest.NewRequest("GET", "/api/v1/orders/notanint", nil))
+		if rec.Code != 401 {
+			t.Errorf("status = %d, want 401", rec.Code)
+		}
+	})
+
+	t.Run("bad path parameter with permission -> 400", func(t *testing.T) {
+		g.Session = true
+		rec := httptest.NewRecorder()
+		apiMux.ServeHTTP(rec, httptest.NewRequest("GET", "/api/v1/orders/notanint", nil))
+		code, msg := decodeErr(t, rec)
+		if rec.Code != 400 || code != "errors.handlers.invalid_field" || !strings.Contains(msg, "orderId") || strings.Contains(msg, "notanint") {
+			t.Errorf("bad path param = (%d, %q, %q)", rec.Code, code, msg)
+		}
+	})
+
+	t.Run("without permission -> 403", func(t *testing.T) {
+		g.Session = true
+		orig := g.Granted
+		g.Granted = nil
+		t.Cleanup(func() { g.Granted = orig })
+
+		rec := httptest.NewRecorder()
+		apiMux.ServeHTTP(rec, httptest.NewRequest("GET", "/api/v1/orders/42", nil))
+		if rec.Code != 403 {
+			t.Errorf("status = %d, want 403", rec.Code)
+		}
+	})
+
+	t.Run("valid getOrder -> 200 with decimal total and route in context", func(t *testing.T) {
+		impl.lastRoute = handlers.Route{}
+		rec := httptest.NewRecorder()
+		apiMux.ServeHTTP(rec, httptest.NewRequest("GET", "/api/v1/orders/42", nil))
+		if rec.Code != 200 {
+			t.Fatalf("status = %d, body=%q", rec.Code, rec.Body.String())
+		}
+		if !strings.Contains(rec.Body.String(), `"total":"3.1"`) {
+			t.Errorf("body = %q, want decimal total \"3.1\"", rec.Body.String())
+		}
+		if impl.lastRoute.Key != "api.get_order" || impl.lastRoute.Operation != "getOrder" {
+			t.Errorf("route in context = %+v", impl.lastRoute)
+		}
+	})
+
+	t.Run("public signIn without session -> 200", func(t *testing.T) {
+		g.Session = false
+		t.Cleanup(func() { g.Session = true })
+
+		req := httptest.NewRequest("POST", "/api/v1/auth/sign-in", strings.NewReader(`{"email":"a@b.example","password":"longpassword"}`))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		apiMux.ServeHTTP(rec, req)
+		if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"token":"tok-ok"`) {
+			t.Errorf("sign-in = (%d, %q)", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("minLength, minItems, query enum -> 400 with {code, message} and no value", func(t *testing.T) {
+		// minLength
+		reqPW := httptest.NewRequest("POST", "/api/v1/auth/sign-in", strings.NewReader(`{"email":"a@b.example","password":"shortpw"}`))
+		reqPW.Header.Set("Content-Type", "application/json")
+		recPW := httptest.NewRecorder()
+		apiMux.ServeHTTP(recPW, reqPW)
+		cPW, mPW := decodeErr(t, recPW)
+		if recPW.Code != 400 || cPW != "errors.handlers.invalid_field" || !strings.Contains(mPW, "/password") || strings.Contains(mPW, "shortpw") {
+			t.Errorf("minLength = (%d, %q, %q)", recPW.Code, cPW, mPW)
+		}
+
+		// minItems
+		reqItems := httptest.NewRequest("POST", "/api/v1/orders", strings.NewReader(`{"items":[]}`))
+		reqItems.Header.Set("Content-Type", "application/json")
+		recItems := httptest.NewRecorder()
+		apiMux.ServeHTTP(recItems, reqItems)
+		cItems, mItems := decodeErr(t, recItems)
+		if recItems.Code != 400 || cItems != "errors.handlers.invalid_field" || !strings.Contains(mItems, "/items") {
+			t.Errorf("minItems = (%d, %q, %q)", recItems.Code, cItems, mItems)
+		}
+
+		// query enum
+		recEnum := httptest.NewRecorder()
+		apiMux.ServeHTTP(recEnum, httptest.NewRequest("GET", "/api/v1/orders?status=secretstatus", nil))
+		cEnum, mEnum := decodeErr(t, recEnum)
+		if recEnum.Code != 400 || cEnum != "errors.handlers.invalid_field" || !strings.Contains(mEnum, "status") || strings.Contains(mEnum, "secretstatus") {
+			t.Errorf("enum = (%d, %q, %q)", recEnum.Code, cEnum, mEnum)
+		}
+	})
+
+	t.Run("unknown path under prefix -> 404 JSON without Allow", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		apiMux.ServeHTTP(rec, httptest.NewRequest("GET", "/api/v1/does-not-exist", nil))
+		code, _ := decodeErr(t, rec)
+		if rec.Code != 404 || code != "errors.handlers.not_found" || rec.Header().Get("Allow") != "" {
+			t.Errorf("unknown path = (%d, %q, allow=%q)", rec.Code, code, rec.Header().Get("Allow"))
+		}
+	})
+
+	t.Run("over WithMaxBody -> 413", func(t *testing.T) {
+		big := `{"email":"a@b.example","password":"` + strings.Repeat("a", 600) + `"}`
+		req := httptest.NewRequest("POST", "/api/v1/auth/sign-in", strings.NewReader(big))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		apiMux.ServeHTTP(rec, req)
+		code, _ := decodeErr(t, rec)
+		if rec.Code != 413 || code != "errors.handlers.too_large" {
+			t.Errorf("over maxBody = (%d, %q)", rec.Code, code)
+		}
+	})
+
+	t.Run("multipart upload accepted (x-auth: session)", func(t *testing.T) {
+		origGranted := g.Granted
+		g.Granted = nil // session-only route needs no permission
+		t.Cleanup(func() { g.Granted = origGranted })
+
+		var body bytes.Buffer
+		mw := multipart.NewWriter(&body)
+		fw, err := mw.CreateFormFile("file", "receipt.pdf")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = io.WriteString(fw, "pdfbytes")
+		_ = mw.WriteField("note", "paid")
+		_ = mw.Close()
+
+		req := httptest.NewRequest("POST", "/api/v1/orders/7/receipt", bytes.NewReader(body.Bytes()))
+		req.Header.Set("Content-Type", mw.FormDataContentType())
+		rec := httptest.NewRecorder()
+		apiMux.ServeHTTP(rec, req)
+		if rec.Code != 204 || impl.uploaded != "file=pdfbytes,note=paid" {
+			t.Errorf("multipart = (%d, %q)", rec.Code, impl.uploaded)
+		}
+	})
 }

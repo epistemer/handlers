@@ -1,0 +1,123 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "toy/spec.yaml",
+  "package": {
+    "name": "apiroutes",
+    "dir": "apiroutes"
+  },
+  "surface": "json",
+  "prefix": "/api/v1",
+  "routes": [
+    {
+      "key": "api.sign_in",
+      "method": "POST",
+      "pattern": "/auth/sign-in",
+      "name": "SignIn",
+      "var": "L10nSignIn",
+      "text": "Sign In",
+      "auth": "public",
+      "view": false,
+      "search": false,
+      "params": [],
+      "operation": "signIn"
+    },
+    {
+      "key": "api.list_orders",
+      "method": "GET",
+      "pattern": "/orders",
+      "name": "ListOrders",
+      "var": "L10nListOrders",
+      "text": "List Orders",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [],
+      "permission": "orders.read",
+      "operation": "listOrders"
+    },
+    {
+      "key": "api.place_order",
+      "method": "POST",
+      "pattern": "/orders",
+      "name": "PlaceOrder",
+      "var": "L10nPlaceOrder",
+      "text": "Place Order",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [],
+      "permission": "api.place_order",
+      "operation": "placeOrder"
+    },
+    {
+      "key": "api.get_order",
+      "method": "GET",
+      "pattern": "/orders/{orderId}",
+      "name": "GetOrder",
+      "var": "L10nGetOrder",
+      "text": "Get Order",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "orderId",
+          "go": "orderId",
+          "var": "L10nGetOrderOrderId",
+          "type": "int64",
+          "import": "",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Order Id"
+        }
+      ],
+      "permission": "api.get_order",
+      "operation": "getOrder"
+    },
+    {
+      "key": "api.upload_receipt",
+      "method": "POST",
+      "pattern": "/orders/{orderId}/receipt",
+      "name": "UploadReceipt",
+      "var": "L10nUploadReceipt",
+      "text": "Upload Receipt",
+      "auth": "session",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "orderId",
+          "go": "orderId",
+          "var": "L10nUploadReceiptOrderId",
+          "type": "int64",
+          "import": "",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Order Id"
+        }
+      ],
+      "operation": "uploadReceipt"
+    }
+  ],
+  "permissions": [
+    {
+      "key": "orders.read",
+      "var": "PermOrdersRead",
+      "text": "List Orders",
+      "level": "verified"
+    },
+    {
+      "key": "api.place_order",
+      "var": "PermApiPlaceOrder",
+      "text": "Place Order",
+      "level": "verified"
+    },
+    {
+      "key": "api.get_order",
+      "var": "PermApiGetOrder",
+      "text": "Get Order",
+      "level": "verified"
+    }
+  ]
+}

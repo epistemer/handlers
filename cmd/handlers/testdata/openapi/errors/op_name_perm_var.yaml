@@ -1,0 +1,23 @@
+openapi: 3.0.3
+info: {title: Test, version: 1.0.0}
+security: [{bearerAuth: []}]
+paths:
+  /orders:
+    get:
+      operationId: listOrders
+      x-permission: orders.read
+      responses: {"200": {description: ok}}
+  /other:
+    get:
+      operationId: PermOrdersRead
+      responses: {"200": {description: ok}}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer}
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: {type: string}
+        message: {type: string}

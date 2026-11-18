@@ -43,13 +43,54 @@ func NewMount(mux *http.ServeMux, routes []Route, g Guard, opts ...Option) *Moun
 // Handle registers routes[i] on the mux with the request chain: body limit,
 // route in context, guard check (unless public), middleware, and then h.
 func (m *Mount) Handle(i int, h func(w http.ResponseWriter, r *http.Request) error) {
+	m.handle(i, h == nil, func(ew ErrorWriter) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := h(w, r); err != nil {
+				ew(w, r, err)
+			}
+		})
+	})
+}
+
+// HandleHTTP registers routes[i] like Handle, with h as the handler and
+// validate (if not nil) run after the middleware: the API's step 5. h writes
+// its own response.
+func (m *Mount) HandleHTTP(i int, h http.Handler, validate func(*http.Request) error) {
+	m.handle(i, h == nil, func(ew ErrorWriter) http.Handler {
+		if validate == nil {
+			return h
+		}
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := validate(r); err != nil {
+				ew(w, r, err)
+				return
+			}
+			h.ServeHTTP(w, r)
+		})
+	})
+}
+
+// Writer returns the error writer the options chose, or the default writer
+// for the mounted routes' surface (nil when routes is empty and WithErrors
+// was not given).
+func (m *Mount) Writer() ErrorWriter {
+	if m.opts.errWriter != nil {
+		return m.opts.errWriter
+	}
+	if len(m.routes) > 0 {
+		return m.errorWriterFor(m.routes[0].Surface)
+	}
+	return nil
+}
+
+func (m *Mount) handle(i int, handlerNil bool, build func(ew ErrorWriter) http.Handler) {
 	if i < 0 || i >= len(m.routes) {
 		panic(fmt.Sprintf("handlers: route index %d out of range", i))
 	}
 	if m.handled[i] {
 		panic(fmt.Sprintf("handlers: route %s (%d) already handled", m.routes[i].Key, i))
 	}
-	if h == nil {
+	if handlerNil {
 		panic(fmt.Sprintf("handlers: nil handler for route %s", m.routes[i].Key))
 	}
 	m.handled[i] = true
@@ -70,11 +111,7 @@ func (m *Mount) Handle(i int, h func(w http.ResponseWriter, r *http.Request) err
 		panic(fmt.Sprintf("handlers: unknown auth %d", rt.Auth))
 	}
 
-	var chained http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := h(w, r); err != nil {
-			ew(w, r, err)
-		}
-	})
+	chained := build(ew)
 	for idx := len(m.opts.mw) - 1; idx >= 0; idx-- {
 		chained = m.opts.mw[idx](chained)
 	}

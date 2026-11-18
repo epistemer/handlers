@@ -4,3 +4,7 @@ adminroutes/zz_adminroutes.labels.json github.com/epistemer/handlers:labels
 adminroutes/zz_adminroutes_i18n.go github.com/epistemer/i18n:labels
 adminroutes/zz_adminroutes_permissions.go github.com/epistemer/handlers:permissions
 adminroutes/zz_adminroutes_routes.go github.com/epistemer/handlers:routes
+apiroutes/zz_apiroutes.labels.json github.com/epistemer/handlers:labels
+apiroutes/zz_apiroutes_i18n.go github.com/epistemer/i18n:labels
+apiroutes/zz_apiroutes_permissions.go github.com/epistemer/handlers:permissions
+apiroutes/zz_apiroutes_routes.go github.com/epistemer/handlers:routes

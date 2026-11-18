@@ -46,6 +46,7 @@ type routeDoc struct {
 	Params     []paramDoc `json:"params"`
 	Permission string     `json:"permission,omitempty"`
 	Entity     string     `json:"entity,omitempty"`
+	Operation  string     `json:"operation,omitempty"`
 }
 
 type paramDoc struct {
@@ -78,6 +79,147 @@ var reservedAliases = map[string]bool{
 	"openapi3": true,
 }
 
+type routesOutputConfig struct {
+	pkgName    string
+	outDir     string
+	absOutDir  string
+	outFile    string
+	absOutFile string
+	outRel     string
+	sourceRel  string
+	modRoot    string
+}
+
+func resolveRoutesPackageName(pkgNameFlag, outDir string) (string, bool) {
+	pkgName := pkgNameFlag
+	if pkgName == "" {
+		pkgName = filepath.Base(filepath.Clean(outDir))
+	}
+	if !isGoIdentifier(pkgName) || pkgName == "_" {
+		return pkgName, false
+	}
+	return pkgName, true
+}
+
+func resolveRoutesPaths(outDir, pkgName, targetAbs, modRootStartDir string) (routesOutputConfig, error) {
+	absOutDir, err := filepath.Abs(outDir)
+	if err != nil {
+		return routesOutputConfig{}, err
+	}
+	modRoot, err := findModuleRootFromCwdOr(modRootStartDir)
+	if err != nil {
+		return routesOutputConfig{}, err
+	}
+	sourceRel, err := relSlash(modRoot, targetAbs)
+	if err != nil {
+		return routesOutputConfig{}, err
+	}
+	outRel, err := relSlash(modRoot, absOutDir)
+	if err != nil {
+		return routesOutputConfig{}, err
+	}
+	return routesOutputConfig{
+		pkgName:    pkgName,
+		outDir:     outDir,
+		absOutDir:  absOutDir,
+		outFile:    filepath.Join(outDir, "zz_"+pkgName+".routes.json"),
+		absOutFile: filepath.Join(absOutDir, "zz_"+pkgName+".routes.json"),
+		outRel:     outRel,
+		sourceRel:  sourceRel,
+		modRoot:    modRoot,
+	}, nil
+}
+
+func writeOrCheckRoutesDoc(
+	cmdName string,
+	cfg routesOutputConfig,
+	doc routesDoc,
+	warnLines []string,
+	baseline string,
+	strict, check bool,
+	stdout, stderr io.Writer,
+) int {
+	encoded, err := encodeRoutesDoc(doc)
+	if err != nil {
+		fmt.Fprintf(stderr, "handlers %s: internal error: %v\n", cmdName, err)
+		return 1
+	}
+
+	var rawAny any
+	if err := json.Unmarshal(encoded, &rawAny); err != nil {
+		fmt.Fprintf(stderr, "handlers %s: internal error: %v\n", cmdName, err)
+		return 1
+	}
+	if err := routesv1.Check(rawAny); err != nil {
+		fmt.Fprintf(stderr, "handlers %s: internal error: %v\n", cmdName, err)
+		return 1
+	}
+
+	var baseBytes []byte
+	var baseLabel string
+	if baseline != "" {
+		baseLabel = baseline
+		if b, ok := loadGitFile(baseline, cfg.absOutFile); ok {
+			baseBytes = b
+		}
+	} else {
+		baseLabel = "the committed file"
+		if b, err := os.ReadFile(cfg.absOutFile); err == nil {
+			baseBytes = b
+		}
+	}
+	if len(baseBytes) > 0 {
+		for _, d := range compareBaseline(baseBytes, baseLabel, cfg.outFile, doc) {
+			warnLines = append(warnLines, d.String())
+		}
+	}
+
+	for _, line := range warnLines {
+		fmt.Fprintln(stdout, line)
+	}
+
+	hasWarning := len(warnLines) > 0
+
+	if check {
+		existing, err := os.ReadFile(cfg.absOutFile)
+		if err != nil {
+			if os.IsNotExist(err) {
+				fmt.Fprintf(stderr, "%s is missing\n", cfg.outFile)
+				return 1
+			}
+			fmt.Fprintf(stderr, "handlers %s: %v\n", cmdName, err)
+			return 1
+		}
+		if !bytes.Equal(existing, encoded) {
+			fmt.Fprintf(stderr, "%s is stale\n", cfg.outFile)
+			return 1
+		}
+		if strict && hasWarning {
+			return 1
+		}
+		return 0
+	}
+
+	if strict && hasWarning {
+		return 1
+	}
+
+	existing, err := os.ReadFile(cfg.absOutFile)
+	if err == nil && bytes.Equal(existing, encoded) {
+		return 0
+	}
+
+	if err := os.MkdirAll(cfg.absOutDir, 0o755); err != nil {
+		fmt.Fprintf(stderr, "handlers %s: %v\n", cmdName, err)
+		return 1
+	}
+	if err := os.WriteFile(cfg.absOutFile, encoded, 0o644); err != nil {
+		fmt.Fprintf(stderr, "handlers %s: %v\n", cmdName, err)
+		return 1
+	}
+	return 0
+}
+
 func runGen(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("gen", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -100,11 +242,8 @@ func runGen(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	pkgName := *pkgNameFlag
-	if pkgName == "" {
-		pkgName = filepath.Base(filepath.Clean(*outDir))
-	}
-	if !isGoIdentifier(pkgName) || pkgName == "_" {
+	pkgName, ok := resolveRoutesPackageName(*pkgNameFlag, *outDir)
+	if !ok {
 		fmt.Fprintf(stderr, "handlers gen: invalid package name %q\n", pkgName)
 		return 2
 	}
@@ -115,24 +254,7 @@ func runGen(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "handlers gen: %v\n", err)
 		return 1
 	}
-	absOutDir, err := filepath.Abs(*outDir)
-	if err != nil {
-		fmt.Fprintf(stderr, "handlers gen: %v\n", err)
-		return 1
-	}
-
-	modRoot, err := findModuleRootFromCwdOr(absPkgDir)
-	if err != nil {
-		fmt.Fprintf(stderr, "handlers gen: %v\n", err)
-		return 1
-	}
-
-	sourceRel, err := relSlash(modRoot, absPkgDir)
-	if err != nil {
-		fmt.Fprintf(stderr, "handlers gen: %v\n", err)
-		return 1
-	}
-	outRel, err := relSlash(modRoot, absOutDir)
+	cfg, err := resolveRoutesPaths(*outDir, pkgName, absPkgDir, absPkgDir)
 	if err != nil {
 		fmt.Fprintf(stderr, "handlers gen: %v\n", err)
 		return 1
@@ -158,88 +280,13 @@ func runGen(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	doc := buildRoutesDoc(pkg, sourceRel, pkgName, outRel, *prefix)
-
-	encoded, err := encodeRoutesDoc(doc)
-	if err != nil {
-		fmt.Fprintf(stderr, "handlers gen: internal error: %v\n", err)
-		return 1
-	}
-
-	var rawAny any
-	if err := json.Unmarshal(encoded, &rawAny); err != nil {
-		fmt.Fprintf(stderr, "handlers gen: internal error: %v\n", err)
-		return 1
-	}
-	if err := routesv1.Check(rawAny); err != nil {
-		fmt.Fprintf(stderr, "handlers gen: internal error: %v\n", err)
-		return 1
-	}
-
-	outFile := filepath.Join(*outDir, "zz_"+pkgName+".routes.json")
-	absOutFile := filepath.Join(absOutDir, "zz_"+pkgName+".routes.json")
-
-	var baseBytes []byte
-	var baseLabel string
-	if *baseline != "" {
-		baseLabel = *baseline
-		if b, ok := loadGitFile(*baseline, absOutFile); ok {
-			baseBytes = b
-		}
-	} else {
-		baseLabel = "the committed file"
-		if b, err := os.ReadFile(absOutFile); err == nil {
-			baseBytes = b
-		}
-	}
-	if len(baseBytes) > 0 {
-		diags = append(diags, compareBaseline(baseBytes, baseLabel, outFile, doc)...)
-	}
-
+	var warnLines []string
 	for _, d := range diags {
-		fmt.Fprintln(stdout, d.String())
+		warnLines = append(warnLines, d.String())
 	}
 
-	hasWarning := len(diags) > 0
-
-	if *check {
-		existing, err := os.ReadFile(absOutFile)
-		if err != nil {
-			if os.IsNotExist(err) {
-				fmt.Fprintf(stderr, "%s is missing\n", outFile)
-				return 1
-			}
-			fmt.Fprintf(stderr, "handlers gen: %v\n", err)
-			return 1
-		}
-		if !bytes.Equal(existing, encoded) {
-			fmt.Fprintf(stderr, "%s is stale\n", outFile)
-			return 1
-		}
-		if *strict && hasWarning {
-			return 1
-		}
-		return 0
-	}
-
-	if *strict && hasWarning {
-		return 1
-	}
-
-	existing, err := os.ReadFile(absOutFile)
-	if err == nil && bytes.Equal(existing, encoded) {
-		return 0
-	}
-
-	if err := os.MkdirAll(absOutDir, 0o755); err != nil {
-		fmt.Fprintf(stderr, "handlers gen: %v\n", err)
-		return 1
-	}
-	if err := os.WriteFile(absOutFile, encoded, 0o644); err != nil {
-		fmt.Fprintf(stderr, "handlers gen: %v\n", err)
-		return 1
-	}
-	return 0
+	doc := buildRoutesDoc(pkg, cfg.sourceRel, cfg.pkgName, cfg.outRel, *prefix)
+	return writeOrCheckRoutesDoc("gen", cfg, doc, warnLines, *baseline, *strict, *check, stdout, stderr)
 }
 
 func buildRoutesDoc(pkg *directive.Package, sourceRel, pkgName, outRel, prefix string) routesDoc {
@@ -282,14 +329,7 @@ func buildRoutesDoc(pkg *directive.Package, sourceRel, pkgName, outRel, prefix s
 		return candidate
 	}
 
-	type permAccum struct {
-		key        string
-		count      int
-		firstText  string
-		unverified bool
-	}
-	var permOrder []string
-	perms := make(map[string]*permAccum)
+	pb := newPermBuilder()
 
 	for _, r := range pkg.Routes {
 		text := r.Desc
@@ -308,17 +348,7 @@ func buildRoutesDoc(pkg *directive.Package, sourceRel, pkgName, outRel, prefix s
 			if permKey == "" {
 				permKey = r.Key
 			}
-			pa, exists := perms[permKey]
-			if !exists {
-				pa = &permAccum{
-					key:        permKey,
-					firstText:  text,
-					unverified: r.Auth == "unverified",
-				}
-				perms[permKey] = pa
-				permOrder = append(permOrder, permKey)
-			}
-			pa.count++
+			pb.add(permKey, text, r.Auth == "unverified")
 		}
 
 		restParam := restParamName(r.Path)
@@ -371,8 +401,45 @@ func buildRoutesDoc(pkg *directive.Package, sourceRel, pkgName, outRel, prefix s
 		})
 	}
 
-	for _, key := range permOrder {
-		pa := perms[key]
+	doc.Permissions = pb.docs()
+
+	return doc
+}
+
+type permAccum struct {
+	key        string
+	count      int
+	firstText  string
+	unverified bool
+}
+
+type permBuilder struct {
+	order []string
+	byKey map[string]*permAccum
+}
+
+func newPermBuilder() *permBuilder {
+	return &permBuilder{byKey: make(map[string]*permAccum)}
+}
+
+func (b *permBuilder) add(key, routeText string, unverified bool) {
+	pa, exists := b.byKey[key]
+	if !exists {
+		pa = &permAccum{
+			key:        key,
+			firstText:  routeText,
+			unverified: unverified,
+		}
+		b.byKey[key] = pa
+		b.order = append(b.order, key)
+	}
+	pa.count++
+}
+
+func (b *permBuilder) docs() []permDoc {
+	out := make([]permDoc, 0, len(b.order))
+	for _, key := range b.order {
+		pa := b.byKey[key]
 		text := directive.Readable(key)
 		if pa.count == 1 {
 			text = pa.firstText
@@ -381,15 +448,14 @@ func buildRoutesDoc(pkg *directive.Package, sourceRel, pkgName, outRel, prefix s
 		if pa.unverified {
 			level = "unverified"
 		}
-		doc.Permissions = append(doc.Permissions, permDoc{
+		out = append(out, permDoc{
 			Key:   key,
 			Var:   permGoName(key),
 			Text:  text,
 			Level: level,
 		})
 	}
-
-	return doc
+	return out
 }
 
 func encodeRoutesDoc(doc routesDoc) ([]byte, error) {

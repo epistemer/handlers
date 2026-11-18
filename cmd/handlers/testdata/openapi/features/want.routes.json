@@ -1,0 +1,144 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "features/spec.yaml",
+  "package": {
+    "name": "feat",
+    "dir": "out"
+  },
+  "surface": "json",
+  "prefix": "",
+  "routes": [
+    {
+      "key": "api.root",
+      "method": "GET",
+      "pattern": "/",
+      "name": "Root",
+      "var": "L10nRoot",
+      "text": "API Root",
+      "auth": "public",
+      "view": false,
+      "search": false,
+      "params": [],
+      "operation": "root"
+    },
+    {
+      "key": "api.get_user_id",
+      "method": "GET",
+      "pattern": "/users/{userID}/items/{itemNum}/{flag}/{code}",
+      "name": "GetUserID",
+      "var": "L10nGetUserID",
+      "text": "Custom Item Label",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "userID",
+          "go": "userID",
+          "var": "L10nGetUserIDUserID",
+          "type": "string",
+          "import": "",
+          "parse": "string",
+          "kind": "segment",
+          "label": "Overridden User"
+        },
+        {
+          "name": "itemNum",
+          "go": "itemNum",
+          "var": "L10nGetUserIDItemNum",
+          "type": "int64",
+          "import": "",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Item Num"
+        },
+        {
+          "name": "flag",
+          "go": "flag",
+          "var": "L10nGetUserIDFlag",
+          "type": "bool",
+          "import": "",
+          "parse": "bool",
+          "kind": "segment",
+          "label": "Flag"
+        },
+        {
+          "name": "code",
+          "go": "code",
+          "var": "L10nGetUserIDCode",
+          "type": "int32",
+          "import": "",
+          "parse": "int32",
+          "kind": "segment",
+          "label": "Code"
+        }
+      ],
+      "permission": "items.read",
+      "operation": "getUserID"
+    },
+    {
+      "key": "items.remove",
+      "method": "DELETE",
+      "pattern": "/users/{userID}/items/{itemNum}/{flag}/{code}",
+      "name": "DeleteItem",
+      "var": "L10nDeleteItem",
+      "text": "Delete Item",
+      "auth": "permission",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "userID",
+          "go": "userID",
+          "var": "L10nDeleteItemUserID",
+          "type": "string",
+          "import": "",
+          "parse": "string",
+          "kind": "segment",
+          "label": "User ID"
+        },
+        {
+          "name": "itemNum",
+          "go": "itemNum",
+          "var": "L10nDeleteItemItemNum",
+          "type": "int64",
+          "import": "",
+          "parse": "int64",
+          "kind": "segment",
+          "label": "Item Num"
+        },
+        {
+          "name": "flag",
+          "go": "flag",
+          "var": "L10nDeleteItemFlag",
+          "type": "bool",
+          "import": "",
+          "parse": "bool",
+          "kind": "segment",
+          "label": "Flag"
+        },
+        {
+          "name": "code",
+          "go": "code",
+          "var": "L10nDeleteItemCode",
+          "type": "int32",
+          "import": "",
+          "parse": "int32",
+          "kind": "segment",
+          "label": "Code"
+        }
+      ],
+      "permission": "items.read",
+      "operation": "deleteItem"
+    }
+  ],
+  "permissions": [
+    {
+      "key": "items.read",
+      "var": "PermItemsRead",
+      "text": "Items Read",
+      "level": "verified"
+    }
+  ]
+}
