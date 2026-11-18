@@ -1,0 +1,6 @@
+handlers.go:7:1: not a directive: write "//h:param orderID label Order ID"
+handlers.go:11:1: wildcard {orderID} has no parameter
+handlers.go:13:58: parameter id has no wildcard in /orders/{orderID}
+handlers.go:15:1: key "orders.show" also at handlers.go:9
+handlers.go:17:1: GET /orders/{orderID} also at handlers.go:11
+handlers.go:23:1: h:path: "orders/list" must start with "/"

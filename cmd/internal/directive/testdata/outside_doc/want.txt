@@ -1,0 +1,2 @@
+handlers.go:7:1: directives must be the doc comment of a handler method
+handlers.go:12:2: directives must be the doc comment of a handler method

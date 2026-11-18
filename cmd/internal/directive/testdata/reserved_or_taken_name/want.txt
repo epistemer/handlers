@@ -1,0 +1,3 @@
+handlers.go:12:1: Routes is a name the generated package declares
+handlers.go:19:1: PermAdminUsers is also the variable of permission admin.users
+handlers.go:25:1: L10nRoutes is also the label variable of a.one

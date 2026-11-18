@@ -3,6 +3,24 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M2.1, the rule engine and `handlers vet`
+
+- **Landed:** the command's module `cmd/` (golang.org/x/tools only), with
+  `cmd/internal/directive` (the syntax pass and the type pass) and
+  `handlers vet` (`-strict`, `-hook`). 30 test packages cover every row of
+  interface §5.2 and the two §5.3 warnings that need no baseline, plus
+  zp's faults rebuilt with toy names; the syntax pass is fed every prefix of
+  a file and never panics. CI runs both modules. Gemini 4 Hydrogen (Medium)
+  wrote it from a spec (about 160k tokens); Claude reviewed it, fixed a
+  staticcheck finding, and ran it on the spike's 200-route package (0.8 s,
+  clean) and on the package Claude Code had broken (both faults found).
+- **Decided for you:** `{$}` in `h:path` reports `h:path: "<v>": must not
+  contain "{$}"`, a `<reason>` under §5.2's row; a parameter type declared in
+  the handler's package reports only that, not also "can't be read".
+- **Next:** M2.2, `handlers gen`, which also brings `vet`'s comparison across
+  packages through the routes files and the baseline warnings.
+- **Waiting on you:** nothing.
+
 ## 2026-11-18: M1.5, the interface is locked
 
 - **Landed:** [interface.md](interface.md), locked on your instruction

@@ -1,0 +1,2 @@
+handlers.go:11:1: h:view takes no value or true, not "false"
+handlers.go:12:1: h:search takes no value or true, not "yes"

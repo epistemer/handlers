@@ -1,0 +1,1 @@
+handlers.go:11:1: h:perm "categories.admin" is used by this route only (warning)

@@ -1,0 +1,1 @@
+handlers.go:18:1: directives on A and B: one handler type per package

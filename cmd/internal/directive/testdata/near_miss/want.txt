@@ -1,0 +1,5 @@
+handlers.go:7:1: not a directive: write "//h:key items.list"
+handlers.go:8:1: not a directive: write "//h:method GET"
+handlers.go:9:1: not a directive: write "//h:path /items"
+handlers.go:10:1: not a directive: write "//h:param id label Item ID"
+handlers.go:11:1: not a directive: write "//h:param slug label Slug"

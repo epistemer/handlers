@@ -1,0 +1,2 @@
+handlers.go:11:1: h:param: write "h:param <name> label <text>"
+handlers.go:12:1: h:param: no parameter other

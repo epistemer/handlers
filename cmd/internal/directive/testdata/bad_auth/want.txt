@@ -1,0 +1,1 @@
+handlers.go:11:1: h:auth: "admin" is not public, session or unverified
