@@ -3,6 +3,7 @@ package lsp
 import (
 	"go/token"
 	"net/url"
+	slashpath "path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -296,7 +297,8 @@ func uriToFSPath(rawURI, goos string) (string, bool) {
 	if p == "" {
 		return "/", true
 	}
-	return filepath.Clean(p), true
+	// Slash-separated whatever the host is: goos names the client's system.
+	return slashpath.Clean(p), true
 }
 
 func fsPathToURI(path, goos string) string {
