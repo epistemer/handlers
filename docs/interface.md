@@ -2,7 +2,8 @@
 
 > Status: **locked on 2026-11-18**, by Claude on epistemer's instruction to
 > freeze it. A change to anything here is an amendment (§17); one that
-> changes what an app writes or gets back is epistemer's to decide. Reviewed before the lock:
+> changes what an app writes or gets back is epistemer's to decide. The
+> choices Claude made in it were confirmed by epistemer the same day. Reviewed before the lock:
 > [review 0005](reviews/0005-interface.md).
 >
 > This document says what an app writes and what it gets back. The design
