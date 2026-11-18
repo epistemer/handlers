@@ -241,18 +241,19 @@ var (
 ## 10. The API
 
 - One committed `openapi.yaml`. The mount prefix is the path of `servers[0].url`, parsed as a URL (`https://host/api/v1` and `/api/v1` both give `/api/v1`; no `servers` gives none). No text substitution.
-- The OpenAPI version is pinned by S2: 3.0 is the baseline, 3.1 if the chosen generator supports it.
+- The OpenAPI version is 3.0 (ADR 0003): oapi-codegen and kin-openapi support it.
 - `handlers openapi` reads the spec and writes `routes/v1` with `surface: json`. It checks that:
   - every operation has a unique `operationId`;
   - every security requirement names a declared scheme;
   - every `x-permission` is a valid key;
   - every operation's error responses use the spec's `Error` schema, `{code, message}`.
+  - every path parameter's name is a Go identifier, no segment holds two parameters, and no parameter sets `allowReserved`, so `ServeMux` can route it (ADR 0003).
 - Guards come from the spec, failing closed:
   - an operation's own `security`, else the spec's top-level `security`; an operation with neither is an error;
   - `security: []` is `public`, and `x-permission` beside it is an error;
   - a bearer scheme is the route's permission: `x-permission: <key>`, defaulting to the route key. `x-auth: session` opts out to a signed-in session with no permission.
 - The route key is `x-route-key`, else derived from the `operationId`: split at case changes (a run of capitals is one word: `getUserID` → `get_user_id`), at `-` and `_`, lowercased and joined with `_`, then prefixed with what the producer is given (`api.`). Two operations deriving one key is an error. An `operationId` is already the API's public name, so tying the key to it adds no new churn; `x-route-key` pins a key across a rename.
-- The typed server comes from the generator spike S2 picks; that spike also decides whether `routes` renders the API's registration too. Whatever wins, the server must:
+- The typed server is oapi-codegen's strict `std-http` server (ADR 0003). handlers passes it an adapter as its `BaseRouter`, which registers each operation on the app's `ServeMux` behind the route, the guard and kin-openapi's validation of the request, in that order, before oapi-codegen binds parameters. The criteria it met:
   - run on `net/http`, with **one path matcher**: each operation registered on the app's `ServeMux` with the route-into-context, guard and error-writer chain, or found from `r.Pattern` before the guard. A second router behind the mux would let the two disagree on paths;
   - send errors through D14's JSON writer;
   - validate requests against the spec;
@@ -296,7 +297,7 @@ var (
 | Q2 | Name of the "signed in, no permission" level | `session` | the freeze |
 | Q3 | Keep the `h:` prefix? | Yes: habit, and the extension's grammar | the freeze |
 | Q4 | Where the generated Go goes | A sibling package, `dir` and `package` parameters as in models | the freeze |
-| Q5 | Does the API use the third-party server, or this package's `routes` template over third-party types? | Whichever S2 shows needs less glue to meet §10 | S2 |
+| Q5 | Does the API use the third-party server, or this package's `routes` template over third-party types? | Answered by ADR 0003: oapi-codegen's strict server, through handlers' adapter | S2 |
 | Q6 | A second language server on `.go` in Claude Code | Ship it if S3 shows it attaches; otherwise only the hook | S3 |
 
 ## 14. Out of v0.1
