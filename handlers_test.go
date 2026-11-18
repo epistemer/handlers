@@ -661,3 +661,131 @@ func TestMountChainAndRouting(t *testing.T) {
 		}
 	})
 }
+
+func TestMountHandleHTTPAndWriter(t *testing.T) {
+	t.Run("HandleHTTP panics on nil handler and missing Done", func(t *testing.T) {
+		pub := handlers.Route{Key: "api.ping", Method: "GET", Prefix: "/api", Pattern: "/ping", Surface: handlers.JSON, Auth: handlers.Public, Label: testRouteLabel}
+		assertPanics(t, "nil http.Handler", func() {
+			m := handlers.NewMount(http.NewServeMux(), []handlers.Route{pub}, nil)
+			m.HandleHTTP(0, nil, nil)
+		})
+		assertPanics(t, "duplicate HandleHTTP", func() {
+			m := handlers.NewMount(http.NewServeMux(), []handlers.Route{pub}, nil)
+			m.HandleHTTP(0, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}), nil)
+			m.HandleHTTP(0, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}), nil)
+		})
+	})
+
+	t.Run("HandleHTTP chain order: route, guard, middleware, validate, handler", func(t *testing.T) {
+		routes := []handlers.Route{
+			{Key: "api.orders.create", Method: "POST", Prefix: "/api", Pattern: "/orders", Surface: handlers.JSON, Auth: handlers.Permission, Permission: "orders.write", Label: testRouteLabel},
+			{Key: "api.ping", Method: "GET", Prefix: "/api", Pattern: "/ping", Surface: handlers.JSON, Auth: handlers.Public, Label: testRouteLabel},
+		}
+		g := &fakeGuard{}
+		var events []string
+		mw := func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				events = append(events, "mw")
+				next.ServeHTTP(w, r)
+			})
+		}
+
+		mux := http.NewServeMux()
+		m := handlers.NewMount(mux, routes, g, handlers.WithMiddleware(mw))
+
+		var validateErr error
+		m.HandleHTTP(0, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			events = append(events, "handler")
+			w.WriteHeader(http.StatusCreated)
+			_, _ = io.WriteString(w, "created")
+		}), func(r *http.Request) error {
+			events = append(events, "validate")
+			if _, ok := handlers.From(r.Context()); !ok {
+				t.Error("validate did not see route in context")
+			}
+			return validateErr
+		})
+		m.HandleHTTP(1, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = io.WriteString(w, "pong")
+		}), nil)
+		m.Done()
+
+		// Success with nil validate.
+		recPing := httptest.NewRecorder()
+		mux.ServeHTTP(recPing, httptest.NewRequest("GET", "/api/ping", nil))
+		if recPing.Code != 200 || recPing.Body.String() != "pong" {
+			t.Errorf("GET /api/ping = (%d, %q)", recPing.Code, recPing.Body.String())
+		}
+
+		// Guard refusal skips middleware, validate, handler.
+		events = nil
+		g.checkErr = errTestGuardDeny
+		recDeny := httptest.NewRecorder()
+		mux.ServeHTTP(recDeny, httptest.NewRequest("POST", "/api/orders", nil))
+		if recDeny.Code != 403 || len(events) != 0 {
+			t.Errorf("guard deny = (%d, events=%v)", recDeny.Code, events)
+		}
+
+		// Validation error runs after middleware, stops handler, writes JSON.
+		g.checkErr = nil
+		validateErr = handlers.ErrInvalidField.With("/items")
+		events = nil
+		recBad := httptest.NewRecorder()
+		mux.ServeHTTP(recBad, httptest.NewRequest("POST", "/api/orders", nil))
+		if recBad.Code != 400 || recBad.Header().Get("Content-Type") != "application/json" {
+			t.Errorf("validate err = (%d, ct=%q)", recBad.Code, recBad.Header().Get("Content-Type"))
+		}
+		if strings.Join(events, ",") != "mw,validate" {
+			t.Errorf("events = %v, want [mw validate]", events)
+		}
+
+		// Validation passes -> handler runs.
+		validateErr = nil
+		events = nil
+		recOK := httptest.NewRecorder()
+		mux.ServeHTTP(recOK, httptest.NewRequest("POST", "/api/orders", nil))
+		if recOK.Code != 201 || recOK.Body.String() != "created" {
+			t.Errorf("POST /api/orders = (%d, %q)", recOK.Code, recOK.Body.String())
+		}
+		if strings.Join(events, ",") != "mw,validate,handler" {
+			t.Errorf("events = %v, want [mw validate handler]", events)
+		}
+	})
+
+	t.Run("Writer returns WithErrors option or surface default", func(t *testing.T) {
+		mux := http.NewServeMux()
+		jsonRoutes := []handlers.Route{{Key: "api.x", Method: "GET", Pattern: "/x", Surface: handlers.JSON, Auth: handlers.Public, Label: testRouteLabel}}
+		htmlRoutes := []handlers.Route{{Key: "ui.x", Method: "GET", Pattern: "/x", Surface: handlers.HTML, Auth: handlers.Public, Label: testRouteLabel}}
+
+		mJSON := handlers.NewMount(mux, jsonRoutes, nil)
+		rec := httptest.NewRecorder()
+		mJSON.Writer()(rec, httptest.NewRequest("GET", "/x", nil), handlers.ErrNotFound)
+		if rec.Code != 404 || rec.Header().Get("Content-Type") != "application/json" {
+			t.Errorf("json default writer = (%d, %q)", rec.Code, rec.Header().Get("Content-Type"))
+		}
+
+		mHTML := handlers.NewMount(mux, htmlRoutes, nil)
+		rec2 := httptest.NewRecorder()
+		mHTML.Writer()(rec2, httptest.NewRequest("GET", "/x", nil), handlers.ErrNotFound)
+		if rec2.Code != 404 || rec2.Header().Get("Content-Type") != "text/plain; charset=utf-8" {
+			t.Errorf("html default writer = (%d, %q)", rec2.Code, rec2.Header().Get("Content-Type"))
+		}
+
+		called := false
+		custom := func(w http.ResponseWriter, r *http.Request, err error) {
+			called = true
+			w.WriteHeader(http.StatusTeapot)
+		}
+		mCustom := handlers.NewMount(mux, nil, nil, handlers.WithErrors(custom))
+		rec3 := httptest.NewRecorder()
+		mCustom.Writer()(rec3, httptest.NewRequest("GET", "/", nil), handlers.ErrNotFound)
+		if !called || rec3.Code != http.StatusTeapot {
+			t.Errorf("custom writer = (called=%v, code=%d)", called, rec3.Code)
+		}
+
+		mEmpty := handlers.NewMount(mux, nil, nil)
+		if mEmpty.Writer() != nil {
+			t.Errorf("empty mount default writer = non-nil, want nil")
+		}
+	})
+}

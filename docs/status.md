@@ -3,6 +3,29 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-18: M3, the API surface
+
+- **Landed:** `handlers openapi` (every §7.2 check with its message, §7.1's
+  parameter mapping, §7.4's routes, sharing gen's encoding, checker,
+  `-check` and baseline), the `openapi` module (`Mount`, the `Router` that
+  oapi-codegen registers through, kin-openapi validation without a second
+  router, multipart streamed, values stripped from causes), and the
+  `routes` generator's API files with `Mount`. The app module now runs
+  oapi-codegen v2.8.2 through genx and passes ADR 0003's whole table through
+  `apiroutes.Mount`: 401 before binding, 400 naming the field without its
+  value, 403, 200 with decimal money, 404 and 413 as JSON. Gemini 4
+  Hydrogen (High) wrote it from a spec (about 600k tokens); Claude
+  reviewed it, the adapter line by line.
+- **Decided for you:** amendment A1 (`Mount.HandleHTTP`, `Mount.Writer`:
+  plumbing for the openapi module, which apps don't call) and A2 (§3.3's
+  example uses `GetSpec`, as oapi-codegen v2.8 deprecates `GetSwagger`).
+  `-key-prefix` that isn't a key is a usage error (exit 2).
+- **Noticed:** genx requires every producer to emit a domain file, so the
+  app's oapi-codegen step declares the spec it reads as its "emit". It works
+  but reads wrong; M5.1's example will settle how an app runs oapi-codegen.
+- **Next:** M4, the editor and agent tools.
+- **Waiting on you:** nothing.
+
 ## 2026-11-18: M2.6, `Table` and `Search`; M2 is done
 
 - **Landed:** `NewTable`, `ByKey`, `Routes` and `Search` (interface §11.7,

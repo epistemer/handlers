@@ -100,9 +100,9 @@ M3 and M4 are independent and can run side by side.
 
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
-| ☐ | M3.1 | `handlers openapi`, the spec producer, with its checks | M | Golden `routes/v1` from a toy spec; each check's test |
-| ☐ | M3.2 | The server as ADR 0003 decides: prefix from `servers`, the JSON error envelope, guards from the route table, validation, serving the spec | M | httptest of each; the spec's statuses match the answers |
-| ☐ | M3.3 | Labels and permissions for API routes through M2's generators | S | Tests as M2.4 and M2.5 |
+| ☑ | M3.1 | `handlers openapi`, the spec producer, with its checks | M | Golden `routes/v1` from a toy spec; each check's test |
+| ☑ | M3.2 | The server as ADR 0003 decides: prefix from `servers`, the JSON error envelope, guards from the route table, validation, serving the spec | M | httptest of each; the spec's statuses match the answers |
+| ☑ | M3.3 | Labels and permissions for API routes through M2's generators | S | Tests as M2.4 and M2.5 |
 
 ## M4 — Editors and agents
 

@@ -105,7 +105,7 @@ admin := http.NewServeMux()
 adminroutes.Register(admin, &adminui.H{...}, guard, handlers.WithErrors(adminui.ErrorPage))
 
 api := http.NewServeMux()
-spec, _ := apigen.GetSwagger() // oapi-codegen's embedded spec
+spec, _ := apigen.GetSpec() // oapi-codegen's embedded spec (GetSwagger before v2.8)
 apiroutes.Mount(api, guard, spec, func(rt *openapi.Router) {
 	apigen.HandlerWithOptions(
 		apigen.NewStrictHandlerWithOptions(apiImpl, nil, apigen.StrictHTTPServerOptions{
@@ -536,6 +536,11 @@ type Mount struct{ /* unexported */ }
 
 func NewMount(mux *http.ServeMux, routes []Route, g Guard, opts ...Option) *Mount
 func (m *Mount) Handle(i int, h func(w http.ResponseWriter, r *http.Request) error)
+// HandleHTTP registers routes[i] like Handle, with h as the handler and validate (if not
+// nil) run after the middleware: the API's step 5. h writes its own response.
+func (m *Mount) HandleHTTP(i int, h http.Handler, validate func(*http.Request) error)
+// Writer returns the error writer the options chose.
+func (m *Mount) Writer() ErrorWriter
 func (m *Mount) Done() // registers the catch-all; panics if a route wasn't handled
 
 func ParamString(r *http.Request, p Param) string
@@ -760,4 +765,5 @@ client SDK pipeline; a language server in the Claude Code plugin.
 
 ## 17. Amendments
 
-None yet.
+- **A1** (2026-11-18, M3, Claude): `Mount.HandleHTTP` and `Mount.Writer`, plumbing for §11.5; apps don't call them.
+- **A2** (2026-11-18, M3, Claude): §3.3's example calls oapi-codegen's `GetSpec`, which replaces the deprecated `GetSwagger` in v2.8.

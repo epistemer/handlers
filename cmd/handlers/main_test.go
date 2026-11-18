@@ -56,7 +56,7 @@ func TestHandlersSubcommands(t *testing.T) {
 		t.Errorf("no args exit code = %d, want 2", code)
 	}
 
-	for _, sub := range []string{"openapi", "lsp"} {
+	for _, sub := range []string{"lsp"} {
 		code, _, stderr := runBin(t, bin, "", "", sub)
 		if code != 2 {
 			t.Errorf("%s exit code = %d, want 2", sub, code)

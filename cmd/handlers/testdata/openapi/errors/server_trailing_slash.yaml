@@ -1,0 +1,15 @@
+openapi: 3.0.3
+info: {title: Test, version: 1.0.0}
+security: [{bearerAuth: []}]
+servers: [{url: "https://shop.example/api/v1/"}]
+paths: {}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer}
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: {type: string}
+        message: {type: string}

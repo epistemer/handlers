@@ -63,11 +63,7 @@ func TestGeneratorsGolden(t *testing.T) {
 			assertMapsEqual(t, "labels second render", labelsFiles, labelsFiles2)
 			assertMapsEqual(t, "permissions second render", permFiles, permFiles2)
 
-			if name == "api" {
-				if len(routesFiles) != 0 {
-					t.Fatalf("json surface produced routes files: %v", mapKeys(routesFiles))
-				}
-			} else if len(routesFiles) != 1 {
+			if len(routesFiles) != 1 {
 				t.Fatalf("expected 1 routes file, got %v", mapKeys(routesFiles))
 			}
 

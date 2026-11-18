@@ -31,7 +31,9 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runVet(args[1:], stdin, stdout, stderr)
 	case "gen":
 		return runGen(args[1:], stdout, stderr)
-	case "openapi", "lsp":
+	case "openapi":
+		return runOpenAPI(args[1:], stdout, stderr)
+	case "lsp":
 		fmt.Fprintf(stderr, "handlers: %s is not implemented yet\n", sub)
 		return 2
 	default:

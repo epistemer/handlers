@@ -1,0 +1,52 @@
+{
+  "domain": "labels/v1",
+  "labels": [
+    {
+      "key": "route.api.sign_in",
+      "path": "route.api.sign_in",
+      "text": "Sign In",
+      "var": "L10nSignIn"
+    },
+    {
+      "key": "route.api.list_orders",
+      "path": "route.api.list_orders",
+      "text": "List Orders",
+      "var": "L10nListOrders"
+    },
+    {
+      "key": "route.api.place_order",
+      "path": "route.api.place_order",
+      "text": "Place Order",
+      "var": "L10nPlaceOrder"
+    },
+    {
+      "key": "route.api.get_order",
+      "path": "route.api.get_order",
+      "text": "Get Order",
+      "var": "L10nGetOrder"
+    },
+    {
+      "key": "route_param.api.get_order.orderId",
+      "path": "route_param.api.get_order.orderId",
+      "text": "Order Id",
+      "var": "L10nGetOrderOrderId"
+    },
+    {
+      "key": "route.api.upload_receipt",
+      "path": "route.api.upload_receipt",
+      "text": "Upload Receipt",
+      "var": "L10nUploadReceipt"
+    },
+    {
+      "key": "route_param.api.upload_receipt.orderId",
+      "path": "route_param.api.upload_receipt.orderId",
+      "text": "Order Id",
+      "var": "L10nUploadReceiptOrderId"
+    }
+  ],
+  "package": {
+    "dir": "apiroutes",
+    "name": "apiroutes"
+  },
+  "producer": "handlers"
+}

@@ -73,20 +73,29 @@ type Package struct {
 
 var keyPattern = regexp.MustCompile(`^[a-z0-9][A-Za-z0-9_]*(\.[a-z0-9][A-Za-z0-9_]*)*$`)
 
-func isValidKey(s string) bool {
+// IsValidKey reports whether s matches the routes/v1 key grammar.
+func IsValidKey(s string) bool {
 	return keyPattern.MatchString(s)
 }
 
-// Readable converts a key or identifier name into human-readable title text
-// (§13.3): split at '.', '_', '-' and lower-to-upper transitions (a run of
-// capitals is one word), each word's first letter upper-cased, joined with spaces.
-func Readable(name string) string {
+func isValidKey(s string) bool {
+	return IsValidKey(s)
+}
+
+// IsReservedGenName reports whether name is a package-level identifier
+// declared by every generated routes package.
+func IsReservedGenName(name string) bool {
+	return reservedGenNames[name]
+}
+
+// SplitWords splits name at '.', '_', '-' and lower-to-upper case transitions
+// (keeping a run of capitals together as one word).
+func SplitWords(name string) []string {
 	var words []string
 	var cur []rune
 
 	flush := func() {
 		if len(cur) > 0 {
-			cur[0] = unicode.ToUpper(cur[0])
 			words = append(words, string(cur))
 			cur = cur[:0]
 		}
@@ -108,6 +117,17 @@ func Readable(name string) string {
 		cur = append(cur, r)
 	}
 	flush()
+	return words
+}
+
+// Readable converts a key or identifier name into human-readable title text
+// (§13.3): split at '.', '_', '-' and lower-to-upper transitions (a run of
+// capitals is one word), each word's first letter upper-cased, joined with spaces.
+func Readable(name string) string {
+	words := SplitWords(name)
+	for i, w := range words {
+		words[i] = upperFirst(w)
+	}
 	return strings.Join(words, " ")
 }
 

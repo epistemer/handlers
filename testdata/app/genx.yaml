@@ -4,6 +4,14 @@ producers:
     run: [go, run, github.com/epistemer/handlers/cmd/handlers, gen, -prefix, /admin, -out, adminroutes, ./admin]
     check: [go, run, github.com/epistemer/handlers/cmd/handlers, gen, -check, -prefix, /admin, -out, adminroutes, ./admin]
     emits: [adminroutes/zz_adminroutes.routes.json]
+  - name: oapi-codegen
+    run: [go, tool, oapi-codegen, -config, api/oapi-codegen.yaml, api/openapi.yaml]
+    emits:
+      - {path: api/openapi.yaml, domain: openapi/v3}
+  - name: api-routes
+    run: [go, tool, handlers, openapi, -key-prefix, api, -out, apiroutes, api/openapi.yaml]
+    check: [go, tool, handlers, openapi, -check, -key-prefix, api, -out, apiroutes, api/openapi.yaml]
+    emits: [apiroutes/zz_apiroutes.routes.json]
 use:
   - github.com/epistemer/handlers: [routes, labels, permissions]
   - github.com/epistemer/i18n: [labels]
