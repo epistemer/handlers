@@ -5,8 +5,8 @@ description: How to use handlers (github.com/epistemer/handlers), neozp's route 
 
 # Using handlers
 
-Written for **handlers v0.2.0** (2026-11-22), with `authguard/v0.2.0`,
-`openapi/v0.2.0`, `cmd/v0.2.0`, `genx v0.2.0`, `i18n v0.3.1`, `errors v0.1.0`,
+Written for **handlers v0.3.0** (2026-11-22), with `authguard/v0.3.0`,
+`openapi/v0.3.0`, `cmd/v0.3.0`, `genx v0.2.0`, `i18n v0.3.1`, `errors v0.1.0`,
 and `auth v0.3.0`. Look at `go.mod`; if newer, read `CHANGELOG.md`.
 `docs/interface.md` is the locked contract and `examples/shop` is a complete
 app with end-to-end tests; **the contract is `docs/interface.md`; when this
