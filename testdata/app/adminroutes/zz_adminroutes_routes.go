@@ -182,32 +182,32 @@ func Register(mux *http.ServeMux, h Handler, g handlers.Guard, opts ...handlers.
 	m.Done()
 }
 
-// Dashboard returns the URL path for dashboard.
-func Dashboard() string {
-	return Prefix + "/"
+// Dashboard returns the link to dashboard.
+func Dashboard() handlers.Link {
+	return handlers.NewLink(&Routes[0], Prefix+"/")
 }
 
-// Orders returns the URL path for orders.list.
-func Orders() string {
-	return Prefix + "/orders"
+// Orders returns the link to orders.list.
+func Orders() handlers.Link {
+	return handlers.NewLink(&Routes[1], Prefix+"/orders")
 }
 
-// Order returns the URL path for orders.detail.
-func Order(p0 ids.OrderID, p1 ids.Token) string {
-	return Prefix + "/orders/" + strconv.FormatInt(int64(p0), 10) + "/" + handlers.Segment(handlers.Text(p1))
+// Order returns the link to orders.detail.
+func Order(p0 ids.OrderID, p1 ids.Token) handlers.Link {
+	return handlers.NewLink(&Routes[2], Prefix+"/orders/"+strconv.FormatInt(int64(p0), 10)+"/"+handlers.Segment(handlers.Text(p1)))
 }
 
-// OrderCancel returns the URL path for orders.cancel.
-func OrderCancel(p0 ids.OrderID) string {
-	return Prefix + "/orders/" + strconv.FormatInt(int64(p0), 10) + "/cancel"
+// OrderCancel returns the link to orders.cancel.
+func OrderCancel(p0 ids.OrderID) handlers.Link {
+	return handlers.NewLink(&Routes[3], Prefix+"/orders/"+strconv.FormatInt(int64(p0), 10)+"/cancel")
 }
 
-// Files returns the URL path for files.serve.
-func Files(p0 string) string {
-	return Prefix + "/files/" + handlers.Rest(string(p0))
+// Files returns the link to files.serve.
+func Files(p0 string) handlers.Link {
+	return handlers.NewLink(&Routes[4], Prefix+"/files/"+handlers.Rest(string(p0)))
 }
 
-// Flags returns the URL path for flags.set.
-func Flags(p0 bool, p1 uint16) string {
-	return Prefix + "/flags/" + strconv.FormatBool(bool(p0)) + "/" + strconv.FormatUint(uint64(p1), 10)
+// Flags returns the link to flags.set.
+func Flags(p0 bool, p1 uint16) handlers.Link {
+	return handlers.NewLink(&Routes[5], Prefix+"/flags/"+strconv.FormatBool(bool(p0))+"/"+strconv.FormatUint(uint64(p1), 10))
 }

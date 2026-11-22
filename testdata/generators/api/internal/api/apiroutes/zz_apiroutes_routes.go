@@ -64,12 +64,12 @@ func Mount(mux *http.ServeMux, g handlers.Guard, spec *openapi3.T, register func
 	openapi.Mount(mux, Routes, g, spec, register, opts...)
 }
 
-// ProductsList returns the URL path for products.list.
-func ProductsList() string {
-	return Prefix + "/products"
+// ProductsList returns the link to products.list.
+func ProductsList() handlers.Link {
+	return handlers.NewLink(&Routes[0], Prefix+"/products")
 }
 
-// ProductsGet returns the URL path for products.get.
-func ProductsGet(p0 int64) string {
-	return Prefix + "/products/" + strconv.FormatInt(int64(p0), 10)
+// ProductsGet returns the link to products.get.
+func ProductsGet(p0 int64) handlers.Link {
+	return handlers.NewLink(&Routes[1], Prefix+"/products/"+strconv.FormatInt(int64(p0), 10))
 }

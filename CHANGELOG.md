@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.2.0] - 2026-11-22
+
+Amendment A4 (ADR 0005), accepted by epistemer: URL builders return links,
+for ui's actions and tables. The root module and `authguard`, `openapi` and
+`cmd` are released together.
+
+### Added
+- `handlers.Link`: `URL`, `String`, `Method`, `Route`, `With(url.Values)`.
+  It satisfies ui's `ui.Link`, `interface{ URL() string }`.
+- `handlers.Gate(admit)`: a guard's `Admit` check as ui's actions gate. A
+  route link asks the check about its route; any other link is admitted.
+- `handlers.NewLink`, for generated code.
+
+### Changed
+- **Breaking:** every generated URL builder returns `handlers.Link`
+  instead of `string`. A use as a string writes `.URL()`:
+  `http.Redirect(w, r, adminroutes.Category(id).URL(), …)`; `%s` keeps
+  working through `String()`. To upgrade: require v0.2.0, run
+  `go tool genx` (the handler package still type-checks against the old
+  builders), then add `.URL()` where the compiler asks.
+
 ## [v0.1.0] - 2026-11-18
 
 Initial release of the root module (`github.com/epistemer/handlers`) and its

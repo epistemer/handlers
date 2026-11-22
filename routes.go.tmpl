@@ -129,8 +129,8 @@ func Register(mux *http.ServeMux, h Handler, g handlers.Guard, opts ...handlers.
 {{- end}}
 {{- range .routes}}
 
-// {{.name}} returns the URL path for {{.key}}.
-func {{.name}}({{range $i, $p := .params}}{{if $i}}, {{end}}p{{$p.index}} {{$p.type}}{{end}}) string {
-	return Prefix{{range .url_parts}} + {{if .is_lit}}{{printf "%q" .lit}}{{else if eq .parse "text"}}{{if .is_rest}}handlers.Rest{{else}}handlers.Segment{{end}}(handlers.Text(p{{.index}})){{else if eq .parse "string"}}{{if .is_rest}}handlers.Rest{{else}}handlers.Segment{{end}}(string(p{{.index}})){{else if eq .parse "bool"}}strconv.FormatBool(bool(p{{.index}})){{else if .is_int}}strconv.FormatInt(int64(p{{.index}}), 10){{else if .is_uint}}strconv.FormatUint(uint64(p{{.index}}), 10){{end}}{{end}}
+// {{.name}} returns the link to {{.key}}.
+func {{.name}}({{range $i, $p := .params}}{{if $i}}, {{end}}p{{$p.index}} {{$p.type}}{{end}}) handlers.Link {
+	return handlers.NewLink(&Routes[{{.index}}], Prefix{{range .url_parts}} + {{if .is_lit}}{{printf "%q" .lit}}{{else if eq .parse "text"}}{{if .is_rest}}handlers.Rest{{else}}handlers.Segment{{end}}(handlers.Text(p{{.index}})){{else if eq .parse "string"}}{{if .is_rest}}handlers.Rest{{else}}handlers.Segment{{end}}(string(p{{.index}})){{else if eq .parse "bool"}}strconv.FormatBool(bool(p{{.index}})){{else if .is_int}}strconv.FormatInt(int64(p{{.index}}), 10){{else if .is_uint}}strconv.FormatUint(uint64(p{{.index}}), 10){{end}}{{end}})
 }
 {{- end}}

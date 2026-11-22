@@ -384,8 +384,9 @@ var Routes = []handlers.Route{ /* one per route */ }
 func ByKey(key string) (handlers.Route, bool)
 
 // One URL builder per route, named as the route, taking its parameters in
-// order: Prefix + the path with each parameter written in.
-func Category(id int64) string // "/admin/categories/42"
+// order: a link to the route at Prefix + the path with each parameter
+// written in (A4).
+func Category(id int64) handlers.Link // URL() "/admin/categories/42"
 ```
 
 URL builders write strings with `handlers.Segment` (a `{name...}`
@@ -481,7 +482,26 @@ type Param struct {
 // From returns the route of the request ctx belongs to.
 func From(ctx context.Context) (Route, bool)
 func WithRoute(ctx context.Context, rt Route) context.Context
+
+// Link is a route's URL, as a builder makes it (A4, ADR 0005). Comparable.
+type Link struct{ /* unexported: the route in the table, the address */ }
+
+func (l Link) URL() string    // Prefix + the path, and a query when With added one
+func (l Link) String() string // URL()
+func (l Link) Method() string // the route's method; "" for the zero Link
+func (l Link) Route() Route   // a copy, Params included; the zero Route for the zero Link
+func (l Link) With(q url.Values) Link // q as its query, replacing any, before a fragment; a q that encodes to nothing removes it
+
+// Gate adapts a guard's check (Guard.Admit) to ui's actions gate: a Link,
+// a *Link or a type embedding one asks admit about its route; any other
+// link, and the zero Link, has no route to ask about, and is admitted.
+// Gate(nil) panics.
+func Gate(admit func(Route) bool) func(interface{ URL() string }) bool
 ```
+
+`Link` satisfies ui's `ui.Link`, `interface{ URL() string }`, with neither
+module importing the other. The gate decides what a page shows, never
+what is allowed: the route's guard runs on every request.
 
 ### 11.2 Guards, options and errors
 
@@ -552,6 +572,8 @@ func ParamText(r *http.Request, p Param, v encoding.TextUnmarshaler) error
 func Segment(s string) string             // url.PathEscape
 func Rest(s string) string                // each segment escaped, slashes kept
 func Text(v encoding.TextMarshaler) string // panics if MarshalText fails
+
+func NewLink(rt *Route, url string) Link   // the link a builder returns (A4)
 ```
 
 Apps don't call these; they are exported because the generated package
@@ -768,3 +790,5 @@ client SDK pipeline; a language server in the Claude Code plugin.
 - **A1** (2026-11-18, M3, Claude): `Mount.HandleHTTP` and `Mount.Writer`, plumbing for §11.5; apps don't call them.
 - **A2** (2026-11-18, M3, Claude): §3.3's example calls oapi-codegen's `GetSpec`, which replaces the deprecated `GetSwagger` in v2.8.
 - **A3** (2026-11-18, M6, Claude), clarifications found by the API review: a `-key-prefix` that isn't a key is a usage error (`handlers openapi: -key-prefix "<v>" is not a key`, exit 2), not a spec diagnostic; `authguard`'s `Admit` checks lazily, so its error is always nil and a failure to read a permission is logged once and refuses; a routes package with no routes registers no catch-all, since its table carries no prefix.
+- **A4** (2026-11-22, for v0.2.0, accepted by epistemer with the defaults of H1–H4): URL builders return `handlers.Link` (`URL`, `Method`, `Route`, `With`, `String`), and `handlers.Gate` adapts a guard's `Admit` check to ui's actions gate. Breaking. The design is [ADR 0005](adr/0005-builders-return-a-link.md); §10.1 and §11.1 state it.
+

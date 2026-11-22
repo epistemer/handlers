@@ -237,52 +237,52 @@ func Register(mux *http.ServeMux, h Handler, g handlers.Guard, opts ...handlers.
 	m.Done()
 }
 
-// SignInPage returns the URL path for sign_in.
-func SignInPage() string {
-	return Prefix + "/sign-in"
+// SignInPage returns the link to sign_in.
+func SignInPage() handlers.Link {
+	return handlers.NewLink(&Routes[0], Prefix+"/sign-in")
 }
 
-// SignInSubmit returns the URL path for sign_in.submit.
-func SignInSubmit() string {
-	return Prefix + "/sign-in"
+// SignInSubmit returns the link to sign_in.submit.
+func SignInSubmit() handlers.Link {
+	return handlers.NewLink(&Routes[1], Prefix+"/sign-in")
 }
 
-// SignInCode returns the URL path for sign_in.code.
-func SignInCode() string {
-	return Prefix + "/sign-in/code"
+// SignInCode returns the link to sign_in.code.
+func SignInCode() handlers.Link {
+	return handlers.NewLink(&Routes[2], Prefix+"/sign-in/code")
 }
 
-// Dashboard returns the URL path for dashboard.
-func Dashboard() string {
-	return Prefix + "/"
+// Dashboard returns the link to dashboard.
+func Dashboard() handlers.Link {
+	return handlers.NewLink(&Routes[3], Prefix+"/")
 }
 
-// Products returns the URL path for products.list.
-func Products() string {
-	return Prefix + "/products"
+// Products returns the link to products.list.
+func Products() handlers.Link {
+	return handlers.NewLink(&Routes[4], Prefix+"/products")
 }
 
-// Product returns the URL path for products.profile.
-func Product(p0 ids.ProductID) string {
-	return Prefix + "/products/" + strconv.FormatInt(int64(p0), 10)
+// Product returns the link to products.profile.
+func Product(p0 ids.ProductID) handlers.Link {
+	return handlers.NewLink(&Routes[5], Prefix+"/products/"+strconv.FormatInt(int64(p0), 10))
 }
 
-// Orders returns the URL path for orders.list.
-func Orders() string {
-	return Prefix + "/orders"
+// Orders returns the link to orders.list.
+func Orders() handlers.Link {
+	return handlers.NewLink(&Routes[6], Prefix+"/orders")
 }
 
-// Order returns the URL path for orders.detail.
-func Order(p0 ids.OrderID) string {
-	return Prefix + "/orders/" + strconv.FormatInt(int64(p0), 10)
+// Order returns the link to orders.detail.
+func Order(p0 ids.OrderID) handlers.Link {
+	return handlers.NewLink(&Routes[7], Prefix+"/orders/"+strconv.FormatInt(int64(p0), 10))
 }
 
-// OrderCancel returns the URL path for orders.cancel.
-func OrderCancel(p0 ids.OrderID) string {
-	return Prefix + "/orders/" + strconv.FormatInt(int64(p0), 10) + "/cancel"
+// OrderCancel returns the link to orders.cancel.
+func OrderCancel(p0 ids.OrderID) handlers.Link {
+	return handlers.NewLink(&Routes[8], Prefix+"/orders/"+strconv.FormatInt(int64(p0), 10)+"/cancel")
 }
 
-// Search returns the URL path for search.
-func Search() string {
-	return Prefix + "/search"
+// Search returns the link to search.
+func Search() handlers.Link {
+	return handlers.NewLink(&Routes[9], Prefix+"/search")
 }
