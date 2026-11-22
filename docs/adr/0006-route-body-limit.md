@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Proposed (amendment A5, draft). Questions H5–H9 stand on their defaults until epistemer accepts or changes them |
+| Status | Proposed (amendment A5, draft). epistemer decided H6 on 2026-11-22 (replace); H5 and H7–H9 stand on their defaults until accepted |
 | Date | 2026-11-22 |
 | Roadmap item | ui D8.3; handlers v0.3.0 |
 | Deciders | epistemer decides; Claude proposes, from ui's design of uploads (ui's rich-inputs-design.md §4.5, its question R21) and the spike that tried a capped route (its §8.1, finding 10) |
@@ -90,7 +90,7 @@ func (h *H) Receipt(w http.ResponseWriter, r *http.Request, id ids.OrderID) erro
 | # | Question | Default | Alternative |
 |---|---|---|---|
 | H5 | The directive's name and syntax | `body`, binary units `B`/`KiB`/`MiB`/`GiB`, as ui and errors write file sizes (1024 per unit) | `maxbody`, or decimal units (`MB`) |
-| H6 | Does a route's limit replace the registration's, or only raise it? | Replace: a route that takes a short form may also ask for less | Only raise: the registration stays a floor |
+| H6 | Does a route's limit replace the registration's, or only raise it? | **Decided** by epistemer: replace. A route that takes a short form may also ask for less | Only raise: the registration stays a floor |
 | H7 | Where the value travels | `routes/v1` `maxBody` and `Route.MaxBody`, so search and tests see it | Only in the generated registration code |
 | H8 | The OpenAPI side | `x-max-body` on an operation, same syntax | Admin routes only; the API keeps one limit |
 | H9 | `body` on a GET | An error: a GET has no body to limit | Allowed and ignored |
