@@ -128,6 +128,14 @@ M3 and M4 are independent and can run side by side.
 | ☑ | M6.2 | The `handlers` skill: its source in `dev/claude-plugin/skills/handlers/`, installed to `~/.claude/skills/handlers/` | S | Written against the frozen interface; `claude plugin validate` passes |
 | ☑ | M6.3 | `docs/api-review.md`, cross-model review of the release, CHANGELOG, tag `v0.1.0` | S | Tag pushed |
 
+## A5 — a route's own body limit (v0.3.0)
+
+| ✓ | ID | Item | Size | Done when |
+|---|----|------|------|-----------|
+| ☐ | A5.1 | [ADR 0006](adr/0006-route-body-limit.md), questions H5–H9, reviewed | S | epistemer accepts or changes it |
+| ☐ | A5.2 | The directive, the extension, `routes/v1` `maxBody`, `Route.MaxBody`, registration, `vet`, the language server, the skill | M | An upload route in the example takes more than its siblings, end to end |
+| ☐ | A5.3 | Release v0.3.0 with `authguard`, `openapi` and `cmd` | S | Tags checked through the proxy |
+
 ## After v0.1.0 (backlog)
 
 1. Breadcrumbs from a `parent` directive.

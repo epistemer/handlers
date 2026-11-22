@@ -3,6 +3,21 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-22 — A5 drafted: a route's own body limit
+
+**Drafted** (Claude), docs only: [ADR 0006](adr/0006-route-body-limit.md),
+asked for by ui's uploads (ui's rich-inputs-design.md §4.5, R21; roadmap
+item ui D8.3). A `//h:body 20MiB` directive and an `x-max-body`
+extension set one route's limit in place of `WithMaxBody`'s. Questions
+H5–H9 stand on their defaults. Reviewed with ui's contract draft (ui's
+review 0021, which this repository's [0007](reviews/0007-route-body-limit.md)
+points to).
+
+**Next.** Build it once epistemer accepts, as v0.3.0 with its three
+nested modules.
+
+**Waiting on epistemer** (API design): H5–H9.
+
 ## 2026-11-22 — A4: builders return a link (v0.2.0)
 
 **Accepted** by epistemer with the defaults of H1–H4 (ADR 0005).
