@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/epistemer/errors v0.1.0
-	github.com/epistemer/handlers v0.2.0
+	github.com/epistemer/handlers v0.3.0
 	github.com/epistemer/i18n v0.3.1
 	github.com/getkin/kin-openapi v0.153.0
 )
