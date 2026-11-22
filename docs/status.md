@@ -3,6 +3,15 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-22 — A4 proposed: builders return a link
+
+**Proposed** (Claude), for epistemer: [ADR 0005](adr/0005-builders-return-a-link.md)
+and amendment A4. Builders return `handlers.Link` and `handlers.Gate`
+adapts a guard to ui's actions gate. It comes from ui's design of actions
+and tables (ui's D7.1, decided S1 and S5) and its spike (D7.2), which used
+a stand-in link with `URL()` and `Method()`. Four questions (H1–H4) have
+defaults. Nothing is built until epistemer accepts it.
+
 ## 2026-11-18: v0.1.0
 
 - **Landed:** M5 and M6 (PR 13), with a fix found on Go 1.26: oapi-codegen
