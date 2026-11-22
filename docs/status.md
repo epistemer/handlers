@@ -6,6 +6,9 @@ taken for you, what's next, and what's waiting on you.
 ## 2026-11-22 — A4: builders return a link (v0.2.0)
 
 **Accepted** by epistemer with the defaults of H1–H4 (ADR 0005).
+**Released** as v0.2.0 (#15), then `authguard`, `openapi` and `cmd`
+v0.2.0 on it (#16); all four checked through proxy.golang.org. The skill
+covers `Link`, `Gate` and the upgrade.
 
 **Landed** (Claude):
 - `link.go`: `Link` (`URL`, `String`, `Method`, `Route`, `With`), `NewLink`
