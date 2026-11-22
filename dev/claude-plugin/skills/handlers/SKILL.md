@@ -5,8 +5,8 @@ description: How to use handlers (github.com/epistemer/handlers), neozp's route 
 
 # Using handlers
 
-Written for **handlers v0.1.0** (2026-11-18), with `authguard/v0.1.0`,
-`openapi/v0.1.0`, `cmd/v0.1.0`, `genx v0.2.0`, `i18n v0.3.1`, `errors v0.1.0`,
+Written for **handlers v0.2.0** (2026-11-22), with `authguard/v0.2.0`,
+`openapi/v0.2.0`, `cmd/v0.2.0`, `genx v0.2.0`, `i18n v0.3.1`, `errors v0.1.0`,
 and `auth v0.3.0`. Look at `go.mod`; if newer, read `CHANGELOG.md`.
 `docs/interface.md` is the locked contract and `examples/shop` is a complete
 app with end-to-end tests; **the contract is `docs/interface.md`; when this
@@ -153,15 +153,25 @@ Every generated routes package exports:
 - `const Prefix` (`""` or `"/..."`)
 - `var Routes []handlers.Route` (declaration order; do not mutate)
 - `func ByKey(key string) (handlers.Route, bool)`
-- One typed URL builder per route: `func Order(p0 ids.OrderID) string`
-  (escapes segments with `handlers.Segment`, `{name...}` with `handlers.Rest`,
-  text types with `handlers.Text`, ints/bools with `strconv`).
+- One typed URL builder per route: `func Order(p0 ids.OrderID) handlers.Link`
+  (v0.2.0, amendment A4; escapes segments with `handlers.Segment`,
+  `{name...}` with `handlers.Rest`, text types with `handlers.Text`,
+  ints/bools with `strconv`). Use as a string: `.URL()`
+  (`http.Redirect(w, r, adminroutes.Order(id).URL(), …)`); `%s` works via
+  `String()`. Pass it as it is to ui's elements and actions (`ui.Link`).
 - Admin (`html`): `type Handler interface` and `func Register(mux *http.ServeMux, h Handler, g handlers.Guard, opts ...handlers.Option)`
 - API (`json`): `func Mount(mux *http.ServeMux, g handlers.Guard, spec *openapi3.T, register func(rt *openapi.Router), opts ...handlers.Option)`
 - Labels (`i18n`): `L10n<RouteName>`, `L10n<RouteName><Param>`, `L10n(path string) i18n.TKer`
 - Permissions (`auth/access`): `Perm<Key>` (`access.Permission(key, text[, auth.Unverified])`)
 
 Runtime (`github.com/epistemer/handlers`):
+- `Link` (v0.2.0): `URL()`, `String()`, `Method()`, `Route()` (a copy),
+  `With(url.Values)` (replaces the query, keeps a fragment). Comparable.
+- `Gate(admit func(Route) bool) func(interface{ URL() string }) bool`: a
+  guard's `Admit` check as ui's actions gate. A route link (or a type
+  embedding `Link`) asks admit; any other link is admitted. Set it per
+  request: `admit, err := guard.Admit(r)`, then
+  `actions.Gate.With(ctx, handlers.Gate(admit))`. Gate(nil) panics.
 - `Route` (`Key`, `Method`, `Prefix`, `Pattern`, `Surface` (`HTML`/`JSON`),
   `Auth` (`Public`/`Session`/`Permission`), `Permission`, `Label`, `View`,
   `Searchable`, `Entity`, `Operation`, `Params []Param{Name, Rest, Label}`).
@@ -299,6 +309,9 @@ either translated or source text, returning `Hit{Route, Text}` in key order.
 - **Keys and parameter names are permanent:** translations (`route.<key>`,
   `route_param.<key>.<param>`) and `auth/access` grants are keyed by them.
   Keep `-baseline origin/main` in CI so removals warn before merge.
+- **Upgrading from v0.1.0:** require v0.2.0, run `go tool genx` first (the
+  handler package still type-checks against the old string builders), then
+  add `.URL()` where the compiler asks.
 - **Run `go tool genx` (or `handlers gen`) before using new URL builders or
   `L10n*`/`Perm*` variables**, and remember `internal/admin` cannot import
   `adminroutes` before `adminroutes` exists or `handlers gen`'s type pass fails.
