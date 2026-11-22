@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Proposed (amendment A5, draft). epistemer decided H6 on 2026-11-22 (replace); H5 and H7–H9 stand on their defaults until accepted |
+| Status | Accepted by epistemer on 2026-11-22: H6 decided (replace), H5 and H7–H9 on their defaults. Amendment A5, for v0.3.0 |
 | Date | 2026-11-22 |
 | Roadmap item | ui D8.3; handlers v0.3.0 |
 | Deciders | epistemer decides; Claude proposes, from ui's design of uploads (ui's rich-inputs-design.md §4.5, its question R21) and the spike that tried a capped route (its §8.1, finding 10) |
