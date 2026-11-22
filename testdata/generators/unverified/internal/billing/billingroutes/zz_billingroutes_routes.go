@@ -72,12 +72,12 @@ func Register(mux *http.ServeMux, h Handler, g handlers.Guard, opts ...handlers.
 	m.Done()
 }
 
-// Categories returns the URL path for categories.manage.
-func Categories() string {
-	return Prefix + "/categories"
+// Categories returns the link to categories.manage.
+func Categories() handlers.Link {
+	return handlers.NewLink(&Routes[0], Prefix+"/categories")
 }
 
-// Refund returns the URL path for orders.refund.
-func Refund() string {
-	return Prefix + "/refund"
+// Refund returns the link to orders.refund.
+func Refund() handlers.Link {
+	return handlers.NewLink(&Routes[1], Prefix+"/refund")
 }

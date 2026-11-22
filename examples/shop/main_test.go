@@ -134,7 +134,7 @@ func (w *testWorld) browser() *http.Client {
 
 func (w *testWorld) signInAdmin(c *http.Client, email string) {
 	w.t.Helper()
-	resp, err := c.PostForm(w.srv.URL+adminroutes.SignInSubmit(), url.Values{
+	resp, err := c.PostForm(w.srv.URL+adminroutes.SignInSubmit().URL(), url.Values{
 		"login":    {email},
 		"password": {testPassword},
 	})
@@ -153,7 +153,7 @@ func (w *testWorld) signInAdmin(c *http.Client, email string) {
 		w.t.Fatalf("no verification code sent to %s", email)
 	}
 
-	resp, err = c.PostForm(w.srv.URL+adminroutes.SignInCode(), url.Values{
+	resp, err = c.PostForm(w.srv.URL+adminroutes.SignInCode().URL(), url.Values{
 		"code": {msg.Code},
 	})
 	if err != nil {
@@ -174,7 +174,7 @@ func (w *testWorld) signInAPI(email string) string {
 		"email":    email,
 		"password": testPassword,
 	})
-	resp, err := client.Post(w.srv.URL+apiroutes.SignIn(), "application/json", bytes.NewReader(body1))
+	resp, err := client.Post(w.srv.URL+apiroutes.SignIn().URL(), "application/json", bytes.NewReader(body1))
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -208,7 +208,7 @@ func (w *testWorld) signInAPI(email string) string {
 		"flow": step1.Flow,
 		"code": msg.Code,
 	})
-	resp, err = client.Post(w.srv.URL+apiroutes.SignInCode(), "application/json", bytes.NewReader(body2))
+	resp, err = client.Post(w.srv.URL+apiroutes.SignInCode().URL(), "application/json", bytes.NewReader(body2))
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -248,7 +248,7 @@ func TestAdminPagesAndAuth(t *testing.T) {
 
 	// Unauthenticated request -> 401 in ErrorPage HTML format.
 	anon := w.browser()
-	resp, err := anon.Get(w.srv.URL + adminroutes.Order(1))
+	resp, err := anon.Get(w.srv.URL + adminroutes.Order(1).URL())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +264,7 @@ func TestAdminPagesAndAuth(t *testing.T) {
 	}
 
 	// Public sign-in page is accessible without a session.
-	resp, err = anon.Get(w.srv.URL + adminroutes.SignInPage())
+	resp, err = anon.Get(w.srv.URL + adminroutes.SignInPage().URL())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +277,7 @@ func TestAdminPagesAndAuth(t *testing.T) {
 	omar := w.browser()
 	w.signInAdmin(omar, "omar@toyshop.example")
 
-	resp, err = omar.Get(w.srv.URL + adminroutes.Order(1))
+	resp, err = omar.Get(w.srv.URL + adminroutes.Order(1).URL())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,7 +286,7 @@ func TestAdminPagesAndAuth(t *testing.T) {
 		t.Errorf("omar order detail = (%d, %q), want 403 error page", resp.StatusCode, body)
 	}
 
-	resp, err = omar.Get(w.srv.URL + adminroutes.Product(1))
+	resp, err = omar.Get(w.srv.URL + adminroutes.Product(1).URL())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func TestAdminPagesAndAuth(t *testing.T) {
 	}
 
 	// Unknown product -> 404 declared error.
-	resp, err = omar.Get(w.srv.URL + adminroutes.Product(999))
+	resp, err = omar.Get(w.srv.URL + adminroutes.Product(999).URL())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,7 +309,7 @@ func TestAdminPagesAndAuth(t *testing.T) {
 	sara := w.browser()
 	w.signInAdmin(sara, "sara@toyshop.example")
 
-	req, _ := http.NewRequest("GET", w.srv.URL+adminroutes.Order(1), nil)
+	req, _ := http.NewRequest("GET", w.srv.URL+adminroutes.Order(1).URL(), nil)
 	req.Header.Set("Accept-Language", "fr")
 	resp, err = sara.Do(req)
 	if err != nil {
@@ -333,7 +333,7 @@ func TestAdminPagesAndAuth(t *testing.T) {
 	}
 
 	// Valid cancel -> succeeds and transitions order to cancelled; second cancel -> 409 Conflict.
-	resp, err = sara.Post(w.srv.URL+adminroutes.OrderCancel(1), "", nil)
+	resp, err = sara.Post(w.srv.URL+adminroutes.OrderCancel(1).URL(), "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -342,7 +342,7 @@ func TestAdminPagesAndAuth(t *testing.T) {
 		t.Errorf("cancel order 1 = (%d, %q)", resp.StatusCode, body)
 	}
 
-	resp, err = sara.Post(w.srv.URL+adminroutes.OrderCancel(1), "", nil)
+	resp, err = sara.Post(w.srv.URL+adminroutes.OrderCancel(1).URL(), "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +370,7 @@ func TestAPISurface(t *testing.T) {
 	}
 
 	// No bearer -> 401.
-	resp, err := client.Get(w.srv.URL + apiroutes.ListOrders())
+	resp, err := client.Get(w.srv.URL + apiroutes.ListOrders().URL())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -382,7 +382,7 @@ func TestAPISurface(t *testing.T) {
 	// Omar has a valid bearer token, no orders.read permission -> 403 on orders, 200 on /me (x-auth: session).
 	omarToken := w.signInAPI("omar@toyshop.example")
 
-	req, _ := http.NewRequest("GET", w.srv.URL+apiroutes.GetOrder(1), nil)
+	req, _ := http.NewRequest("GET", w.srv.URL+apiroutes.GetOrder(1).URL(), nil)
 	req.Header.Set("Authorization", "Bearer "+omarToken)
 	resp, err = client.Do(req)
 	if err != nil {
@@ -393,7 +393,7 @@ func TestAPISurface(t *testing.T) {
 		t.Errorf("omar getOrder = (%d, %q)", resp.StatusCode, code)
 	}
 
-	req, _ = http.NewRequest("GET", w.srv.URL+apiroutes.GetMe(), nil)
+	req, _ = http.NewRequest("GET", w.srv.URL+apiroutes.GetMe().URL(), nil)
 	req.Header.Set("Authorization", "Bearer "+omarToken)
 	resp, err = client.Do(req)
 	if err != nil {
@@ -406,7 +406,7 @@ func TestAPISurface(t *testing.T) {
 
 	// Sara holds orders.read -> 200 with decimal money.
 	saraToken := w.signInAPI("sara@toyshop.example")
-	req, _ = http.NewRequest("GET", w.srv.URL+apiroutes.GetOrder(1), nil)
+	req, _ = http.NewRequest("GET", w.srv.URL+apiroutes.GetOrder(1).URL(), nil)
 	req.Header.Set("Authorization", "Bearer "+saraToken)
 	resp, err = client.Do(req)
 	if err != nil {
@@ -419,7 +419,7 @@ func TestAPISurface(t *testing.T) {
 
 	// Invalid request body failing schema -> 400 with no value echoed.
 	badBody := strings.NewReader(`{"email":"a@b.example","password":"shortpw"}`)
-	resp, err = client.Post(w.srv.URL+apiroutes.SignIn(), "application/json", badBody)
+	resp, err = client.Post(w.srv.URL+apiroutes.SignIn().URL(), "application/json", badBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -444,7 +444,7 @@ func TestSearch(t *testing.T) {
 	omar := w.browser()
 	w.signInAdmin(omar, "omar@toyshop.example")
 
-	req, _ := http.NewRequest("GET", w.srv.URL+adminroutes.Search()+"?q=produits", nil)
+	req, _ := http.NewRequest("GET", w.srv.URL+adminroutes.Search().URL()+"?q=produits", nil)
 	req.Header.Set("Accept-Language", "fr")
 	resp, err := omar.Do(req)
 	if err != nil {
@@ -455,7 +455,7 @@ func TestSearch(t *testing.T) {
 		t.Errorf("omar search 'produits' = (%d, %q)", resp.StatusCode, body)
 	}
 
-	req, _ = http.NewRequest("GET", w.srv.URL+adminroutes.Search()+"?q=", nil)
+	req, _ = http.NewRequest("GET", w.srv.URL+adminroutes.Search().URL()+"?q=", nil)
 	req.Header.Set("Accept-Language", "fr")
 	resp, err = omar.Do(req)
 	if err != nil {
@@ -470,7 +470,7 @@ func TestSearch(t *testing.T) {
 	sara := w.browser()
 	w.signInAdmin(sara, "sara@toyshop.example")
 
-	req, _ = http.NewRequest("GET", w.srv.URL+adminroutes.Search()+"?q=commandes", nil)
+	req, _ = http.NewRequest("GET", w.srv.URL+adminroutes.Search().URL()+"?q=commandes", nil)
 	req.Header.Set("Accept-Language", "fr")
 	resp, err = sara.Do(req)
 	if err != nil {

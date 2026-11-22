@@ -239,32 +239,32 @@ func Register(mux *http.ServeMux, h Handler, g handlers.Guard, opts ...handlers.
 	m.Done()
 }
 
-// Home returns the URL path for home.
-func Home() string {
-	return Prefix + "/"
+// Home returns the link to home.
+func Home() handlers.Link {
+	return handlers.NewLink(&Routes[0], Prefix+"/")
 }
 
-// OrdersList returns the URL path for orders.list.
-func OrdersList() string {
-	return Prefix + "/orders"
+// OrdersList returns the link to orders.list.
+func OrdersList() handlers.Link {
+	return handlers.NewLink(&Routes[1], Prefix+"/orders")
 }
 
-// OrderDetail returns the URL path for orders.detail.
-func OrderDetail(p0 shop.OrderID) string {
-	return Prefix + "/orders/" + strconv.FormatInt(int64(p0), 10)
+// OrderDetail returns the link to orders.detail.
+func OrderDetail(p0 shop.OrderID) handlers.Link {
+	return handlers.NewLink(&Routes[2], Prefix+"/orders/"+strconv.FormatInt(int64(p0), 10))
 }
 
-// OrderCancel returns the URL path for orders.cancel.
-func OrderCancel(p0 shop.OrderID) string {
-	return Prefix + "/orders/" + strconv.FormatInt(int64(p0), 10) + "/cancel"
+// OrderCancel returns the link to orders.cancel.
+func OrderCancel(p0 shop.OrderID) handlers.Link {
+	return handlers.NewLink(&Routes[3], Prefix+"/orders/"+strconv.FormatInt(int64(p0), 10)+"/cancel")
 }
 
-// FilesServe returns the URL path for files.serve.
-func FilesServe(p0 string) string {
-	return Prefix + "/files/" + handlers.Rest(string(p0))
+// FilesServe returns the link to files.serve.
+func FilesServe(p0 string) handlers.Link {
+	return handlers.NewLink(&Routes[4], Prefix+"/files/"+handlers.Rest(string(p0)))
 }
 
-// ItemsKinds returns the URL path for items.kinds.
-func ItemsKinds(p0 string, p1 bool, p2 ids.Token, p3 int, p4 int8, p5 int16, p6 int32, p7 int64, p8 uint, p9 uint8, p10 uint16, p11 uint32, p12 uint64) string {
-	return Prefix + "/kinds/" + handlers.Segment(string(p0)) + "/" + strconv.FormatBool(bool(p1)) + "/" + handlers.Segment(handlers.Text(p2)) + "/" + strconv.FormatInt(int64(p3), 10) + "/" + strconv.FormatInt(int64(p4), 10) + "/" + strconv.FormatInt(int64(p5), 10) + "/" + strconv.FormatInt(int64(p6), 10) + "/" + strconv.FormatInt(int64(p7), 10) + "/" + strconv.FormatUint(uint64(p8), 10) + "/" + strconv.FormatUint(uint64(p9), 10) + "/" + strconv.FormatUint(uint64(p10), 10) + "/" + strconv.FormatUint(uint64(p11), 10) + "/" + strconv.FormatUint(uint64(p12), 10)
+// ItemsKinds returns the link to items.kinds.
+func ItemsKinds(p0 string, p1 bool, p2 ids.Token, p3 int, p4 int8, p5 int16, p6 int32, p7 int64, p8 uint, p9 uint8, p10 uint16, p11 uint32, p12 uint64) handlers.Link {
+	return handlers.NewLink(&Routes[5], Prefix+"/kinds/"+handlers.Segment(string(p0))+"/"+strconv.FormatBool(bool(p1))+"/"+handlers.Segment(handlers.Text(p2))+"/"+strconv.FormatInt(int64(p3), 10)+"/"+strconv.FormatInt(int64(p4), 10)+"/"+strconv.FormatInt(int64(p5), 10)+"/"+strconv.FormatInt(int64(p6), 10)+"/"+strconv.FormatInt(int64(p7), 10)+"/"+strconv.FormatUint(uint64(p8), 10)+"/"+strconv.FormatUint(uint64(p9), 10)+"/"+strconv.FormatUint(uint64(p10), 10)+"/"+strconv.FormatUint(uint64(p11), 10)+"/"+strconv.FormatUint(uint64(p12), 10))
 }

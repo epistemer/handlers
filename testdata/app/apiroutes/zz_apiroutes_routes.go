@@ -111,27 +111,27 @@ func Mount(mux *http.ServeMux, g handlers.Guard, spec *openapi3.T, register func
 	openapi.Mount(mux, Routes, g, spec, register, opts...)
 }
 
-// SignIn returns the URL path for api.sign_in.
-func SignIn() string {
-	return Prefix + "/auth/sign-in"
+// SignIn returns the link to api.sign_in.
+func SignIn() handlers.Link {
+	return handlers.NewLink(&Routes[0], Prefix+"/auth/sign-in")
 }
 
-// ListOrders returns the URL path for api.list_orders.
-func ListOrders() string {
-	return Prefix + "/orders"
+// ListOrders returns the link to api.list_orders.
+func ListOrders() handlers.Link {
+	return handlers.NewLink(&Routes[1], Prefix+"/orders")
 }
 
-// PlaceOrder returns the URL path for api.place_order.
-func PlaceOrder() string {
-	return Prefix + "/orders"
+// PlaceOrder returns the link to api.place_order.
+func PlaceOrder() handlers.Link {
+	return handlers.NewLink(&Routes[2], Prefix+"/orders")
 }
 
-// GetOrder returns the URL path for api.get_order.
-func GetOrder(p0 int64) string {
-	return Prefix + "/orders/" + strconv.FormatInt(int64(p0), 10)
+// GetOrder returns the link to api.get_order.
+func GetOrder(p0 int64) handlers.Link {
+	return handlers.NewLink(&Routes[3], Prefix+"/orders/"+strconv.FormatInt(int64(p0), 10))
 }
 
-// UploadReceipt returns the URL path for api.upload_receipt.
-func UploadReceipt(p0 int64) string {
-	return Prefix + "/orders/" + strconv.FormatInt(int64(p0), 10) + "/receipt"
+// UploadReceipt returns the link to api.upload_receipt.
+func UploadReceipt(p0 int64) handlers.Link {
+	return handlers.NewLink(&Routes[4], Prefix+"/orders/"+strconv.FormatInt(int64(p0), 10)+"/receipt")
 }

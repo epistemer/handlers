@@ -46,7 +46,7 @@ func ErrorPage(w http.ResponseWriter, r *http.Request, err error) {
 		Status:  status,
 		Title:   http.StatusText(status),
 		Message: errors.T(r.Context(), err),
-		HomeURL: adminroutes.Dashboard(),
+		HomeURL: adminroutes.Dashboard().URL(),
 	})
 }
 
@@ -63,7 +63,7 @@ func (h *H) SignInPage(w http.ResponseWriter, r *http.Request) error {
 		Action string
 	}{
 		Title:  adminroutes.L10nSignInPage.T(ctx),
-		Action: adminroutes.SignInSubmit(),
+		Action: adminroutes.SignInSubmit().URL(),
 	})
 }
 
@@ -93,7 +93,7 @@ func (h *H) SignInSubmit(w http.ResponseWriter, r *http.Request) error {
 			SentTo string
 		}{
 			Title:  adminroutes.L10nSignInCode.T(ctx),
-			Action: adminroutes.SignInCode(),
+			Action: adminroutes.SignInCode().URL(),
 			SentTo: ch.SentTo,
 		})
 	}
@@ -102,7 +102,7 @@ func (h *H) SignInSubmit(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	res.Write(w)
-	http.Redirect(w, r, adminroutes.Dashboard(), http.StatusSeeOther)
+	http.Redirect(w, r, adminroutes.Dashboard().URL(), http.StatusSeeOther)
 	return nil
 }
 
@@ -126,7 +126,7 @@ func (h *H) SignInCode(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	res.Write(w)
-	http.Redirect(w, r, adminroutes.Dashboard(), http.StatusSeeOther)
+	http.Redirect(w, r, adminroutes.Dashboard().URL(), http.StatusSeeOther)
 	return nil
 }
 
@@ -150,11 +150,11 @@ func (h *H) Dashboard(w http.ResponseWriter, r *http.Request) error {
 	}{
 		Title:       adminroutes.L10nDashboard.T(ctx),
 		ProductsLbl: adminroutes.L10nProducts.T(ctx),
-		ProductsURL: adminroutes.Products(),
+		ProductsURL: adminroutes.Products().URL(),
 		OrdersLbl:   adminroutes.L10nOrders.T(ctx),
-		OrdersURL:   adminroutes.Orders(),
+		OrdersURL:   adminroutes.Orders().URL(),
 		SearchLbl:   adminroutes.L10nSearch.T(ctx),
-		SearchURL:   adminroutes.Search(),
+		SearchURL:   adminroutes.Search().URL(),
 	})
 }
 
@@ -182,7 +182,7 @@ func (h *H) Products(w http.ResponseWriter, r *http.Request) error {
 			SKU:   p.SKU,
 			Name:  p.Name,
 			Price: p.Price.StringFixed(2),
-			URL:   adminroutes.Product(p.ID),
+			URL:   adminroutes.Product(p.ID).URL(),
 		}
 	}
 	return renderHTML(w, productsTmpl, struct {
@@ -203,9 +203,9 @@ func (h *H) Products(w http.ResponseWriter, r *http.Request) error {
 		ColName:    models.L10nProduct_Name.T(ctx),
 		ColPrice:   models.L10nProduct_Price.T(ctx),
 		Rows:       rows,
-		DashURL:    adminroutes.Dashboard(),
+		DashURL:    adminroutes.Dashboard().URL(),
 		DashLabel:  adminroutes.L10nDashboard.T(ctx),
-		SearchURL:  adminroutes.Search(),
+		SearchURL:  adminroutes.Search().URL(),
 		SearchText: adminroutes.L10nSearch.T(ctx),
 	})
 }
@@ -248,7 +248,7 @@ func (h *H) Product(w http.ResponseWriter, r *http.Request, id ids.ProductID) er
 		Name:       p.Name,
 		PriceLabel: models.L10nProduct_Price.T(ctx),
 		Price:      p.Price.StringFixed(2),
-		BackURL:    adminroutes.Products(),
+		BackURL:    adminroutes.Products().URL(),
 		BackLabel:  adminroutes.L10nProducts.T(ctx),
 	})
 }
@@ -275,7 +275,7 @@ func (h *H) Orders(w http.ResponseWriter, r *http.Request) error {
 			ID:     o.ID,
 			Status: o.Status.Label().T(ctx),
 			Total:  o.Total.StringFixed(2),
-			URL:    adminroutes.Order(o.ID),
+			URL:    adminroutes.Order(o.ID).URL(),
 		}
 	}
 	return renderHTML(w, ordersTmpl, struct {
@@ -292,7 +292,7 @@ func (h *H) Orders(w http.ResponseWriter, r *http.Request) error {
 		ColStatus: models.L10nOrder_Status.T(ctx),
 		ColTotal:  models.L10nOrder_Total.T(ctx),
 		Rows:      rows,
-		DashURL:   adminroutes.Dashboard(),
+		DashURL:   adminroutes.Dashboard().URL(),
 		DashLabel: adminroutes.L10nDashboard.T(ctx),
 	})
 }
@@ -334,10 +334,10 @@ func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID) error 
 		Status:      o.Status.Label().T(ctx),
 		TotalLabel:  models.L10nOrder_Total.T(ctx),
 		Total:       o.Total.StringFixed(2),
-		CancelURL:   adminroutes.OrderCancel(o.ID),
+		CancelURL:   adminroutes.OrderCancel(o.ID).URL(),
 		CancelLabel: adminroutes.L10nOrderCancel.T(ctx),
 		CanCancel:   o.Status != models.OrderStatusCancelled,
-		BackURL:     adminroutes.Orders(),
+		BackURL:     adminroutes.Orders().URL(),
 		BackLabel:   adminroutes.L10nOrders.T(ctx),
 	})
 }
@@ -352,7 +352,7 @@ func (h *H) OrderCancel(w http.ResponseWriter, r *http.Request, id ids.OrderID) 
 	if _, err := h.Store.CancelOrder(id); err != nil {
 		return err
 	}
-	http.Redirect(w, r, adminroutes.Order(id), http.StatusSeeOther)
+	http.Redirect(w, r, adminroutes.Order(id).URL(), http.StatusSeeOther)
 	return nil
 }
 
@@ -395,8 +395,8 @@ func (h *H) Search(w http.ResponseWriter, r *http.Request) error {
 		Title:     adminroutes.L10nSearch.T(ctx),
 		Query:     q,
 		Hits:      out,
-		Action:    adminroutes.Search(),
-		DashURL:   adminroutes.Dashboard(),
+		Action:    adminroutes.Search().URL(),
+		DashURL:   adminroutes.Dashboard().URL(),
 		DashLabel: adminroutes.L10nDashboard.T(ctx),
 	})
 }
@@ -404,11 +404,11 @@ func (h *H) Search(w http.ResponseWriter, r *http.Request) error {
 func searchableURL(rt handlers.Route) string {
 	switch rt.Key {
 	case "dashboard":
-		return adminroutes.Dashboard()
+		return adminroutes.Dashboard().URL()
 	case "products.list":
-		return adminroutes.Products()
+		return adminroutes.Products().URL()
 	case "orders.list":
-		return adminroutes.Orders()
+		return adminroutes.Orders().URL()
 	default:
 		return rt.Prefix + rt.Pattern
 	}

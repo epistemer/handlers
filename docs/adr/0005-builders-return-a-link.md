@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Proposed, for epistemer (ui's roadmap D7.3) |
+| Status | Accepted by epistemer on 2026-11-22, with the defaults of H1–H4 |
 | Date | 2026-11-22 |
 | Roadmap item | ui D7.3; handlers v0.2.0 |
 | Deciders | epistemer decides; Claude proposes, from ui's design of actions and tables (ui's server-state-design.md §4, §5.3, §10; its ADRs 0008 and 0009) and the spike that tried it (§12.1) |
@@ -37,7 +37,7 @@ three things (ui's design §10):
 3. **No change; ui matches URLs to routes at render.** A lookup per action
    per row, and a mismatch found only when a page renders.
 
-## Decision (proposed)
+## Decision
 
 Option 2.
 
@@ -91,7 +91,7 @@ ctx := actions.Gate.With(r.Context(), handlers.Gate(admit))
 - `Table.Search` (§14) is unchanged.
 - handlers still imports no ui package, and ui none of handlers.
 
-## Questions for epistemer, each with a default
+## Questions, answered with their defaults
 
 | # | Question | Default |
 |---|---|---|

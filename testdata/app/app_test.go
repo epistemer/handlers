@@ -170,22 +170,22 @@ func TestAdminRoutesHTTPAndLabels(t *testing.T) {
 	})
 
 	t.Run("URL builders escape segments and preserve rest slashes", func(t *testing.T) {
-		if got := adminroutes.Dashboard(); got != "/admin/" {
+		if got := adminroutes.Dashboard().URL(); got != "/admin/" {
 			t.Errorf("Dashboard() = %q", got)
 		}
-		if got := adminroutes.Orders(); got != "/admin/orders" {
+		if got := adminroutes.Orders().URL(); got != "/admin/orders" {
 			t.Errorf("Orders() = %q", got)
 		}
-		if got := adminroutes.Order(42, ids.Token{Raw: "a/b c"}); got != "/admin/orders/42/a%2Fb%20c" {
+		if got := adminroutes.Order(42, ids.Token{Raw: "a/b c"}).URL(); got != "/admin/orders/42/a%2Fb%20c" {
 			t.Errorf("Order() = %q", got)
 		}
-		if got := adminroutes.OrderCancel(42); got != "/admin/orders/42/cancel" {
+		if got := adminroutes.OrderCancel(42).URL(); got != "/admin/orders/42/cancel" {
 			t.Errorf("OrderCancel() = %q", got)
 		}
-		if got := adminroutes.Files("dir/sub dir/file?1.txt"); got != "/admin/files/dir/sub%20dir/file%3F1.txt" {
+		if got := adminroutes.Files("dir/sub dir/file?1.txt").URL(); got != "/admin/files/dir/sub%20dir/file%3F1.txt" {
 			t.Errorf("Files() = %q", got)
 		}
-		if got := adminroutes.Flags(true, 9); got != "/admin/flags/true/9" {
+		if got := adminroutes.Flags(true, 9).URL(); got != "/admin/flags/true/9" {
 			t.Errorf("Flags() = %q", got)
 		}
 	})
@@ -351,7 +351,7 @@ func (a *toyAPI) UploadReceipt(ctx context.Context, req apigen.UploadReceiptRequ
 
 func TestAPIRoutesADR0003(t *testing.T) {
 	handlerstest.AssertPublic(t, apiroutes.Routes, "api.sign_in")
-	if got := apiroutes.GetOrder(42); got != "/api/v1/orders/42" {
+	if got := apiroutes.GetOrder(42).URL(); got != "/api/v1/orders/42" {
 		t.Errorf("GetOrder(42) = %q", got)
 	}
 	if apiPerm := apiroutes.PermOrdersRead; apiPerm.Key() != "orders.read" {

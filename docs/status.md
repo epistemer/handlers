@@ -3,14 +3,28 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
-## 2026-11-22 — A4 proposed: builders return a link
+## 2026-11-22 — A4: builders return a link (v0.2.0)
 
-**Proposed** (Claude), for epistemer: [ADR 0005](adr/0005-builders-return-a-link.md)
-and amendment A4. Builders return `handlers.Link` and `handlers.Gate`
-adapts a guard to ui's actions gate. It comes from ui's design of actions
-and tables (ui's D7.1, decided S1 and S5) and its spike (D7.2), which used
-a stand-in link with `URL()` and `Method()`. Four questions (H1–H4) have
-defaults. Nothing is built until epistemer accepts it.
+**Accepted** by epistemer with the defaults of H1–H4 (ADR 0005).
+
+**Landed** (Claude):
+- `link.go`: `Link` (`URL`, `String`, `Method`, `Route`, `With`), `NewLink`
+  for generated code, and `Gate`. A link points into the generated route
+  table, so it stays comparable although `Route` holds a slice.
+- `routes.go.tmpl`: each builder returns
+  `handlers.NewLink(&Routes[i], …)`.
+- The example, `testdata/app` and the generator goldens regenerated; their
+  uses as strings take `.URL()`.
+- Interface §10.1, §11.1 and §11.3; CHANGELOG v0.2.0, with the upgrade's
+  order: generate first, then add `.URL()`.
+
+**Review** ([0006](reviews/0006-links.md)): Gemini 3.8 Flash (High), about
+155k tokens. Seven findings; five changed the code:
+- `Gate` asks about a type embedding `Link` too;
+- `With` keeps a fragment;
+- `Route()` copies `Params`;
+- an empty query leaves no `?`;
+- `Gate(nil)` panics at once.
 
 ## 2026-11-18: v0.1.0
 

@@ -76,12 +76,12 @@ func Register(mux *http.ServeMux, h Handler, g handlers.Guard, opts ...handlers.
 	m.Done()
 }
 
-// Root returns the URL path for root.
-func Root() string {
-	return Prefix + "/"
+// Root returns the link to root.
+func Root() handlers.Link {
+	return handlers.NewLink(&Routes[0], Prefix+"/")
 }
 
-// DocsPage returns the URL path for docs.page.
-func DocsPage(p0 string, p1 string) string {
-	return Prefix + "/docs/" + handlers.Segment(string(p0)) + "/" + handlers.Rest(string(p1))
+// DocsPage returns the link to docs.page.
+func DocsPage(p0 string, p1 string) handlers.Link {
+	return handlers.NewLink(&Routes[1], Prefix+"/docs/"+handlers.Segment(string(p0))+"/"+handlers.Rest(string(p1)))
 }
