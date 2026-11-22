@@ -36,6 +36,7 @@
           "view": {"type": "boolean"},
           "search": {"type": "boolean"},
           "entity": {"type": "string"},
+          "maxBody": {"type": "integer", "minimum": 1},
           "operation": {"type": "string", "minLength": 1},
           "params": {
             "type": "array",

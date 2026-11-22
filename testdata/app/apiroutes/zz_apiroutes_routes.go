@@ -80,6 +80,7 @@ var Routes = []handlers.Route{
 		Label:      L10nUploadReceipt,
 		View:       false,
 		Searchable: false,
+		MaxBody:    20971520,
 		Operation:  "uploadReceipt",
 		Params: []handlers.Param{
 			{Name: "orderId", Rest: false, Label: L10nUploadReceiptOrderId},

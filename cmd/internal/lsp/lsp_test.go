@@ -541,6 +541,9 @@ func (h *H) List(w http.ResponseWriter, r *http.Request) error { return nil }
 //h:param 
 //h:entity categories.
 //h:entity categories.list
+//h:body 
+//h:body 20
+//h:body 20MiB
 func (h *H) Detail(w http.ResponseWriter, r *http.Request, id int64, slug string) error { return nil }
 `
 	srcB := `package admin
@@ -614,6 +617,28 @@ func (h *H) ShowOrder(w http.ResponseWriter, r *http.Request, id int64) error { 
 	// Line 17 with empty prefix ("//h:entity ") -> includes both categories.list and orders.show from b.go
 	if got := completeAt(17, 11); !slices.Equal(got, []string{"categories.list", "orders.show"}) {
 		t.Errorf("line 17 empty entity completion = %v, want [categories.list orders.show]", got)
+	}
+	// Line 19: "//h:body "
+	if got := completeAt(19, 9); !slices.Equal(got, []string{"512B", "64KiB", "20MiB", "1GiB"}) {
+		t.Errorf("line 19 empty body completion = %v, want [512B 64KiB 20MiB 1GiB]", got)
+	}
+	// Line 20: "//h:body 20"
+	if got := completeAt(20, 11); !slices.Equal(got, []string{"20B", "20KiB", "20MiB", "20GiB"}) {
+		t.Errorf("line 20 numeric body completion = %v, want [20B 20KiB 20MiB 20GiB]", got)
+	}
+
+	// Hover on "//h:body 20MiB" (line 21) -> shows bytes grouped by three with spaces.
+	hidBody := c.request("textDocument/hover", HoverParams{
+		TextDocument: TextDocumentIdentifier{URI: uriA},
+		Position:     Position{Line: 21, Character: 4},
+	})
+	hrespBody := c.readResponse(hidBody)
+	var hovBody Hover
+	if err := json.Unmarshal(hrespBody.Result, &hovBody); err != nil {
+		t.Fatalf("unmarshal body hover: %v", err)
+	}
+	if !strings.Contains(hovBody.Contents.Value, "20MiB = 20 971 520 bytes") {
+		t.Errorf("body hover = %q, want substring %q", hovBody.Contents.Value, "20MiB = 20 971 520 bytes")
 	}
 
 	// Hover on "//h:key categories.list" (line 6)

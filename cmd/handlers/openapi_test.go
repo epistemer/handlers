@@ -160,6 +160,10 @@ func TestOpenAPI72Rows(t *testing.T) {
 		{"path_param_allow_reserved.yaml", `GET /orders/{id}: parameter "id" sets allowReserved`},
 		{"path_param_unsupported_schema.yaml", `GET /orders/{id}: path parameter "id": number isn't supported`},
 		{"path_param_x_go_type.yaml", `GET /orders/{id}: path parameter "id": x-go-type isn't supported`},
+		{"x_max_body_non_string.yaml", `POST /orders: x-max-body must be a string, as "20MiB"`},
+		{"x_max_body_bad_syntax.yaml", `POST /orders: x-max-body: "20MB" is not a size: write a positive whole number and B, KiB, MiB or GiB, as 20MiB`},
+		{"x_max_body_overflow.yaml", `POST /orders: x-max-body: "9999999999GiB" is larger than a body can be`},
+		{"x_max_body_on_get.yaml", `GET /orders: x-max-body on a GET route, which has no body`},
 	}
 
 	for _, tc := range cases {

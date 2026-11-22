@@ -78,7 +78,8 @@
           "label": "File Path"
         }
       ],
-      "permission": "categories.manage"
+      "permission": "categories.manage",
+      "maxBody": 20971520
     },
     {
       "key": "session.me",

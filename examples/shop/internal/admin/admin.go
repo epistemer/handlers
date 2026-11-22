@@ -347,6 +347,7 @@ func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID) error 
 //h:path /orders/{id}/cancel
 //h:desc Cancel order
 //h:perm orders.manage
+//h:body 20MiB
 //h:param id label Order ID
 func (h *H) OrderCancel(w http.ResponseWriter, r *http.Request, id ids.OrderID) error {
 	if _, err := h.Store.CancelOrder(id); err != nil {

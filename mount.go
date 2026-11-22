@@ -121,8 +121,12 @@ func (m *Mount) handle(i int, handlerNil bool, build func(ew ErrorWriter) http.H
 		pat = "/{$}"
 	}
 	m.mux.HandleFunc(rt.Method+" "+rt.Prefix+pat, func(w http.ResponseWriter, r *http.Request) {
-		if m.opts.maxBody > 0 && r.Body != nil {
-			r.Body = http.MaxBytesReader(w, r.Body, m.opts.maxBody)
+		limit := m.opts.maxBody
+		if rt.MaxBody > 0 {
+			limit = rt.MaxBody
+		}
+		if limit > 0 && r.Body != nil {
+			r.Body = http.MaxBytesReader(w, r.Body, limit)
 		}
 		r = r.WithContext(WithRoute(r.Context(), rt))
 		if rt.Auth != Public {

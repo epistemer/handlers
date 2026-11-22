@@ -41,6 +41,9 @@ var Routes = []handlers.Route{
 {{- if .entity}}
 		Entity: {{printf "%q" .entity}},
 {{- end}}
+{{- if .max_body}}
+		MaxBody: {{.max_body}},
+{{- end}}
 {{- if .operation}}
 		Operation: {{printf "%q" .operation}},
 {{- end}}

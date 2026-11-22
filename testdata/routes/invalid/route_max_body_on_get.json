@@ -1,0 +1,27 @@
+{
+  "domain": "routes/v1",
+  "package": {
+    "dir": "internal/shop/shoproutes",
+    "name": "shoproutes"
+  },
+  "permissions": [],
+  "prefix": "/shop",
+  "producer": "handlers",
+  "source": "internal/shop",
+  "routes": [
+    {
+      "auth": "public",
+      "key": "orders.list",
+      "maxBody": 1024,
+      "method": "GET",
+      "name": "OrdersList",
+      "params": [],
+      "pattern": "/orders",
+      "search": false,
+      "text": "Orders",
+      "var": "L10nOrdersList",
+      "view": true
+    }
+  ],
+  "surface": "html"
+}

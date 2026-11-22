@@ -28,7 +28,7 @@
     },
     {
       "name": "meta.h-directive.line.go",
-      "match": "^(\\s*//)(h):(key|method|path|desc|auth|perm|view|search|entity)(?:\\s+([^\\n]*))?$",
+      "match": "^(\\s*//)(h):(key|method|path|desc|auth|perm|view|search|entity|body)(?:\\s+([^\\n]*))?$",
       "captures": {
         "1": {
           "name": "comment.line.double-slash.go"

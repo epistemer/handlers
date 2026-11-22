@@ -46,6 +46,7 @@ type routeDoc struct {
 	Params     []paramDoc `json:"params"`
 	Permission string     `json:"permission,omitempty"`
 	Entity     string     `json:"entity,omitempty"`
+	MaxBody    int64      `json:"maxBody,omitempty"`
 	Operation  string     `json:"operation,omitempty"`
 }
 
@@ -398,6 +399,7 @@ func buildRoutesDoc(pkg *directive.Package, sourceRel, pkgName, outRel, prefix s
 			Params:     params,
 			Permission: permKey,
 			Entity:     r.Entity,
+			MaxBody:    r.MaxBody,
 		})
 	}
 

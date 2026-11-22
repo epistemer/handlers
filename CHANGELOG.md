@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - v0.3.0
+
+Amendment A5 (ADR 0006), accepted by epistemer: a route can set its own body
+limit in place of `WithMaxBody`'s.
+
+### Added
+- `//h:body <size>` directive on admin handlers and `x-max-body: <size>`
+  extension on OpenAPI operations (`^[1-9][0-9]*(B|KiB|MiB|GiB)$`, fitting in
+  `int64`, refused on `GET` routes).
+- Optional `maxBody` integer field (minimum 1, absent on `GET`) on a route in
+  `routes/v1` (`schema/routes.v1.json` and `internal/routesv1.Check`).
+- `Route.MaxBody int64` (bytes; `0` uses the registration's `WithMaxBody`
+  limit). When `Route.MaxBody > 0`, registration limits the request body to it
+  in place of `WithMaxBody` (larger or smaller, and even when `WithMaxBody(0)`
+  was given).
+- `handlers lsp`: `body` completion (directive name, example sizes, and units
+  after a number) and byte-count hover (`20MiB = 20 971 520 bytes`).
+
 ## [v0.2.0] - 2026-11-22
 
 Amendment A4 (ADR 0005), accepted by epistemer: URL builders return links,

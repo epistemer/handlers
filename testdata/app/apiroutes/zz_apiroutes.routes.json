@@ -97,6 +97,7 @@
           "label": "Order Id"
         }
       ],
+      "maxBody": 20971520,
       "operation": "uploadReceipt"
     }
   ],

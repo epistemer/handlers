@@ -93,7 +93,8 @@
           "alias": "ids"
         }
       ],
-      "permission": "orders.manage"
+      "permission": "orders.manage",
+      "maxBody": 20971520
     },
     {
       "key": "files.serve",

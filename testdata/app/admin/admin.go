@@ -63,6 +63,7 @@ func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID, tok id
 //h:path /orders/{id}/cancel
 //h:desc Cancel order
 //h:perm orders.manage
+//h:body 20MiB
 //h:param id label Order ID
 func (h *H) OrderCancel(w http.ResponseWriter, r *http.Request, id ids.OrderID) error {
 	if rt, ok := handlers.From(r.Context()); ok {

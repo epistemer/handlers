@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"go/token"
+	"math"
 	"regexp"
 	"strings"
 )
@@ -462,6 +463,17 @@ func checkRoute(
 			add(loc+".entity", "must not be empty")
 		} else if !allRouteKeys[s] {
 			add(loc+".entity", fmt.Sprintf("unknown route key %q", s))
+		}
+	}
+
+	// maxBody: optional integer >= 1, absent when method is GET
+	if raw, ok := r["maxBody"]; ok {
+		if method == "GET" {
+			add(loc+".maxBody", "must be absent when method is GET")
+		} else if f, ok := raw.(float64); !ok || math.IsNaN(f) || math.IsInf(f, 0) || math.Trunc(f) != f {
+			add(loc+".maxBody", "must be an integer")
+		} else if f < 1 {
+			add(loc+".maxBody", "must be at least 1")
 		}
 	}
 

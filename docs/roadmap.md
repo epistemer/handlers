@@ -132,8 +132,8 @@ M3 and M4 are independent and can run side by side.
 
 | ✓ | ID | Item | Size | Done when |
 |---|----|------|------|-----------|
-| ☐ | A5.1 | [ADR 0006](adr/0006-route-body-limit.md), questions H5–H9, reviewed | S | epistemer accepts or changes it |
-| ☐ | A5.2 | The directive, the extension, `routes/v1` `maxBody`, `Route.MaxBody`, registration, `vet`, the language server, the skill | M | An upload route in the example takes more than its siblings, end to end |
+| ☑ | A5.1 | [ADR 0006](adr/0006-route-body-limit.md), questions H5–H9, reviewed | S | epistemer accepts or changes it |
+| ☑ | A5.2 | The directive, the extension, `routes/v1` `maxBody`, `Route.MaxBody`, registration, `vet`, the language server, the skill | M | An upload route in the example takes more than its siblings, end to end |
 | ☐ | A5.3 | Release v0.3.0 with `authguard`, `openapi` and `cmd` | S | Tags checked through the proxy |
 
 ## After v0.1.0 (backlog)

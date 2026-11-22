@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/token"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/epistemer/handlers/cmd/internal/directive"
@@ -20,6 +21,7 @@ var directiveNames = []string{
 	"view",
 	"search",
 	"entity",
+	"body",
 	"param",
 }
 
@@ -33,11 +35,14 @@ var directiveDocs = map[string]string{
 	"view":   "h:view [true] — Mark route as a view page (takes no value or true).",
 	"search": "h:search [true] — Include route in search (takes no value or true).",
 	"entity": "h:entity <key> — Key of another route in the same package representing this route's entity.",
+	"body":   "h:body <size> — Maximum request body size for this route: positive whole number and B, KiB, MiB, or GiB (e.g. 20MiB).",
 	"param":  "h:param <name> label <text> — Label for a path parameter of the handler (defaults to parameter name made readable).",
 }
 
 var methodValues = []string{"GET", "POST", "PUT", "PATCH", "DELETE"}
 var authValues = []string{"public", "session", "unverified"}
+var bodyUnits = []string{"B", "KiB", "MiB", "GiB"}
+var bodyExamples = []string{"512B", "64KiB", "20MiB", "1GiB"}
 
 func completeDocument(doc *openDoc, routes []directive.Route, pos Position, enc string) CompletionList {
 	list := CompletionList{Items: []CompletionItem{}}
@@ -199,9 +204,61 @@ func completeDocument(doc *openDoc, routes []directive.Route, pos Position, enc 
 				},
 			})
 		}
+	case "body":
+		candidates := bodyExamples
+		if num, unitPrefix, ok := splitLeadingPositiveNumber(valPrefix); ok {
+			candidates = nil
+			for _, u := range bodyUnits {
+				if strings.HasPrefix(u, unitPrefix) {
+					candidates = append(candidates, num+u)
+				}
+			}
+		}
+		for _, c := range candidates {
+			if strings.HasPrefix(c, valPrefix) {
+				list.Items = append(list.Items, CompletionItem{
+					Label: c,
+					Kind:  itemKindEnumMember,
+					TextEdit: &TextEdit{
+						Range:   editRange,
+						NewText: c,
+					},
+				})
+			}
+		}
 	}
 
 	return list
+}
+
+func splitLeadingPositiveNumber(s string) (num, rest string, ok bool) {
+	if s == "" || s[0] < '1' || s[0] > '9' {
+		return "", "", false
+	}
+	i := 1
+	for i < len(s) && s[i] >= '0' && s[i] <= '9' {
+		i++
+	}
+	return s[:i], s[i:], true
+}
+
+func formatGroupedBytes(n int64) string {
+	s := strconv.FormatInt(n, 10)
+	if len(s) <= 3 {
+		return s
+	}
+	rem := len(s) % 3
+	var b strings.Builder
+	if rem > 0 {
+		b.WriteString(s[:rem])
+	}
+	for i := rem; i < len(s); i += 3 {
+		if b.Len() > 0 {
+			b.WriteByte(' ')
+		}
+		b.WriteString(s[i : i+3])
+	}
+	return b.String()
 }
 
 func hoverDocument(doc *openDoc, pos Position, enc string) *Hover {
@@ -222,13 +279,20 @@ func hoverDocument(doc *openDoc, pos Position, enc string) *Hover {
 
 	afterH := trimmed[4:]
 	dirName := afterH
+	val := ""
 	if sep := strings.IndexAny(afterH, " \t"); sep >= 0 {
 		dirName = afterH[:sep]
+		val = strings.TrimSpace(afterH[sep+1:])
 	}
 
 	docLine, ok := directiveDocs[dirName]
 	if !ok {
 		return nil
+	}
+	if dirName == "body" && val != "" {
+		if n, errMsg := directive.ParseBodySize(val, "h:body"); errMsg == "" {
+			docLine = val + " = " + formatGroupedBytes(n) + " bytes — " + docLine
+		}
 	}
 
 	startByte := leadingBytes

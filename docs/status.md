@@ -3,6 +3,22 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-22 — A5 built: a route's own body limit
+
+**Accepted** by epistemer (ADR 0006: H6 replace, the rest defaults).
+**Built**: `//h:body` and `x-max-body` in the rule engine and both
+producers, `routes/v1` `maxBody` (schema, `Check`, conformance files),
+`Route.MaxBody`, registration's precedence (§12.1 step 1), the language
+server's completion and hover, the TextMate grammar, interface.md
+(amendment A5), the skill and CHANGELOG. The example's order cancel and
+`testdata/app` carry `//h:body 20MiB`; goldens regenerated.
+
+Gemini 4 Argon (Medium) wrote it in a worktree from a brief naming the
+ADR, about 338k tokens; Claude reviewed the diff and ran every module's
+build, vet, race tests, tidy and staticcheck, and `genx check`.
+
+**Next.** Release v0.3.0 with `authguard`, `openapi` and `cmd`.
+
 ## 2026-11-22 — A5 drafted: a route's own body limit
 
 **Drafted** (Claude), docs only: [ADR 0006](adr/0006-route-body-limit.md),

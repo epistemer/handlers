@@ -76,6 +76,7 @@ generators:
               view: $r.view,
               search: $r.search,
               entity: ($r.entity // ""),
+              max_body: ($r.maxBody // 0),
               operation: ($r.operation // ""),
               params: $params,
               url_parts: ($r.pattern | url_parts($params))

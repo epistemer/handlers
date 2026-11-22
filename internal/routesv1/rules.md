@@ -33,7 +33,8 @@ Route: required key, method, pattern, name, var, text, auth, view, search, param
 - `text`: non-empty. `auth`: public, session or permission; anything else: `unknown auth "x"`.
 - `permission`: required and non-empty when auth is permission; must be absent when auth is
   public or session.
-- `view`, `search`: booleans. `entity`: optional non-empty string. `operation`: optional
+- `view`, `search`: booleans. `entity`: optional non-empty string. `maxBody`: optional
+  integer, at least 1; must be absent when method is GET. `operation`: optional
   non-empty string; required when surface is json, absent when html.
 - `params`: array, in signature order. Each param requires name, go, var, type, import,
   parse, kind, label: `name` and `go` Go identifiers; `var` a Go identifier starting with

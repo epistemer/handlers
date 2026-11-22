@@ -44,6 +44,7 @@ paths:
       operationId: deleteItem
       x-route-key: items.remove
       x-permission: items.read
+      x-max-body: 512KiB
       parameters:
         - name: flag
           in: path
