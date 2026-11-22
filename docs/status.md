@@ -3,6 +3,12 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-22 — v0.3.0 released
+
+v0.3.0 (#20) with amendment A5, then `authguard`, `openapi` and `cmd`
+v0.3.0 on it (#21); all four checked through proxy.golang.org. The skill
+covers `//h:body`, `x-max-body` and `Route.MaxBody`.
+
 ## 2026-11-22 — A5 built: a route's own body limit
 
 **Accepted** by epistemer (ADR 0006: H6 replace, the rest defaults).
