@@ -2,6 +2,7 @@ package routesv1_test
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -55,6 +56,7 @@ func checkKeywords(t *testing.T, s map[string]any, at string) {
 		"properties":  true,
 		"items":       true,
 		"minLength":   true,
+		"minimum":     true,
 		"pattern":     true,
 		"enum":        true,
 	}
@@ -97,6 +99,15 @@ func validate(s map[string]any, v any, at string) []string {
 		if _, ok := v.(bool); !ok {
 			bad("want a boolean")
 			return problems
+		}
+	case "integer":
+		f, ok := v.(float64)
+		if !ok || math.IsNaN(f) || math.IsInf(f, 0) || math.Trunc(f) != f {
+			bad("want an integer")
+			return problems
+		}
+		if min, ok := s["minimum"].(float64); ok && f < min {
+			bad("below minimum")
 		}
 	case "object":
 		obj, ok := v.(map[string]any)

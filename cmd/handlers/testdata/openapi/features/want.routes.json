@@ -130,6 +130,7 @@
         }
       ],
       "permission": "items.read",
+      "maxBody": 524288,
       "operation": "deleteItem"
     }
   ],

@@ -61,6 +61,7 @@ func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID) error
 | `view` | none, or `true` | off (`false`) |
 | `search` | none, or `true` | off (`false`) |
 | `entity` | another route's `key` in the same package | none (`""`) |
+| `body` | `^[1-9][0-9]*(B\|KiB\|MiB\|GiB)$` (`512KiB`, `20MiB`, fits in `int64`, not on `GET`) | registration's `WithMaxBody` |
 | `param` | `<name> label <text>` (`<name>` is a path parameter, once each) | readable parameter name |
 
 - **Parameter types** (bound in signature order after `w` and `r`): `string`,
@@ -77,6 +78,9 @@ func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID) error
     `h:<view|search> takes no value or true, not "<v>"`,
     `h:desc is empty`, `h:<key|perm|entity>: "<v>" is not a key`,
     `h:path: "<v>" must start with "/"`, `must not end with "/"`, `must not contain "{$}"` / `ServeMux` reason,
+    `h:body: "<v>" is not a size: write a positive whole number and B, KiB, MiB or GiB, as 20MiB`,
+    `h:body: "<v>" is larger than a body can be`,
+    `h:body on a GET route, which has no body`,
     `h:param: write "h:param <name> label <text>"`, `h:param: no parameter <name>`.
   - Auth/perm/entity rules: `h:perm needs a permission route, not auth <auth>`,
     `permission "<k>": <key a> is unverified and <key b> isn't`,
@@ -174,7 +178,8 @@ Runtime (`github.com/epistemer/handlers`):
   `actions.Gate.With(ctx, handlers.Gate(admit))`. Gate(nil) panics.
 - `Route` (`Key`, `Method`, `Prefix`, `Pattern`, `Surface` (`HTML`/`JSON`),
   `Auth` (`Public`/`Session`/`Permission`), `Permission`, `Label`, `View`,
-  `Searchable`, `Entity`, `Operation`, `Params []Param{Name, Rest, Label}`).
+  `Searchable`, `Entity`, `MaxBody` (bytes; `0` uses the registration's limit,
+  else replaces `WithMaxBody`), `Operation`, `Params []Param{Name, Rest, Label}`).
 - `From(ctx) (Route, bool)`, `WithRoute(ctx, rt)`.
 - `Guard` (`Prepare`, `Check`, `Admit`).
 - Options: `WithErrors(ErrorWriter)` (defaults: `WriteText` for HTML,
@@ -226,7 +231,11 @@ path parameters is refused in v0.1.
   `session`). Optional security (`{}` beside schemes) is refused.
 - **Extensions:** `x-route-key` (overrides derived `<key-prefix>.<op_id>`),
   `x-permission`, `x-auth: session`, `x-label` (falls back to `summary`,
-  then readable `operationId`).
+  then readable `operationId`), `x-max-body` (string size with `body`'s syntax,
+  e.g. `"20MiB"`, not on `GET`; errors: `x-max-body must be a string, as "20MiB"`,
+  `x-max-body: "<v>" is not a size: write a positive whole number and B, KiB, MiB or GiB, as 20MiB`,
+  `x-max-body: "<v>" is larger than a body can be`,
+  `x-max-body on a GET route, which has no body`).
 - **Errors:** `#/components/schemas/Error` must have string `code` and
   `message`, and every `4XX`/`5XX`/`default` JSON response must use it.
 - Run `oapi-codegen` (e.g. via `go:generate`) with `std-http-server: true`,

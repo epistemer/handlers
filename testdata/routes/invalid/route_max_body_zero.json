@@ -1,0 +1,27 @@
+{
+  "domain": "routes/v1",
+  "package": {
+    "dir": "internal/shop/shoproutes",
+    "name": "shoproutes"
+  },
+  "permissions": [],
+  "prefix": "/shop",
+  "producer": "handlers",
+  "source": "internal/shop",
+  "routes": [
+    {
+      "auth": "public",
+      "key": "orders.cancel",
+      "maxBody": 0,
+      "method": "POST",
+      "name": "OrderCancel",
+      "params": [],
+      "pattern": "/orders/cancel",
+      "search": false,
+      "text": "Cancel order",
+      "var": "L10nOrderCancel",
+      "view": false
+    }
+  ],
+  "surface": "html"
+}

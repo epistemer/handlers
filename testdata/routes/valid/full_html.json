@@ -71,6 +71,7 @@
       "permission": "orders.manage",
       "view": false,
       "search": false,
+      "maxBody": 20971520,
       "params": [
         {
           "name": "id",

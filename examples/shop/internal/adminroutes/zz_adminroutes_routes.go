@@ -124,6 +124,7 @@ var Routes = []handlers.Route{
 		Label:      L10nOrderCancel,
 		View:       false,
 		Searchable: false,
+		MaxBody:    20971520,
 		Params: []handlers.Param{
 			{Name: "id", Rest: false, Label: L10nOrderCancelId},
 		},

@@ -61,6 +61,7 @@ paths:
     post:
       operationId: uploadReceipt
       x-auth: session
+      x-max-body: 20MiB
       parameters:
         - {name: orderId, in: path, required: true, schema: {type: integer, format: int64}}
       requestBody:

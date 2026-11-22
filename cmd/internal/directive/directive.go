@@ -59,6 +59,7 @@ type Route struct {
 	Perm         string // "" when not given
 	View, Search bool
 	Entity       string
+	MaxBody      int64          // bytes; 0 when not given
 	Params       []Param        // signature order, after w and r
 	Pos          token.Position // the func keyword
 }
@@ -71,7 +72,43 @@ type Package struct {
 	Routes []Route
 }
 
-var keyPattern = regexp.MustCompile(`^[a-z0-9][A-Za-z0-9_]*(\.[a-z0-9][A-Za-z0-9_]*)*$`)
+var (
+	keyPattern      = regexp.MustCompile(`^[a-z0-9][A-Za-z0-9_]*(\.[a-z0-9][A-Za-z0-9_]*)*$`)
+	bodySizePattern = regexp.MustCompile(`^([1-9][0-9]*)(B|KiB|MiB|GiB)$`)
+)
+
+// ParseBodySize parses s as a body size matching ^[1-9][0-9]*(B|KiB|MiB|GiB)$
+// whose byte count fits in int64. If valid, it returns the byte count and "".
+// Otherwise it returns 0 and the diagnostic message prefixed with prefix
+// (e.g. "h:body" or "x-max-body").
+func ParseBodySize(s, prefix string) (int64, string) {
+	m := bodySizePattern.FindStringSubmatch(s)
+	if m == nil {
+		return 0, fmt.Sprintf(`%s: %q is not a size: write a positive whole number and B, KiB, MiB or GiB, as 20MiB`, prefix, s)
+	}
+	var shift uint
+	switch m[2] {
+	case "B":
+		shift = 0
+	case "KiB":
+		shift = 10
+	case "MiB":
+		shift = 20
+	case "GiB":
+		shift = 30
+	}
+	const maxInt64 = int64(^uint64(0) >> 1)
+	maxN := maxInt64 >> shift
+	var n int64
+	for i := 0; i < len(m[1]); i++ {
+		d := int64(m[1][i] - '0')
+		if n > (maxN-d)/10 {
+			return 0, fmt.Sprintf(`%s: %q is larger than a body can be`, prefix, s)
+		}
+		n = n*10 + d
+	}
+	return n << shift, ""
+}
 
 // IsValidKey reports whether s matches the routes/v1 key grammar.
 func IsValidKey(s string) bool {

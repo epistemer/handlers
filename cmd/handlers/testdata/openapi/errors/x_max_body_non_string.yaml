@@ -1,0 +1,20 @@
+openapi: 3.0.3
+info: {title: Test, version: 1.0.0}
+security:
+  - bearerAuth: []
+paths:
+  /orders:
+    post:
+      operationId: createOrder
+      x-max-body: 20971520
+      responses:
+        "200": {description: ok}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer}
+  schemas:
+    Error:
+      type: object
+      properties:
+        code: {type: string}
+        message: {type: string}

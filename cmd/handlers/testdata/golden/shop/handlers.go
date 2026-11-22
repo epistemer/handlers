@@ -31,6 +31,7 @@ func (h *H) Category(w http.ResponseWriter, r *http.Request, id int64) error {
 //h:path /categories/{id}/files/{rest...}
 //h:desc Update category files
 //h:perm categories.manage
+//h:body 20MiB
 //h:param id label Category ID
 //h:param rest label File Path
 func (h *H) UpdateCategoryFiles(w http.ResponseWriter, r *http.Request, id int64, rest string) error {

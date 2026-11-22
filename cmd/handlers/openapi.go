@@ -116,6 +116,7 @@ type openAPIOpInfo struct {
 	permKey  string
 	hasXPerm bool
 	label    string
+	maxBody  int64
 	params   []paramDoc
 }
 
@@ -235,6 +236,7 @@ func analyzeOpenAPI(spec *openapi3.T, sourceRel, pkgName, outRel, keyPrefix stri
 				}
 
 				label := resolveOpenAPIOpLabel(loc, op, opID, addErr)
+				maxBody := checkOpenAPIMaxBody(loc, method, op, addErr)
 
 				// Finalize parameter Var now that goName is known.
 				for i := range params {
@@ -254,6 +256,7 @@ func analyzeOpenAPI(spec *openapi3.T, sourceRel, pkgName, outRel, keyPrefix stri
 					permKey:  permKey,
 					hasXPerm: hasXPerm,
 					label:    label,
+					maxBody:  maxBody,
 					params:   params,
 				})
 			}
@@ -338,6 +341,7 @@ func analyzeOpenAPI(spec *openapi3.T, sourceRel, pkgName, outRel, keyPrefix stri
 			Search:     false,
 			Params:     info.params,
 			Permission: info.permKey,
+			MaxBody:    info.maxBody,
 			Operation:  info.opID,
 		})
 	}
@@ -788,6 +792,28 @@ func resolveOpenAPIOpLabel(loc string, op *openapi3.Operation, opID string, addE
 		return directive.Readable(opID)
 	}
 	return ""
+}
+
+func checkOpenAPIMaxBody(loc, method string, op *openapi3.Operation, addErr func(loc, msg string)) int64 {
+	raw, ok := op.Extensions["x-max-body"]
+	if !ok {
+		return 0
+	}
+	s, isStr := raw.(string)
+	if !isStr {
+		addErr(loc, `x-max-body must be a string, as "20MiB"`)
+		return 0
+	}
+	n, errMsg := directive.ParseBodySize(s, "x-max-body")
+	if errMsg != "" {
+		addErr(loc, errMsg)
+		return 0
+	}
+	if method == "GET" {
+		addErr(loc, "x-max-body on a GET route, which has no body")
+		return 0
+	}
+	return n
 }
 
 func deriveRouteKey(operationID string) string {

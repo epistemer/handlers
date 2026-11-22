@@ -28,6 +28,159 @@ func TestReadable(t *testing.T) {
 	}
 }
 
+func TestParseBodySize(t *testing.T) {
+	valid := []struct {
+		in   string
+		want int64
+	}{
+		{"1B", 1},
+		{"512B", 512},
+		{"64KiB", 64 << 10},
+		{"512KiB", 512 << 10},
+		{"20MiB", 20 << 20},
+		{"2GiB", 2 << 30},
+		{"9223372036854775807B", 9223372036854775807},
+		{"8589934591GiB", 8589934591 << 30},
+	}
+	for _, tc := range valid {
+		got, errMsg := directive.ParseBodySize(tc.in, "h:body")
+		if errMsg != "" || got != tc.want {
+			t.Errorf("ParseBodySize(%q) = (%d, %q), want (%d, \"\")", tc.in, got, errMsg, tc.want)
+		}
+	}
+
+	notASize := []string{"", "0B", "0MiB", "20", "20MB", "20mb", "20mib", "20 MiB", "-1MiB", "1.5MiB", "01MiB"}
+	for _, in := range notASize {
+		_, errMsg := directive.ParseBodySize(in, "h:body")
+		want := `h:body: "` + in + `" is not a size: write a positive whole number and B, KiB, MiB or GiB, as 20MiB`
+		if errMsg != want {
+			t.Errorf("ParseBodySize(%q) err = %q, want %q", in, errMsg, want)
+		}
+	}
+
+	overflow := []string{"9223372036854775808B", "8589934592GiB", "999999999999999999999MiB"}
+	for _, in := range overflow {
+		_, errMsg := directive.ParseBodySize(in, "h:body")
+		want := `h:body: "` + in + `" is larger than a body can be`
+		if errMsg != want {
+			t.Errorf("ParseBodySize(%q) err = %q, want %q", in, errMsg, want)
+		}
+	}
+}
+
+func TestBodyDirectiveDiagnostics(t *testing.T) {
+	cases := []struct {
+		name     string
+		src      string
+		wantDiag string
+		wantBody int64
+	}{
+		{
+			name: "valid_20MiB",
+			src: `package admin
+import "net/http"
+type H struct{}
+//h:key orders.receipt
+//h:method POST
+//h:path /orders/receipt
+//h:desc Upload receipt
+//h:body 20MiB
+func (h *H) Receipt(w http.ResponseWriter, r *http.Request) error { return nil }
+`,
+			wantBody: 20 << 20,
+		},
+		{
+			name: "not_a_size",
+			src: `package admin
+import "net/http"
+type H struct{}
+//h:key orders.receipt
+//h:method POST
+//h:path /orders/receipt
+//h:desc Upload receipt
+//h:body 0B
+func (h *H) Receipt(w http.ResponseWriter, r *http.Request) error { return nil }
+`,
+			wantDiag: `handlers.go:8:1: h:body: "0B" is not a size: write a positive whole number and B, KiB, MiB or GiB, as 20MiB`,
+		},
+		{
+			name: "larger_than_a_body_can_be",
+			src: `package admin
+import "net/http"
+type H struct{}
+//h:key orders.receipt
+//h:method POST
+//h:path /orders/receipt
+//h:desc Upload receipt
+//h:body 9999999999GiB
+func (h *H) Receipt(w http.ResponseWriter, r *http.Request) error { return nil }
+`,
+			wantDiag: `handlers.go:8:1: h:body: "9999999999GiB" is larger than a body can be`,
+		},
+		{
+			name: "given_twice",
+			src: `package admin
+import "net/http"
+type H struct{}
+//h:key orders.receipt
+//h:method POST
+//h:path /orders/receipt
+//h:desc Upload receipt
+//h:body 1MiB
+//h:body 20MiB
+func (h *H) Receipt(w http.ResponseWriter, r *http.Request) error { return nil }
+`,
+			wantDiag: `handlers.go:9:1: h:body given twice`,
+		},
+		{
+			name: "on_get_route",
+			src: `package admin
+import "net/http"
+type H struct{}
+//h:key orders.list
+//h:method GET
+//h:path /orders
+//h:desc Orders
+//h:body 20MiB
+func (h *H) Orders(w http.ResponseWriter, r *http.Request) error { return nil }
+`,
+			wantDiag: `handlers.go:8:1: h:body on a GET route, which has no body`,
+		},
+		{
+			name: "near_miss",
+			src: `package admin
+import "net/http"
+type H struct{}
+//h:key orders.receipt
+//h:method POST
+//h:path /orders/receipt
+//h:desc Upload receipt
+// h:body 20MiB
+func (h *H) Receipt(w http.ResponseWriter, r *http.Request) error { return nil }
+`,
+			wantDiag: `handlers.go:8:1: not a directive: write "//h:body 20MiB"`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			pkg, diags := directive.Syntax(map[string][]byte{"handlers.go": []byte(tc.src)})
+			if tc.wantDiag == "" {
+				if len(diags) != 0 {
+					t.Fatalf("unexpected diagnostics: %v", diags)
+				}
+				if len(pkg.Routes) != 1 || pkg.Routes[0].MaxBody != tc.wantBody {
+					t.Fatalf("routes = %+v, want MaxBody=%d", pkg.Routes, tc.wantBody)
+				}
+				return
+			}
+			if len(diags) != 1 || diags[0].String() != tc.wantDiag {
+				t.Fatalf("diags = %v, want [%s]", diags, tc.wantDiag)
+			}
+		})
+	}
+}
+
 func TestSyntaxCases(t *testing.T) {
 	entries, err := os.ReadDir("testdata")
 	if err != nil {

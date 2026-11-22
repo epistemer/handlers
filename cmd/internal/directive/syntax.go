@@ -26,11 +26,13 @@ type routeRec struct {
 	pathPos   token.Position
 	permPos   token.Position
 	entityPos token.Position
+	bodyPos   token.Position
 	keyValid  bool
 	methodOK  bool
 	pathOK    bool
 	permValid bool
 	entityOK  bool
+	bodyOK    bool
 	hasKey    bool
 	hasMethod bool
 	hasPath   bool
@@ -71,6 +73,7 @@ var knownDirectives = map[string]bool{
 	"view":   true,
 	"search": true,
 	"entity": true,
+	"body":   true,
 	"param":  true,
 }
 
@@ -590,6 +593,20 @@ func validateDirectives(lines []parsedLine, fn *ast.FuncDecl, funcPos token.Posi
 				rec.route.Entity = l.val
 			}
 
+		case "body":
+			rec.bodyPos = l.pos
+			n, errMsg := ParseBodySize(l.val, "h:body")
+			if errMsg != "" {
+				diags = append(diags, Diagnostic{
+					Pos:      l.pos,
+					Severity: Error,
+					Message:  errMsg,
+				})
+			} else {
+				rec.bodyOK = true
+				rec.route.MaxBody = n
+			}
+
 		case "param":
 			pName, kw, labelText, ok := parseParamDirective(l.val)
 			if !ok || kw != "label" || labelText == "" {
@@ -638,6 +655,14 @@ func validateDirectives(lines []parsedLine, fn *ast.FuncDecl, funcPos token.Posi
 			Pos:      rec.entityPos,
 			Severity: Error,
 			Message:  "h:entity names the route itself",
+		})
+	}
+
+	if rec.bodyOK && rec.methodOK && rec.route.Method == "GET" {
+		diags = append(diags, Diagnostic{
+			Pos:      rec.bodyPos,
+			Severity: Error,
+			Message:  "h:body on a GET route, which has no body",
 		})
 	}
 

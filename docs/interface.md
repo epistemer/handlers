@@ -166,6 +166,7 @@ func (h *H) Category(w http.ResponseWriter, r *http.Request, id int64) error {
 | `view` | none, or `true` | off |
 | `search` | none, or `true` | off |
 | `entity` | another route's key, in the same package, not its own | none |
+| `body` | `^[1-9][0-9]*(B\|KiB\|MiB\|GiB)$`: a positive whole number and a unit, no space, units as written (`512KiB`, `20MiB`); the bytes it names fit in an `int64` | the registration's `WithMaxBody` |
 | `param` | `<name> label <text>`, `<name>` a parameter of the handler; once per parameter | the parameter's name made readable |
 
 - `unverified` declares the route's permission at `auth.Unverified`.
@@ -202,6 +203,7 @@ type error), which tests match by its fixed prefix. A run with an error writes n
 | `desc` empty | `h:desc is empty` |
 | `key`, `perm`, `entity` | `h:<name>: "<v>" is not a key` |
 | `path` | `h:path: "<v>" must start with "/"` · `h:path: "<v>" must not end with "/"` · `h:path: "<v>": <ServeMux's reason>` |
+| `body` | `h:body: "<v>" is not a size: write a positive whole number and B, KiB, MiB or GiB, as 20MiB` · `h:body: "<v>" is larger than a body can be` · `h:body on a GET route, which has no body` |
 | `param` | `h:param: write "h:param <name> label <text>"` · `h:param: no parameter <name>` |
 | `perm` with `public` or `session` | `h:perm needs a permission route, not auth <auth>` |
 | Routes sharing a permission disagree on `unverified` | `permission "<k>": <key a> is unverified and <key b> isn't` |
@@ -301,6 +303,7 @@ Messages are `<spec>: <location>: <message>`, the location as
 | `x-permission`, `x-route-key` or `-key-prefix` not a key | `<M> <p>: x-permission "<v>" is not a key` · `<M> <p>: x-route-key "<v>" is not a key` · `-key-prefix "<v>" is not a key` |
 | Two operations, one key | `<M> <p>: key "<k>" also from operationId "<a>"` |
 | An empty `x-label` | `<M> <p>: x-label is empty` |
+| `x-max-body` | `<M> <p>: x-max-body must be a string, as "20MiB"` · `<M> <p>: x-max-body: "<v>" is not a size: write a positive whole number and B, KiB, MiB or GiB, as 20MiB` · `<M> <p>: x-max-body: "<v>" is larger than a body can be` · `<M> <p>: x-max-body on a GET route, which has no body` |
 | An operation name equal to a label or permission variable | as §5.2 |
 | An error response without the `Error` schema | `<M> <p>: response <code> doesn't use #/components/schemas/Error` (every `4XX`, `5XX` and `default` response with a JSON body) |
 | `Error` missing or wrong | `components/schemas/Error: needs string properties code and message` |
@@ -321,6 +324,7 @@ are resolved before any check. `openapi -check` fails as `gen -check` does.
 | `x-permission` | operation | The permission's whole key; default the route key |
 | `x-auth: session` | operation | A signed-in session without a permission |
 | `x-label` | operation, path parameter | The label text; default the operation's `summary`, else the `operationId` made readable; a parameter's name made readable |
+| `x-max-body` | operation | The route's own body limit, a string with `body`'s syntax (`20MiB`); replaces `WithMaxBody` |
 
 `x-go-type` and `x-go-type-import` are oapi-codegen's and pass through,
 except on path parameters (§7.1).
@@ -356,6 +360,7 @@ Go names, resolved by the producer:
 | Permission `var` | `Perm` + the key split at `.`, `_` and `-`, each part's first letter upper-cased (`pricingPlans.fees` → `PermPricingPlansFees`) |
 | `type`, `import`, `alias` | The parameter's type as the generated package spells it (`shop.OrderID`), its package's import path (`""` for predeclared types) and the qualifier it is imported as. Aliases are the package's name, numbered on a collision (`shop2`), and never a name under which the generated file imports its own packages (`handlers`, `http`, `strconv`, `url`, `access`, `auth`, `openapi`, `openapi3`) |
 | `parse` | `text` for a text type; else the underlying type: `string`, `bool`, `int`, `int8` … `int64`, `uint`, `uint8` … `uint64` |
+| `maxBody` | Optional integer of bytes (at least 1, absent on a `GET` route), from `//h:body` or `x-max-body` |
 | `source` | The handler package's directory, or the spec's path, relative to the module root |
 
 ## 9. Generators
@@ -469,6 +474,7 @@ type Route struct {
 	View       bool
 	Searchable bool
 	Entity     string    // a route key, or ""
+	MaxBody    int64     // bytes; 0: the registration's limit
 	Operation  string    // the operationId on the JSON surface
 	Params     []Param
 }
@@ -677,7 +683,7 @@ func (t *Table) Search(r *http.Request, g Guard, tr *i18n.Translator, q Query) (
 
 Every registered route answers in this order:
 
-1. The body is limited (`WithMaxBody`).
+1. If `Route.MaxBody > 0`, the body is limited to it; else if the registration's `maxBody > 0` (`WithMaxBody`), to that; else not at all.
 2. The route goes into the context (`From`).
 3. The guard checks it, unless it is public.
 4. `WithMiddleware`'s middleware runs.
@@ -768,8 +774,10 @@ entry. `Search` returns `Admit`'s error.
 
 - `handlers lsp`: full document sync; diagnostics from the syntax pass on
   open and change and from both passes on save; completion of directive
-  names, values and parameter names; hover; definition for `entity`. It
-  negotiates UTF-8 positions when the client offers them, else UTF-16.
+  names (`body` included), values (the four `body` units included) and
+  parameter names; hover (`body` shows the byte count, as `20MiB = 20 971 520 bytes`);
+  definition for `entity`. It negotiates UTF-8 positions when the client
+  offers them, else UTF-16.
 - `dev/vscode`: the VS Code extension, a client of `handlers lsp`, with the
   TextMate grammar for directives.
 - `dev/claude-plugin`: a Claude Code plugin with the `vet -hook` hook and,
@@ -791,4 +799,5 @@ client SDK pipeline; a language server in the Claude Code plugin.
 - **A2** (2026-11-18, M3, Claude): §3.3's example calls oapi-codegen's `GetSpec`, which replaces the deprecated `GetSwagger` in v2.8.
 - **A3** (2026-11-18, M6, Claude), clarifications found by the API review: a `-key-prefix` that isn't a key is a usage error (`handlers openapi: -key-prefix "<v>" is not a key`, exit 2), not a spec diagnostic; `authguard`'s `Admit` checks lazily, so its error is always nil and a failure to read a permission is logged once and refuses; a routes package with no routes registers no catch-all, since its table carries no prefix.
 - **A4** (2026-11-22, for v0.2.0, accepted by epistemer with the defaults of H1–H4): URL builders return `handlers.Link` (`URL`, `Method`, `Route`, `With`, `String`), and `handlers.Gate` adapts a guard's `Admit` check to ui's actions gate. Breaking. The design is [ADR 0005](adr/0005-builders-return-a-link.md); §10.1 and §11.1 state it.
+- **A5** (2026-11-22, for v0.3.0, accepted by epistemer: H6 decided as replace, H5 and H7–H9 on their defaults): a route can set its own body limit with `//h:body <size>` or `x-max-body: <size>` (`^[1-9][0-9]*(B|KiB|MiB|GiB)$`, fitting in `int64`, absent on `GET`), carried in `routes/v1` `maxBody` and `Route.MaxBody`, replacing `WithMaxBody`'s limit for that route. The design is [ADR 0006](adr/0006-route-body-limit.md); §4.2, §5.2, §7.2, §7.3, §8, §11.1, §12.1 and §15 state it.
 

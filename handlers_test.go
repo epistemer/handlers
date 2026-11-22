@@ -660,6 +660,72 @@ func TestMountChainAndRouting(t *testing.T) {
 			t.Errorf("custom writer = (%d, %q)", rec.Code, rec.Body.String())
 		}
 	})
+
+	t.Run("Route.MaxBody precedence over WithMaxBody", func(t *testing.T) {
+		routes := []handlers.Route{
+			{Key: "default", Method: "POST", Prefix: "/app", Pattern: "/default", Surface: handlers.HTML, Auth: handlers.Public, Label: testRouteLabel},
+			{Key: "larger", Method: "POST", Prefix: "/app", Pattern: "/larger", Surface: handlers.HTML, Auth: handlers.Public, Label: testRouteLabel, MaxBody: 32},
+			{Key: "smaller", Method: "POST", Prefix: "/app", Pattern: "/smaller", Surface: handlers.HTML, Auth: handlers.Public, Label: testRouteLabel, MaxBody: 4},
+		}
+		readAllHandler := func(w http.ResponseWriter, r *http.Request) error {
+			b, err := io.ReadAll(r.Body)
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(w, "%d", len(b))
+			return nil
+		}
+
+		// Registration limit = 8 bytes.
+		mux := http.NewServeMux()
+		m := handlers.NewMount(mux, routes, nil, handlers.WithMaxBody(8))
+		m.Handle(0, readAllHandler)
+		m.Handle(1, readAllHandler)
+		m.Handle(2, readAllHandler)
+		m.Done()
+
+		// 16-byte body: refused by default route (limit 8), admitted by larger route (MaxBody 32).
+		body16 := strings.Repeat("x", 16)
+		recDef := httptest.NewRecorder()
+		mux.ServeHTTP(recDef, httptest.NewRequest("POST", "/app/default", strings.NewReader(body16)))
+		if recDef.Code != http.StatusRequestEntityTooLarge {
+			t.Errorf("default route 16B = %d, want 413", recDef.Code)
+		}
+
+		recLarge := httptest.NewRecorder()
+		mux.ServeHTTP(recLarge, httptest.NewRequest("POST", "/app/larger", strings.NewReader(body16)))
+		if recLarge.Code != http.StatusOK || recLarge.Body.String() != "16" {
+			t.Errorf("larger route 16B = (%d, %q), want (200, \"16\")", recLarge.Code, recLarge.Body.String())
+		}
+
+		// 6-byte body: admitted by default route (limit 8), refused by smaller route (MaxBody 4).
+		body6 := strings.Repeat("x", 6)
+		recDef6 := httptest.NewRecorder()
+		mux.ServeHTTP(recDef6, httptest.NewRequest("POST", "/app/default", strings.NewReader(body6)))
+		if recDef6.Code != http.StatusOK || recDef6.Body.String() != "6" {
+			t.Errorf("default route 6B = (%d, %q), want (200, \"6\")", recDef6.Code, recDef6.Body.String())
+		}
+
+		recSmall6 := httptest.NewRecorder()
+		mux.ServeHTTP(recSmall6, httptest.NewRequest("POST", "/app/smaller", strings.NewReader(body6)))
+		if recSmall6.Code != http.StatusRequestEntityTooLarge {
+			t.Errorf("smaller route 6B = %d, want 413", recSmall6.Code)
+		}
+
+		// WithMaxBody(0) still applies a route's own MaxBody.
+		muxZero := http.NewServeMux()
+		mZero := handlers.NewMount(muxZero, routes, nil, handlers.WithMaxBody(0))
+		mZero.Handle(0, readAllHandler)
+		mZero.Handle(1, readAllHandler)
+		mZero.Handle(2, readAllHandler)
+		mZero.Done()
+
+		recZeroSmall := httptest.NewRecorder()
+		muxZero.ServeHTTP(recZeroSmall, httptest.NewRequest("POST", "/app/smaller", strings.NewReader(body6)))
+		if recZeroSmall.Code != http.StatusRequestEntityTooLarge {
+			t.Errorf("WithMaxBody(0) with route MaxBody=4 on 6B = %d, want 413", recZeroSmall.Code)
+		}
+	})
 }
 
 func TestMountHandleHTTPAndWriter(t *testing.T) {

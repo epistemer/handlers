@@ -68,6 +68,7 @@ type Route struct {
 	View       bool
 	Searchable bool
 	Entity     string // a route key, or ""
+	MaxBody    int64  // bytes; 0: the registration's limit
 	Operation  string // the operationId on the JSON surface
 	Params     []Param
 }
