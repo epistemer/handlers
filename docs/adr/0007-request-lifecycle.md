@@ -101,9 +101,11 @@ func Recover(ew handlers.ErrorWriter) func(http.Handler) http.Handler
   aborted (`panic(http.ErrAbortHandler)`), so the client sees a truncated
   response rather than a complete-looking one.
 - If the error writer itself panics (a render panic was Confab's case),
-  that is logged too; if nothing was written yet, the headers it set are
-  cleared and `WriteText` answers; otherwise, or if `WriteText` panics,
+  that is logged too; if nothing was written yet, `WriteText` answers; otherwise, or if `WriteText` panics,
   the connection is aborted.
+- Before the error writer or `WriteText` answers, the headers are put
+  back as they were before the route ran (built: review of #25), so an
+  outer middleware's headers stay and the handler's go.
 - The recovering writer has `Unwrap`, `Flush` and `Hijack` (a flush or a
   hijack counts as started), so `http.ResponseController` and streaming
   keep working.

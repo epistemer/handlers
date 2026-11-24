@@ -22,6 +22,18 @@ shared permissions, and is installed.
   apiroutes`, and the seed grants it once. Shared permissions get a text
   after their key.
 
+**Open, not blocking the release** (board follow-up):
+- No Gemini review yet of Claude's two fix commits on #25 and #26 (the
+  flash writer, the header restore, `vetContext`), nor a cross-family
+  review of #26. Every Gemini model was out of quota for about two hours;
+  run both when it returns. A finding becomes v0.4.1.
+- A Windows language-server timing test (`TestTypePassOnSaveAndStaleDrop`)
+  failed once on #25 and passed on rerun; it's untouched by this round and
+  wasn't investigated.
+- #24 (docs) merged with checks pending, and #27 (docs) with one failed
+  check, a proxy download error; its rerun and main's CI were green before
+  the tag.
+
 ## 2026-11-24 — A7 built: recovery, middleware, shared permissions (v0.4.0)
 
 **Locked** by epistemer with the defaults of N1–N11 (#24).
@@ -35,7 +47,11 @@ shared permissions, and is installed.
   The example's admin takes `orders.read` from its API. Gemini 3.8 Flash
   (High) wrote it (about 1.06M tokens).
 
-Claude reviewed both. Gemini reviewed each diff against the spec:
+Claude reviewed #25 in full. For #26, Claude reviewed the parser, gen,
+the generator and `routes/v1` before merging, and read `syntax.go`'s and
+`cross.go`'s checks after it; `openapi.go` was read only in part. #26's
+Gemini review was by the model that wrote it, so it isn't a cross-family
+review. Gemini reviewed each diff against the spec:
 - #25: Hydrogen (High), about 79k tokens; seven of its twelve findings
   were fixed.
 - #26: Flash (High), about 198k tokens; three of six were fixed.

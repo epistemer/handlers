@@ -28,7 +28,11 @@ Directives are `//h:<name>` or `//h:<name> <value>` (no space after `//`):
 - `//h:desc <text>` — label text (defaults to readable key with a warning).
 - `//h:auth <level>` — `public`, `session`, or `unverified` (default: route
   permission at `Verified`).
-- `//h:perm <key>` — permission key (only when `auth` is default or `unverified`).
+- `//h:perm <key>` — permission key (only when `auth` is default or `unverified`);
+  `//h:perm <key> <text>` gives the permission its text; `//h:perm <key> from
+  <package>` takes a permission another routes package declares (nothing may
+  follow the package).
+- `//h:body <size>` — the route's own body limit, as `20MiB` (not on `GET`).
 - `//h:view [true]` — mark route as a view page.
 - `//h:search [true]` — include route in search.
 - `//h:entity <key>` — another route's key in the same package.
