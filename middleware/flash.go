@@ -93,6 +93,7 @@ type flashCtxKey struct {
 
 type flashState struct {
 	incoming   []flashMsg
+	dirty      bool // the cookie held something that was dropped on reading
 	canReceive bool
 	mu         sync.Mutex
 	added      []flashMsg
@@ -124,22 +125,20 @@ func (t flashKeyTer) T(ctx context.Context, _ ...any) string {
 	return t.key.T(ctx, t.args...)
 }
 
-func (t flashKeyTer) K() string {
-	return t.key.K()
-}
-
 // Middleware reads the request's flash cookie into the context and writes it
 // back with the response's header when messages are delivered or added.
 func (f *Flash) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var incoming []flashMsg
+		dirty := false
 		if c, err := r.Cookie(f.cookieName()); err == nil {
-			incoming = f.decodeCookie(r.Context(), c.Value)
+			incoming, dirty = f.decodeCookie(r.Context(), c.Value)
 		}
 
 		canReceive := r.Method != http.MethodHead && (!HTMX(r) || Boosted(r))
 		st := &flashState{
 			incoming:   incoming,
+			dirty:      dirty,
 			canReceive: canReceive,
 		}
 		req := r.WithContext(context.WithValue(r.Context(), flashCtxKey{f}, st))
@@ -151,9 +150,7 @@ func (f *Flash) Middleware(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(rw, req)
-		if !rw.decided && !rw.hijacked {
-			rw.decide(http.StatusOK, rw.contentType(nil))
-		}
+		rw.finish()
 	})
 }
 
@@ -176,7 +173,7 @@ func (f *Flash) Add(ctx context.Context, level string, msg i18n.Ter, args ...any
 		m.Text = ""
 	} else if _, isErr := msg.(error); isErr {
 		m.Text = msg.T(ctx, args...)
-	} else if k, isKer := msg.(i18n.Ker); isKer {
+	} else if k, isKer := msg.(i18n.Ker); isKer && k.K() != "" {
 		m.Key = k.K()
 		m.Args = snapshotArgs(ctx, args)
 	} else {
@@ -381,13 +378,15 @@ func encodeMessages(msgs []flashMsg) string {
 	return base64.RawURLEncoding.EncodeToString(raw)
 }
 
-func (f *Flash) decodeCookie(ctx context.Context, val string) []flashMsg {
+// decodeCookie returns the cookie's messages, and whether it held anything
+// that was dropped, so the cookie is rewritten.
+func (f *Flash) decodeCookie(ctx context.Context, val string) (msgs []flashMsg, dirty bool) {
 	if val == "" {
-		return nil
+		return nil, false
 	}
 	if len(val) > maxCookieReadBytes {
 		slog.Default().DebugContext(ctx, "middleware: flash cookie exceeds 4 KiB")
-		return nil
+		return nil, true
 	}
 	var (
 		raw []byte
@@ -400,23 +399,25 @@ func (f *Flash) decodeCookie(ctx context.Context, val string) []flashMsg {
 	}
 	if err != nil {
 		slog.Default().DebugContext(ctx, "middleware: malformed flash cookie", "err", err)
-		return nil
+		return nil, true
 	}
 	var wire []wireMsg
 	if err := json.Unmarshal(raw, &wire); err != nil {
 		slog.Default().DebugContext(ctx, "middleware: malformed flash cookie JSON", "err", err)
-		return nil
+		return nil, true
 	}
 
 	var out []flashMsg
 	for _, wm := range wire {
 		if !validLevel(wm.Level) {
 			slog.Default().DebugContext(ctx, "middleware: unknown flash level in cookie", "level", wm.Level)
+			dirty = true
 			continue
 		}
 		if wm.Key == "" {
 			if len(wm.Args) > 0 {
 				slog.Default().DebugContext(ctx, "middleware: malformed flash message in cookie")
+				dirty = true
 				continue
 			}
 			out = append(out, flashMsg{Level: wm.Level, Text: wm.Text})
@@ -437,6 +438,7 @@ func (f *Flash) decodeCookie(ctx context.Context, val string) []flashMsg {
 			}
 		}
 		if badArg {
+			dirty = true
 			continue
 		}
 		out = append(out, flashMsg{
@@ -445,41 +447,82 @@ func (f *Flash) decodeCookie(ctx context.Context, val string) []flashMsg {
 			Args:  args,
 		})
 	}
-	return out
+	return out, dirty
 }
 
 type flashWriter struct {
-	w           http.ResponseWriter
-	r           *http.Request
-	f           *Flash
-	st          *flashState
-	decided     bool
-	hijacked    bool
-	wroteHeader bool
+	w        http.ResponseWriter
+	r        *http.Request
+	f        *Flash
+	st       *flashState
+	decided  bool
+	hijacked bool
+	held     int // a final status held until the first write, when no Content-Type is set
 }
 
 func (w *flashWriter) Header() http.Header {
 	return w.w.Header()
 }
 
+// WriteHeader decides at once when the content type is known; otherwise it
+// holds the status until the first write can be sniffed, as net/http does.
 func (w *flashWriter) WriteHeader(code int) {
 	if code >= 100 && code <= 199 {
 		w.w.WriteHeader(code)
 		return
 	}
-	if !w.decided && !w.hijacked {
-		w.decide(code, w.contentType(nil))
+	if w.decided || w.hijacked {
+		w.w.WriteHeader(code)
+		return
 	}
-	w.wroteHeader = true
-	w.w.WriteHeader(code)
+	if w.held != 0 {
+		return // a second WriteHeader is superfluous, as in net/http
+	}
+	if ct := w.contentType(nil); ct != "" {
+		w.decide(code, ct)
+		w.w.WriteHeader(code)
+		return
+	}
+	w.held = code
 }
 
 func (w *flashWriter) Write(p []byte) (int, error) {
 	if !w.decided && !w.hijacked {
-		w.decide(http.StatusOK, w.contentType(p))
-		w.wroteHeader = true
+		if len(p) == 0 {
+			return 0, nil
+		}
+		status := http.StatusOK
+		if w.held != 0 {
+			status = w.held
+		}
+		w.decide(status, w.contentType(p))
+		w.sendHeld()
 	}
 	return w.w.Write(p)
+}
+
+// sendHeld sends a held status after the decision.
+func (w *flashWriter) sendHeld() {
+	if w.held != 0 {
+		code := w.held
+		w.held = 0
+		w.w.WriteHeader(code)
+	}
+}
+
+// finish decides for a handler that returned without writing a body.
+func (w *flashWriter) finish() {
+	if w.hijacked {
+		return
+	}
+	if !w.decided {
+		status := http.StatusOK
+		if w.held != 0 {
+			status = w.held
+		}
+		w.decide(status, w.contentType(nil))
+	}
+	w.sendHeld()
 }
 
 func (w *flashWriter) Unwrap() http.ResponseWriter {
@@ -487,18 +530,18 @@ func (w *flashWriter) Unwrap() http.ResponseWriter {
 }
 
 func (w *flashWriter) Flush() {
-	if !w.decided && !w.hijacked {
-		w.decide(http.StatusOK, w.contentType(nil))
-		w.wroteHeader = true
-	}
-	_ = http.NewResponseController(w.w).Flush()
+	_ = w.FlushError()
 }
 
 func (w *flashWriter) FlushError() error {
 	if !w.decided && !w.hijacked {
-		w.decide(http.StatusOK, w.contentType(nil))
-		w.wroteHeader = true
+		status := http.StatusOK
+		if w.held != 0 {
+			status = w.held
+		}
+		w.decide(status, w.contentType(nil))
 	}
+	w.sendHeld()
 	return http.NewResponseController(w.w).Flush()
 }
 
@@ -528,7 +571,7 @@ func (w *flashWriter) contentType(firstWrite []byte) string {
 		}
 		return vals[0]
 	}
-	if firstWrite != nil {
+	if len(firstWrite) > 0 {
 		return http.DetectContentType(firstWrite)
 	}
 	return ""
@@ -563,15 +606,26 @@ func (w *flashWriter) decide(status int, ct string) {
 		isHTMLContentType(ct) &&
 		(status < http.StatusMultipleChoices || (status >= http.StatusBadRequest && status <= 599))
 
-	if !delivered && len(added) == 0 {
+	if !delivered && len(added) == 0 && !w.st.dirty {
 		return
+	}
+
+	// A message added now that can't fit on its own is dropped first, so it
+	// doesn't push out older ones that do.
+	kept := added[:0:0]
+	for _, m := range added {
+		if len(encodeMessages([]flashMsg{m})) > maxCookieWriteByte {
+			slog.Default().WarnContext(ctx, "middleware: flash message exceeds 3 KiB, dropped")
+			continue
+		}
+		kept = append(kept, m)
 	}
 
 	var remaining []flashMsg
 	if !delivered {
 		remaining = append(remaining, w.st.incoming...)
 	}
-	remaining = append(remaining, added...)
+	remaining = append(remaining, kept...)
 
 	encoded := encodeMessages(remaining)
 	if len(encoded) > maxCookieWriteByte {
@@ -584,7 +638,7 @@ func (w *flashWriter) decide(status int, ct string) {
 		slog.Default().WarnContext(ctx, "middleware: flash cookie exceeds 3 KiB, dropped oldest messages", "dropped", dropped)
 	}
 
-	if len(remaining) == 0 && len(w.st.incoming) == 0 {
+	if len(remaining) == 0 && len(w.st.incoming) == 0 && !w.st.dirty {
 		return
 	}
 

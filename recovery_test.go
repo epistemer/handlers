@@ -382,3 +382,39 @@ func (panicGuard) Check(*http.Request, handlers.Route) error { panic("guard boom
 func (panicGuard) Admit(*http.Request) (func(handlers.Route) bool, error) {
 	return func(handlers.Route) bool { return true }, nil
 }
+
+func TestRecoveryRestoresHeaders(t *testing.T) {
+	orig := slog.Default()
+	slog.SetDefault(slog.New(&logCapture{}))
+	t.Cleanup(func() { slog.SetDefault(orig) })
+
+	routes := []handlers.Route{
+		{Key: "orders.export", Method: "GET", Prefix: "/app", Pattern: "/export", Surface: handlers.HTML, Auth: handlers.Public, Label: testRouteLabel},
+	}
+	mux := http.NewServeMux()
+	m := handlers.NewMount(mux, routes, nil)
+	m.Handle(0, func(w http.ResponseWriter, r *http.Request) error {
+		w.Header().Set("Content-Disposition", `attachment; filename="export.csv"`)
+		w.Header().Set("Content-Encoding", "gzip")
+		panic("export failed")
+	})
+	m.Done()
+	// An outer middleware's header stays.
+	outer := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Security-Policy", "default-src 'self'")
+		mux.ServeHTTP(w, r)
+	})
+	rec := httptest.NewRecorder()
+	outer.ServeHTTP(rec, httptest.NewRequest("GET", "/app/export", nil))
+	if rec.Code != 500 {
+		t.Fatalf("status = %d, want 500", rec.Code)
+	}
+	for _, h := range []string{"Content-Disposition", "Content-Encoding"} {
+		if v := rec.Header().Get(h); v != "" {
+			t.Errorf("%s = %q on the error page, want none", h, v)
+		}
+	}
+	if v := rec.Header().Get("Content-Security-Policy"); v != "default-src 'self'" {
+		t.Errorf("Content-Security-Policy = %q, want the outer middleware's", v)
+	}
+}

@@ -102,6 +102,17 @@ func Serve(
 ) {
 	rw := NewWriter(w)
 	var panicErr error
+	// The headers as they were before next ran: outer middleware's (a
+	// Content-Security-Policy, a flash) stay on the error page; what next set
+	// (a Content-Disposition, a Content-Encoding) doesn't.
+	before := w.Header().Clone()
+	restore := func() {
+		h := rw.Header()
+		clear(h)
+		for k, v := range before {
+			h[k] = v
+		}
+	}
 
 	defer func() {
 		if panicErr == nil {
@@ -116,7 +127,7 @@ func Serve(
 			if rw.started {
 				panic(http.ErrAbortHandler)
 			}
-			clear(rw.Header())
+			restore()
 			defer func() {
 				if recover() != nil {
 					panic(http.ErrAbortHandler)
@@ -146,6 +157,7 @@ func Serve(
 	}()
 
 	if panicErr != nil {
+		restore()
 		if ew != nil {
 			ew(rw, r, panicErr)
 		} else {
