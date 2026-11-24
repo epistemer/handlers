@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when a handler package links to it before it was generated:
   `<pkg>.<Name> doesn't exist yet: generate the route before linking to it`,
   and `<import path> doesn't exist yet: generate the routes before linking
-  to them` when the routes package doesn't exist yet (amendment A6, a
+  to them` from `gen` when the routes package doesn't exist yet (amendment A6, a
   clarification; Confab's F4). The refusal itself is unchanged.
 
 ## [v0.3.0] - 2026-11-22

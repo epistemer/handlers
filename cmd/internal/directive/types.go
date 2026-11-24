@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -352,7 +353,7 @@ func findRouteDiagnostic(lpkg *packages.Package, dir, out string) (Diagnostic, b
 			}
 		}
 
-		if outImportPath != "" && (strings.Contains(msg, outImportPath) || strings.Contains(e.Msg, outImportPath)) {
+		if outImportPath != "" && !hasGoFiles(out) && namesImport(e.Msg, outImportPath) {
 			qualifying = append(qualifying, Diagnostic{
 				Pos:      pos,
 				Severity: Error,
@@ -381,7 +382,7 @@ func parseUndefinedPkgMember(msg string) (ident, name string, ok bool) {
 		return "", "", false
 	}
 	ident, name = parts[0], parts[1]
-	if !isGoIdent(ident) || !isGoIdent(name) {
+	if !isGoIdent(ident) || !isGoIdent(name) || !token.IsExported(name) {
 		return "", "", false
 	}
 	return ident, name, true
@@ -498,8 +499,15 @@ func resolvePkgName(impPath, dir, modDir, modPath, out, outImportPath string) st
 		fset := token.NewFileSet()
 		pkgs, err := parser.ParseDir(fset, pkgDir, nil, parser.PackageClauseOnly)
 		if err == nil {
+			names := make([]string, 0, len(pkgs))
 			for name := range pkgs {
-				return name
+				if !strings.HasSuffix(name, "_test") {
+					names = append(names, name)
+				}
+			}
+			if len(names) > 0 {
+				slices.Sort(names)
+				return names[0]
 			}
 		}
 	}
@@ -556,4 +564,37 @@ func computeOutImportPath(out, modDir, modPath string) string {
 		return modPath
 	}
 	return path.Join(modPath, filepath.ToSlash(rel))
+}
+
+// hasGoFiles reports whether dir holds a non-test Go file.
+func hasGoFiles(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".go") && !strings.HasSuffix(e.Name(), "_test.go") {
+			return true
+		}
+	}
+	return false
+}
+
+// namesImport reports whether msg is an import failure naming exactly path
+// (quoted, or followed by a space, a parenthesis, a colon or the end).
+func namesImport(msg, path string) bool {
+	if !strings.Contains(msg, "import") && !strings.Contains(msg, "package") {
+		return false
+	}
+	for i := 0; ; {
+		j := strings.Index(msg[i:], path)
+		if j < 0 {
+			return false
+		}
+		end := i + j + len(path)
+		if end == len(msg) || strings.ContainsRune("\" ( ):", rune(msg[end])) {
+			return true
+		}
+		i = end
+	}
 }
