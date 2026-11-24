@@ -92,7 +92,7 @@ var Routes = []handlers.Route{
 		Pattern:    "/orders",
 		Surface:    handlers.HTML,
 		Auth:       handlers.Permission,
-		Permission: "orders.manage",
+		Permission: "orders.read",
 		Label:      L10nOrders,
 		View:       true,
 		Searchable: true,

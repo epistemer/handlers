@@ -27,6 +27,54 @@
       }
     },
     {
+      "name": "meta.h-directive.perm-from.line.go",
+      "match": "^(\\s*//)(h):(perm)\\s+(\\S+)\\s+(from)(?:\\s+(\\S+))?(?:\\s+([^\\n]*))?$",
+      "captures": {
+        "1": {
+          "name": "comment.line.double-slash.go"
+        },
+        "2": {
+          "name": "keyword.other.h-directive.go"
+        },
+        "3": {
+          "name": "entity.name.tag.h-directive.go"
+        },
+        "4": {
+          "name": "string.unquoted.h-directive.value.go"
+        },
+        "5": {
+          "name": "keyword.other.h-directive.from.go"
+        },
+        "6": {
+          "name": "entity.name.package.go"
+        },
+        "7": {
+          "name": "string.unquoted.h-directive.value.go"
+        }
+      }
+    },
+    {
+      "name": "meta.h-directive.perm.line.go",
+      "match": "^(\\s*//)(h):(perm)(?:\\s+(\\S+)(?:\\s+([^\\n]*))?)?$",
+      "captures": {
+        "1": {
+          "name": "comment.line.double-slash.go"
+        },
+        "2": {
+          "name": "keyword.other.h-directive.go"
+        },
+        "3": {
+          "name": "entity.name.tag.h-directive.go"
+        },
+        "4": {
+          "name": "string.unquoted.h-directive.value.go"
+        },
+        "5": {
+          "name": "string.unquoted.h-directive.text.go"
+        }
+      }
+    },
+    {
       "name": "meta.h-directive.line.go",
       "match": "^(\\s*//)(h):(key|method|path|desc|auth|perm|view|search|entity|body)(?:\\s+([^\\n]*))?$",
       "captures": {

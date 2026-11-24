@@ -1,0 +1,74 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "internal/shop",
+  "package": {
+    "name": "shoproutes",
+    "dir": "internal/shop/shoproutes"
+  },
+  "surface": "html",
+  "prefix": "/shop",
+  "routes": [
+    {
+      "key": "orders.detail",
+      "method": "GET",
+      "pattern": "/orders/{id}",
+      "name": "OrderDetail",
+      "var": "L10nOrderDetail",
+      "text": "Order detail",
+      "auth": "permission",
+      "permission": "orders.read",
+      "view": true,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "orderID",
+          "var": "L10nOrderID",
+          "type": "int64",
+          "import": "",
+          "parse": "int",
+          "kind": "segment",
+          "label": "Order ID"
+        }
+      ]
+    },
+    {
+      "key": "orders.cancel",
+      "method": "POST",
+      "pattern": "/orders/{id}/cancel",
+      "name": "OrderCancel",
+      "var": "L10nOrderCancel",
+      "text": "Cancel order",
+      "auth": "permission",
+      "permission": "orders.manage",
+      "view": false,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "orderID",
+          "var": "L10nOrderID2",
+          "type": "int64",
+          "import": "",
+          "parse": "int",
+          "kind": "segment",
+          "label": "Order ID"
+        }
+      ]
+    }
+  ],
+  "permissions": [
+    {
+      "key": "orders.read",
+      "from": "apiroutes",
+      "level": "verified"
+    },
+    {
+      "key": "orders.manage",
+      "var": "PermOrdersManage",
+      "text": "Manage customer orders",
+      "level": "verified"
+    }
+  ]
+}

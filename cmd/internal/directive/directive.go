@@ -57,6 +57,8 @@ type Route struct {
 	Desc         string
 	Auth         string // "", "public", "session", "unverified"
 	Perm         string // "" when not given
+	PermText     string // "" when not given
+	PermFrom     string // "" when not given
 	View, Search bool
 	Entity       string
 	MaxBody      int64          // bytes; 0 when not given
@@ -108,6 +110,53 @@ func ParseBodySize(s, prefix string) (int64, string) {
 		n = n*10 + d
 	}
 	return n << shift, ""
+}
+
+// PermValue holds the parsed parts of a perm or x-permission directive.
+type PermValue struct {
+	Key  string
+	Text string
+	From string
+}
+
+// ParsePerm parses s according to the grammar:
+//
+//	<key>
+//	<key> <text>
+//	<key> from <package>
+//
+// prefix is "h:perm" or "x-permission".
+// If invalid, it returns a non-empty diagnostic message.
+func ParsePerm(s, prefix string) (PermValue, string) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		if prefix == "h:perm" {
+			return PermValue{}, fmt.Sprintf("%s: %q is not a key", prefix, "")
+		}
+		return PermValue{}, fmt.Sprintf("%s %q is not a key", prefix, "")
+	}
+	fields := strings.Fields(s)
+	key := fields[0]
+	if !IsValidKey(key) {
+		if prefix == "h:perm" {
+			return PermValue{}, fmt.Sprintf("%s: %q is not a key", prefix, key)
+		}
+		return PermValue{}, fmt.Sprintf("%s %q is not a key", prefix, key)
+	}
+	if len(fields) == 1 {
+		return PermValue{Key: key}, ""
+	}
+	if fields[1] == "from" {
+		if len(fields) != 3 || !token.IsIdentifier(fields[2]) || token.IsKeyword(fields[2]) || fields[2] == "_" {
+			if prefix == "h:perm" {
+				return PermValue{}, fmt.Sprintf(`%s: write "h:perm %s from <package>", with nothing after`, prefix, key)
+			}
+			return PermValue{}, fmt.Sprintf(`%s: write "%s from <package>", with nothing after`, prefix, key)
+		}
+		return PermValue{Key: key, From: fields[2]}, ""
+	}
+	text := strings.TrimSpace(s[len(key):])
+	return PermValue{Key: key, Text: text}, ""
 }
 
 // IsValidKey reports whether s matches the routes/v1 key grammar.

@@ -20,6 +20,7 @@ type vettedPkg struct {
 	pkg           *directive.Package
 	prefix        string
 	pkgDir        string
+	pkgName       string
 	routesFile    string
 	routesFileAbs string
 }
@@ -100,9 +101,19 @@ func crossVet(modRoot string, vetted []vettedPkg, baselineRef string) ([]directi
 				if f.doc.Package.Dir != "" {
 					vp.pkgDir = f.doc.Package.Dir
 				}
+				if f.doc.Package.Name != "" {
+					vp.pkgName = f.doc.Package.Name
+				}
 				vp.routesFile = f.relPath
 				vp.routesFileAbs = f.absPath
 				break
+			}
+		}
+		if vp.pkgName == "" {
+			if vp.pkg != nil && vp.pkg.Name != "" {
+				vp.pkgName = vp.pkg.Name + "routes"
+			} else {
+				vp.pkgName = filepath.Base(vp.pkgDir)
 			}
 		}
 	}
@@ -115,14 +126,32 @@ func crossVet(modRoot string, vetted []vettedPkg, baselineRef string) ([]directi
 				continue
 			}
 			if baseBytes, ok := loadGitFile(baselineRef, vp.routesFileAbs); ok {
-				newDoc := buildRoutesDoc(vp.pkg, vp.relDir, "", vp.pkgDir, vp.prefix)
+				newDoc := buildRoutesDoc(vp.pkg, vp.relDir, vp.pkgName, vp.pkgDir, vp.prefix)
 				diags = append(diags, compareBaseline(baseBytes, baselineRef, vp.routesFile, newDoc)...)
 			}
 		}
 	}
 
+	type crossPackage struct {
+		name     string
+		dir      string
+		sourceID int
+		decls    map[string]string // permKey -> level ("verified" or "unverified")
+	}
+	type crossTakenPerm struct {
+		sourceID  int
+		permKey   string
+		fromPkg   string
+		takingDir string
+		routeKey  string
+		level     string // "verified" or "unverified"
+		pos       token.Position
+	}
+
 	var allRoutes []crossRoute
 	var allPerms []crossPerm
+	var allPackages []crossPackage
+	var allTakenPerms []crossTakenPerm
 	sourceID := 0
 
 	for fi, f := range files {
@@ -135,6 +164,11 @@ func crossVet(modRoot string, vetted []vettedPkg, baselineRef string) ([]directi
 		if pkgDir == "" {
 			pkgDir = filepath.ToSlash(filepath.Dir(f.relPath))
 		}
+		pkgName := f.doc.Package.Name
+		if pkgName == "" {
+			pkgName = filepath.Base(pkgDir)
+		}
+		decls := make(map[string]string)
 		for _, r := range f.doc.Routes {
 			allRoutes = append(allRoutes, crossRoute{
 				sourceID:       sourceID,
@@ -146,22 +180,56 @@ func crossVet(modRoot string, vetted []vettedPkg, baselineRef string) ([]directi
 				refLine:        1,
 			})
 		}
+		seenTakenInFile := make(map[string]bool)
 		for _, p := range f.doc.Permissions {
-			allPerms = append(allPerms, crossPerm{
-				sourceID: sourceID,
-				key:      p.Key,
-				pkgDir:   pkgDir,
-				pos:      pos,
-			})
+			lvl := p.Level
+			if lvl == "" {
+				lvl = "verified"
+			}
+			if p.From == "" {
+				decls[p.Key] = lvl
+				allPerms = append(allPerms, crossPerm{
+					sourceID: sourceID,
+					key:      p.Key,
+					pkgDir:   pkgDir,
+					pos:      pos,
+				})
+			} else if !seenTakenInFile[p.Key] {
+				seenTakenInFile[p.Key] = true
+				rk := p.Key
+				for _, r := range f.doc.Routes {
+					if r.Permission == p.Key && r.Key != "" {
+						rk = r.Key
+						break
+					}
+				}
+				allTakenPerms = append(allTakenPerms, crossTakenPerm{
+					sourceID:  sourceID,
+					permKey:   p.Key,
+					fromPkg:   p.From,
+					takingDir: pkgDir,
+					routeKey:  rk,
+					level:     lvl,
+					pos:       pos,
+				})
+			}
 		}
+		allPackages = append(allPackages, crossPackage{
+			name:     pkgName,
+			dir:      pkgDir,
+			sourceID: sourceID,
+			decls:    decls,
+		})
 	}
 
 	for _, vp := range vetted {
 		sourceID++
-		if vp.pkg == nil {
+		if vp.pkg == nil || (vp.routesFile == "" && len(vp.pkg.Routes) == 0) {
 			continue
 		}
+		decls := make(map[string]string)
 		seenPermInPkg := make(map[string]bool)
+		seenTakenInPkg := make(map[string]bool)
 		for _, r := range vp.pkg.Routes {
 			if r.Key != "" {
 				refFile := r.Pos.Filename
@@ -183,17 +251,45 @@ func crossVet(modRoot string, vetted []vettedPkg, baselineRef string) ([]directi
 				if pk == "" {
 					pk = r.Key
 				}
-				if pk != "" && !seenPermInPkg[pk] {
-					seenPermInPkg[pk] = true
-					allPerms = append(allPerms, crossPerm{
-						sourceID: sourceID,
-						key:      pk,
-						pkgDir:   vp.pkgDir,
-						pos:      r.Pos,
-					})
+				lvl := "verified"
+				if r.Auth == "unverified" {
+					lvl = "unverified"
+				}
+				if r.PermFrom == "" {
+					if pk != "" {
+						decls[pk] = lvl
+					}
+					if pk != "" && !seenPermInPkg[pk] {
+						seenPermInPkg[pk] = true
+						allPerms = append(allPerms, crossPerm{
+							sourceID: sourceID,
+							key:      pk,
+							pkgDir:   vp.pkgDir,
+							pos:      r.Pos,
+						})
+					}
+				} else {
+					if pk != "" && !seenTakenInPkg[pk] {
+						seenTakenInPkg[pk] = true
+						allTakenPerms = append(allTakenPerms, crossTakenPerm{
+							sourceID:  sourceID,
+							permKey:   pk,
+							fromPkg:   r.PermFrom,
+							takingDir: vp.pkgDir,
+							routeKey:  r.Key,
+							level:     lvl,
+							pos:       r.Pos,
+						})
+					}
 				}
 			}
 		}
+		allPackages = append(allPackages, crossPackage{
+			name:     vp.pkgName,
+			dir:      vp.pkgDir,
+			sourceID: sourceID,
+			decls:    decls,
+		})
 	}
 
 	seenKeys := make(map[string]crossRoute)
@@ -218,11 +314,62 @@ func crossVet(modRoot string, vetted []vettedPkg, baselineRef string) ([]directi
 				diags = append(diags, directive.Diagnostic{
 					Pos:      p.pos,
 					Severity: directive.Error,
-					Message:  fmt.Sprintf("permission %q is in %s and %s; a permission belongs to one routes package", p.key, first.pkgDir, p.pkgDir),
+					Message:  fmt.Sprintf("permission %q is in %s and %s; declare it in one and take it from there with \"from <package>\"", p.key, first.pkgDir, p.pkgDir),
 				})
 			}
 		} else {
 			seenPerms[p.key] = p
+		}
+	}
+
+	for _, tp := range allTakenPerms {
+		var targets []crossPackage
+		for _, cp := range allPackages {
+			if cp.name == tp.fromPkg {
+				targets = append(targets, cp)
+			}
+		}
+		if len(targets) > 1 {
+			sort.Slice(targets, func(i, j int) bool {
+				return targets[i].dir < targets[j].dir
+			})
+			diags = append(diags, directive.Diagnostic{
+				Pos:      tp.pos,
+				Severity: directive.Error,
+				Message:  fmt.Sprintf("permission %q in %s: two routes packages are named %s, in %s and %s", tp.permKey, tp.takingDir, tp.fromPkg, targets[0].dir, targets[1].dir),
+			})
+		} else if len(targets) == 0 {
+			diags = append(diags, directive.Diagnostic{
+				Pos:      tp.pos,
+				Severity: directive.Error,
+				Message:  fmt.Sprintf("permission %q in %s: no routes package %s", tp.permKey, tp.takingDir, tp.fromPkg),
+			})
+		} else {
+			target := targets[0]
+			declLevel, ok := target.decls[tp.permKey]
+			if !ok {
+				diags = append(diags, directive.Diagnostic{
+					Pos:      tp.pos,
+					Severity: directive.Error,
+					Message:  fmt.Sprintf("permission %q in %s: %s doesn't declare it", tp.permKey, tp.takingDir, tp.fromPkg),
+				})
+			} else {
+				declUnv := (declLevel == "unverified")
+				takenUnv := (tp.level == "unverified")
+				if takenUnv && !declUnv {
+					diags = append(diags, directive.Diagnostic{
+						Pos:      tp.pos,
+						Severity: directive.Error,
+						Message:  fmt.Sprintf("permission %q in %s: %s is unverified and the declaration in %s isn't", tp.permKey, tp.takingDir, tp.routeKey, tp.fromPkg),
+					})
+				} else if !takenUnv && declUnv {
+					diags = append(diags, directive.Diagnostic{
+						Pos:      tp.pos,
+						Severity: directive.Error,
+						Message:  fmt.Sprintf("permission %q in %s: %s isn't unverified and the declaration in %s is", tp.permKey, tp.takingDir, tp.routeKey, tp.fromPkg),
+					})
+				}
+			}
 		}
 	}
 
@@ -287,4 +434,49 @@ func muxConflicts(a, b string) bool {
 		return false
 	}
 	return !tryServeMux(m, b)
+}
+
+func countCommittedTakingRoutes(modRoot, skipSource, skipOutRel string) map[string]int {
+	counts := make(map[string]int)
+	if modRoot == "" {
+		return counts
+	}
+	_ = filepath.WalkDir(modRoot, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		name := d.Name()
+		if d.IsDir() {
+			if path != modRoot && (name == "testdata" || name == "vendor" || strings.HasPrefix(name, ".")) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if strings.HasPrefix(name, "zz_") && strings.HasSuffix(name, ".routes.json") {
+			b, err := os.ReadFile(path)
+			if err != nil {
+				return nil
+			}
+			var doc routesDoc
+			if err := json.Unmarshal(b, &doc); err != nil {
+				return nil
+			}
+			if doc.Source == skipSource || (skipOutRel != "" && doc.Package.Dir == skipOutRel) {
+				return nil
+			}
+			takenPerms := make(map[string]bool)
+			for _, perm := range doc.Permissions {
+				if perm.From != "" {
+					takenPerms[perm.Key] = true
+				}
+			}
+			for _, r := range doc.Routes {
+				if r.Auth == "permission" && takenPerms[r.Permission] {
+					counts[r.Permission]++
+				}
+			}
+		}
+		return nil
+	})
+	return counts
 }

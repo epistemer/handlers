@@ -84,9 +84,11 @@ func newTestWorld(t *testing.T) *testWorld {
 
 	// Sara is a shop manager holding orders.manage and orders.read.
 	// Omar is a verified customer with no admin/order permissions.
+	// Tariq holds only orders.read (the API permission, taken by /admin/orders).
 	kit.AddUser("sara@toyshop.example", auth.User{ID: "u1", Name: "Sara"}, "sara@toyshop.example")
 	kit.AddUser("omar@toyshop.example", auth.User{ID: "u2", Name: "Omar"}, "omar@toyshop.example")
-	for _, uid := range []auth.UserID{"u1", "u2"} {
+	kit.AddUser("tariq@toyshop.example", auth.User{ID: "u3", Name: "Tariq"}, "tariq@toyshop.example")
+	for _, uid := range []auth.UserID{"u1", "u2", "u3"} {
 		if err := kit.Auth.SetPassword(ctx, uid, testPassword); err != nil {
 			t.Fatal(err)
 		}
@@ -103,6 +105,17 @@ func newTestWorld(t *testing.T) *testWorld {
 		t.Fatal(err)
 	}
 	if err := ac.Join(ctx, "u1", managers.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	readers, err := ac.CreateGroup(ctx, "Readers")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ac.Grant(ctx, readers.ID, apiroutes.PermOrdersRead); err != nil {
+		t.Fatal(err)
+	}
+	if err := ac.Join(ctx, "u3", readers.ID); err != nil {
 		t.Fatal(err)
 	}
 
@@ -273,9 +286,18 @@ func TestAdminPagesAndAuth(t *testing.T) {
 		t.Errorf("public sign-in page status = %d, want 200", resp.StatusCode)
 	}
 
-	// Verified user without orders.manage -> 403 on orders page, 200 on products.
+	// Verified user without orders.manage or orders.read -> 403 on orders page, 200 on products.
 	omar := w.browser()
 	w.signInAdmin(omar, "omar@toyshop.example")
+
+	resp, err = omar.Get(w.srv.URL + adminroutes.Orders().URL())
+	if err != nil {
+		t.Fatal(err)
+	}
+	body = readBody(t, resp)
+	if resp.StatusCode != http.StatusForbidden || !strings.Contains(body, "<h1>403 Forbidden</h1>") {
+		t.Errorf("omar orders list = (%d, %q), want 403 error page", resp.StatusCode, body)
+	}
 
 	resp, err = omar.Get(w.srv.URL + adminroutes.Order(1).URL())
 	if err != nil {
@@ -284,6 +306,29 @@ func TestAdminPagesAndAuth(t *testing.T) {
 	body = readBody(t, resp)
 	if resp.StatusCode != http.StatusForbidden || !strings.Contains(body, "<h1>403 Forbidden</h1>") {
 		t.Errorf("omar order detail = (%d, %q), want 403 error page", resp.StatusCode, body)
+	}
+
+	// Verified user granted ONLY the API's permission (orders.read from apiroutes):
+	// can open /admin/orders (takes orders.read from apiroutes), but 403 on /admin/orders/1 (orders.manage).
+	tariq := w.browser()
+	w.signInAdmin(tariq, "tariq@toyshop.example")
+
+	resp, err = tariq.Get(w.srv.URL + adminroutes.Orders().URL())
+	if err != nil {
+		t.Fatal(err)
+	}
+	body = readBody(t, resp)
+	if resp.StatusCode != http.StatusOK || !strings.Contains(body, "Orders") {
+		t.Errorf("tariq orders list = (%d, %q), want 200", resp.StatusCode, body)
+	}
+
+	resp, err = tariq.Get(w.srv.URL + adminroutes.Order(1).URL())
+	if err != nil {
+		t.Fatal(err)
+	}
+	body = readBody(t, resp)
+	if resp.StatusCode != http.StatusForbidden || !strings.Contains(body, "<h1>403 Forbidden</h1>") {
+		t.Errorf("tariq order detail = (%d, %q), want 403 error page", resp.StatusCode, body)
 	}
 
 	resp, err = omar.Get(w.srv.URL + adminroutes.Product(1).URL())

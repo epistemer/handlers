@@ -85,7 +85,7 @@ func runVet(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	var allDiags []directive.Diagnostic
 	var vetted []vettedPkg
 	for _, dir := range dirs {
-		pkg, diags, err := analyzePackageDir(dir, "")
+		pkg, diags, err := analyzePackageDir(dir, "", "", nil)
 		if err != nil {
 			fmt.Fprintf(stderr, "handlers vet: %v\n", err)
 			return 1
@@ -223,11 +223,11 @@ func expandPackages(patterns []string) ([]string, error) {
 }
 
 func checkPackageDir(dir string) ([]directive.Diagnostic, error) {
-	_, diags, err := analyzePackageDir(dir, "")
+	_, diags, err := analyzePackageDir(dir, "", "", nil)
 	return diags, err
 }
 
-func analyzePackageDir(dir, out string) (*directive.Package, []directive.Diagnostic, error) {
+func analyzePackageDir(dir, out, routesPkg string, extCounts map[string]int) (*directive.Package, []directive.Diagnostic, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, nil, err
@@ -256,7 +256,14 @@ func analyzePackageDir(dir, out string) (*directive.Package, []directive.Diagnos
 		return nil, nil, nil
 	}
 
-	pkg, diags := directive.Syntax(files)
+	var opts []directive.SyntaxOption
+	if routesPkg != "" {
+		opts = append(opts, directive.WithRoutesPackage(routesPkg))
+	}
+	if extCounts != nil {
+		opts = append(opts, directive.WithExternalPermCounts(extCounts))
+	}
+	pkg, diags := directive.Syntax(files, opts...)
 	if len(pkg.Routes) > 0 {
 		tDiags, err := directive.Types(dir, pkg, out)
 		if err != nil {

@@ -122,21 +122,62 @@ generators:
         else error("permissions: unknown level \(.)")
         end;
 
+      def check_refs($docs):
+        reduce (
+          $docs[] as $doc
+          | ($doc.permissions[]? | select(.from != null and .from != "")) as $p
+          | {doc: $doc, p: $p}
+        ) as $item (
+          null;
+          $item.doc as $doc
+          | $item.p as $p
+          | $doc.package.dir as $dir
+          | $p.key as $k
+          | $p.from as $P
+          | [ $docs[] | select(.package.name == $P) ] as $targets
+          | if ($targets | length) > 1 then
+              error("permission \"\($k)\" in \($dir): two routes packages are named \($P), in \($targets[0].package.dir) and \($targets[1].package.dir)")
+            elif ($targets | length) == 0 then
+              error("permission \"\($k)\" in \($dir): no routes package \($P)")
+            else
+              ($targets[0]) as $target
+              | [ $target.permissions[]? | select((.from == null or .from == "") and .key == $k) ] as $decls
+              | if ($decls | length) == 0 then
+                  error("permission \"\($k)\" in \($dir): \($P) doesn't declare it")
+                else
+                  ($decls[0]) as $decl
+                  | ($decl.level == "unverified") as $declUnv
+                  | ($p.level == "unverified") as $takenUnv
+                  | if $takenUnv and ($declUnv | not) then
+                      ([ $doc.routes[]? | select(.permission == $k) | .key ] | first // $k) as $rk
+                      | error("permission \"\($k)\" in \($dir): \($rk) is unverified and the declaration in \($P) isn't")
+                    elif ($takenUnv | not) and $declUnv then
+                      ([ $doc.routes[]? | select(.permission == $k) | .key ] | first // $k) as $rk
+                      | error("permission \"\($k)\" in \($dir): \($rk) isn't unverified and the declaration in \($P) is")
+                    else
+                      .
+                    end
+                end
+            end
+        );
+
       .["routes/v1"] as $docs
-      | ([ $docs | to_entries[] | .key as $idx | .value.package.dir as $dir | ([.value.permissions[].key] | unique)[] | {key: ., dir: $dir, idx: $idx} ]
+      | ([ $docs | to_entries[] | .key as $idx | .value.package.dir as $dir | [ .value.permissions[]? | select(.from == null or .from == "") | .key ] | unique[] | {key: ., dir: $dir, idx: $idx} ]
          | group_by(.key)
          | map(select(length > 1) | sort_by(.idx))
          | first // null) as $dup
       | if $dup != null then
-          error("permission \"\($dup[0].key)\" is in \($dup[0].dir) and \($dup[1].dir); a permission belongs to one routes package")
+          error("permission \"\($dup[0].key)\" is in \($dup[0].dir) and \($dup[1].dir); declare it in one and take it from there with \"from <package>\"")
         else . end
+      | check_refs($docs)
       | $docs[]
-      | select((.permissions | length) > 0)
       | . as $doc
+      | [ $doc.permissions[]? | select(.from == null or .from == "") ] as $declared
+      | select(($declared | length) > 0)
       | {
           package: $doc.package,
-          has_unverified: ([ $doc.permissions[] | select((.level | is_unverified)) ] | length) > 0,
-          permissions: [ $doc.permissions[] | {key: .key, var: .var, text: .text, unverified: (.level | is_unverified)} ]
+          has_unverified: ([ $declared[] | select((.level | is_unverified)) ] | length) > 0,
+          permissions: [ $declared[] | {key: .key, var: .var, text: .text, unverified: (.level | is_unverified)} ]
         }
     out: '"\(.package.dir)/zz_\(.package.name)_permissions.go"'
     template: permissions.go.tmpl

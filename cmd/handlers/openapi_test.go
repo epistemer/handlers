@@ -232,6 +232,170 @@ func TestOpenAPI72Rows(t *testing.T) {
 	})
 }
 
+func TestOpenAPIA7Rows(t *testing.T) {
+	bin := buildHandlers(t)
+
+	baseSpec := `openapi: "3.0.3"
+info:
+  title: Test
+  version: "1.0.0"
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        code: {type: string}
+        message: {type: string}
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+security:
+  - bearerAuth: []
+paths:
+`
+
+	runSpec := func(t *testing.T, specContent string, args ...string) (int, string, string) {
+		t.Helper()
+		tmpMod := t.TempDir()
+		if err := os.WriteFile(filepath.Join(tmpMod, "go.mod"), []byte("module example.com/test\n\ngo 1.26.0\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tmpMod, "spec.yaml"), []byte(specContent), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		cmdArgs := append([]string{"openapi", "-out", "out"}, args...)
+		cmdArgs = append(cmdArgs, "spec.yaml")
+		return runBin(t, bin, tmpMod, "", cmdArgs...)
+	}
+
+	t.Run("bad_from_syntax", func(t *testing.T) {
+		spec := baseSpec + `  /orders:
+    get:
+      operationId: listOrders
+      x-permission: orders.read from apiroutes extra
+      responses:
+        "200": {description: ok}
+`
+		code, stdout, _ := runSpec(t, spec)
+		if code != 1 {
+			t.Fatalf("exit = %d, want 1", code)
+		}
+		want := `spec.yaml: GET /orders: x-permission: write "orders.read from <package>", with nothing after`
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("from_own_package", func(t *testing.T) {
+		spec := baseSpec + `  /orders:
+    get:
+      operationId: listOrders
+      x-permission: orders.read from apiroutes
+      responses:
+        "200": {description: ok}
+`
+		code, stdout, _ := runSpec(t, spec, "-package", "apiroutes")
+		if code != 1 {
+			t.Fatalf("exit = %d, want 1", code)
+		}
+		want := `spec.yaml: GET /orders: x-permission: apiroutes is this routes package; declare the permission here`
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("two_different_texts", func(t *testing.T) {
+		spec := baseSpec + `  /orders:
+    get:
+      operationId: listOrders
+      x-permission: orders.read First Text
+      responses:
+        "200": {description: ok}
+  /orders/recent:
+    get:
+      operationId: recentOrders
+      x-permission: orders.read Second Text
+      responses:
+        "200": {description: ok}
+`
+		code, stdout, _ := runSpec(t, spec)
+		if code != 1 {
+			t.Fatalf("exit = %d, want 1", code)
+		}
+		want := `spec.yaml: GET /orders/recent: permission "orders.read": text "Second Text" differs from "First Text" at GET /orders`
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("declared_and_taken", func(t *testing.T) {
+		spec := baseSpec + `  /orders:
+    get:
+      operationId: listOrders
+      x-permission: orders.read
+      responses:
+        "200": {description: ok}
+  /orders/recent:
+    get:
+      operationId: recentOrders
+      x-permission: orders.read from otherroutes
+      responses:
+        "200": {description: ok}
+`
+		code, stdout, _ := runSpec(t, spec)
+		if code != 1 {
+			t.Fatalf("exit = %d, want 1", code)
+		}
+		want := `spec.yaml: GET /orders/recent: permission "orders.read" is declared in this package at GET /orders, so it can't be taken from otherroutes`
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("taken_from_two_packages", func(t *testing.T) {
+		spec := baseSpec + `  /orders:
+    get:
+      operationId: listOrders
+      x-permission: orders.read from other1
+      responses:
+        "200": {description: ok}
+  /orders/recent:
+    get:
+      operationId: recentOrders
+      x-permission: orders.read from other2
+      responses:
+        "200": {description: ok}
+`
+		code, stdout, _ := runSpec(t, spec)
+		if code != 1 {
+			t.Fatalf("exit = %d, want 1", code)
+		}
+		want := `spec.yaml: GET /orders/recent: permission "orders.read" is taken from other1 at GET /orders, not other2`
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("valid_taken_no_warning", func(t *testing.T) {
+		spec := baseSpec + `  /orders:
+    get:
+      operationId: listOrders
+      x-permission: orders.read from apiroutes
+      responses:
+        "200": {description: ok}
+`
+		code, stdout, stderr := runSpec(t, spec)
+		if code != 0 {
+			t.Fatalf("exit = %d (stdout=%q stderr=%q)", code, stdout, stderr)
+		}
+		// A taken permission should not produce the "used by this operation only" warning!
+		if strings.Contains(stdout, "used by this operation only") {
+			t.Errorf("unexpected warning for taken permission: %q", stdout)
+		}
+	})
+}
+
 func TestOpenAPIFlagsAndBaselineAndVet(t *testing.T) {
 	bin := buildHandlers(t)
 	toySpec, err := os.ReadFile(filepath.Join("testdata", "openapi", "toy", "spec.yaml"))
@@ -383,7 +547,7 @@ func (h *H) Orders(w http.ResponseWriter, r *http.Request) error { return nil }
 		}
 		for _, want := range []string{
 			`key "api.list_orders" also at apiroutes/zz_apiroutes.routes.json:1`,
-			`permission "orders.read" is in apiroutes and admin; a permission belongs to one routes package`,
+			`permission "orders.read" is in apiroutes and admin; declare it in one and take it from there with "from <package>"`,
 		} {
 			if !strings.Contains(stdout, want) {
 				t.Errorf("vet stdout missing %q\ngot:\n%s", want, stdout)

@@ -31,7 +31,7 @@ var directiveDocs = map[string]string{
 	"path":   "h:path <path> — Required URL path starting with \"/\" (no trailing \"/\" unless \"/\", no \"{$}\"; supports {name} and trailing {name...}).",
 	"desc":   "h:desc <text> — Route label text (defaults to the key made readable, with a warning).",
 	"auth":   "h:auth <level> — Access level: public, session, or unverified (default: route permission at Verified).",
-	"perm":   "h:perm <key> — Permission key (only when auth is default or unverified; defaults to the route key).",
+	"perm":   "h:perm <key> [text] | <key> from <package> — Permission key, optional text, or taken from another package (only when auth is default or unverified; defaults to the route key).",
 	"view":   "h:view [true] — Mark route as a view page (takes no value or true).",
 	"search": "h:search [true] — Include route in search (takes no value or true).",
 	"entity": "h:entity <key> — Key of another route in the same package representing this route's entity.",

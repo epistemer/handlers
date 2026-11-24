@@ -7,5 +7,5 @@ import (
 )
 
 var (
-	PermOrdersManage = access.Permission("orders.manage", "Orders Manage")
+	PermOrdersManage = access.Permission("orders.manage", "Manage orders")
 )

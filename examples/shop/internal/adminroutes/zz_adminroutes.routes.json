@@ -105,7 +105,7 @@
       "view": true,
       "search": true,
       "params": [],
-      "permission": "orders.manage"
+      "permission": "orders.read"
     },
     {
       "key": "orders.detail",
@@ -174,9 +174,14 @@
   ],
   "permissions": [
     {
+      "key": "orders.read",
+      "from": "apiroutes",
+      "level": "verified"
+    },
+    {
       "key": "orders.manage",
       "var": "PermOrdersManage",
-      "text": "Orders Manage",
+      "text": "Manage orders",
       "level": "verified"
     }
   ]

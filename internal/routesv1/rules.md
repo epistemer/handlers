@@ -43,8 +43,7 @@ Route: required key, method, pattern, name, var, text, auth, view, search, param
   with alias `shop`); `parse` one of string bool text int int8 int16 int32 int64 uint
   uint8 uint16 uint32 uint64 (the underlying type's width); `kind` segment or rest; `label` non-empty.
 
-Permission: required key, var, text, level. `key` as a route key; `var` a Go identifier
-starting with `Perm`; `text` non-empty; `level` verified or unverified.
+Permission: required key, level. Optional `from` (a package name: a Go identifier, not `_`, not the document's own package name). Without `from`, required `var` (a Go identifier starting with `Perm`) and `text` (non-empty). With `from`, `var` and `text` must be absent; `level` verified or unverified.
 
 ## Rules across fields
 
@@ -69,6 +68,11 @@ starting with `Perm`; `text` non-empty; `level` verified or unverified.
 12. An `alias` names one import path, and an import path has one alias:
     `routes[1].params[0].alias: "shop" also names "example.com/shop/internal/shop"`,
     `routes[1].params[0].alias: "example.com/shop/internal/shop" is already imported as "shop"`.
+
+13. A permission entry with `from` has no `var` or `text`, and `from` does not name the document's own package:
+    `permissions[0].var: must be absent with from`,
+    `permissions[0].text: must be absent with from`,
+    `permissions[0].from: "adminroutes" is the document's own package name`.
 
 ## Conformance files
 

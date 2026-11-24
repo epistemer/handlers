@@ -503,11 +503,173 @@ func (h *H) BItem(w http.ResponseWriter, r *http.Request, name string) error { r
 	}
 	for _, want := range []string{
 		`key "a.home" also at pkgAroutes/zz_pkgAroutes.routes.json:1`,
-		`permission "shared.perm" is in pkgAroutes and pkgBroutes; a permission belongs to one routes package`,
+		`permission "shared.perm" is in pkgAroutes and pkgBroutes; declare it in one and take it from there with "from <package>"`,
 		`GET /a/items/{name} conflicts with GET /a/items/{id} at pkgAroutes/zz_pkgAroutes.routes.json:1`,
 	} {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("vet stdout missing %q\ngot:\n%s", want, stdout)
 		}
 	}
+}
+
+func TestVetA7CrossPackageChecks(t *testing.T) {
+	bin := buildHandlers(t)
+
+	setupMod := func(t *testing.T) string {
+		dir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/veta7\n\ngo 1.26.0\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return dir
+	}
+
+	writeCommittedRoutes := func(t *testing.T, dir, routesRel, pkgName, permKey, permLevel string) {
+		p := filepath.Join(dir, routesRel, "zz_"+pkgName+".routes.json")
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		var perms []map[string]any
+		if permKey != "" {
+			perms = append(perms, map[string]any{
+				"key":   permKey,
+				"var":   "Perm" + strings.ReplaceAll(permKey, ".", ""),
+				"text":  "Perm Text",
+				"level": permLevel,
+			})
+		}
+		body := map[string]any{
+			"domain":      "routes/v1",
+			"producer":    "handlers",
+			"source":      routesRel,
+			"package":     map[string]any{"name": pkgName, "dir": routesRel},
+			"surface":     "html",
+			"prefix":      "/" + pkgName,
+			"routes":      []any{},
+			"permissions": perms,
+		}
+		b, err := json.Marshal(body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	t.Run("no_routes_package", func(t *testing.T) {
+		dir := setupMod(t)
+		if err := os.MkdirAll(filepath.Join(dir, "admin"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "admin", "h.go"), []byte(`package admin
+import "net/http"
+type H struct{}
+//h:key admin.list
+//h:method GET
+//h:path /list
+//h:desc List
+//h:perm orders.read from apiroutes
+func (h *H) List(w http.ResponseWriter, r *http.Request) error { return nil }
+`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		code, stdout, _ := runBin(t, bin, dir, "", "vet", "./admin")
+		if code != 1 {
+			t.Fatalf("exit = %d, want 1", code)
+		}
+		want := `permission "orders.read" in admin: no routes package apiroutes`
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("two_routes_packages", func(t *testing.T) {
+		dir := setupMod(t)
+		writeCommittedRoutes(t, dir, "api1routes", "apiroutes", "perm.one", "verified")
+		writeCommittedRoutes(t, dir, "api2routes", "apiroutes", "perm.two", "verified")
+		if err := os.MkdirAll(filepath.Join(dir, "admin"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "admin", "h.go"), []byte(`package admin
+import "net/http"
+type H struct{}
+//h:key admin.list
+//h:method GET
+//h:path /list
+//h:desc List
+//h:perm perm.one from apiroutes
+func (h *H) List(w http.ResponseWriter, r *http.Request) error { return nil }
+`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		code, stdout, _ := runBin(t, bin, dir, "", "vet", "./admin")
+		if code != 1 {
+			t.Fatalf("exit = %d, want 1", code)
+		}
+		want := `permission "perm.one" in admin: two routes packages are named apiroutes, in api1routes and api2routes`
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("doesnt_declare_it", func(t *testing.T) {
+		dir := setupMod(t)
+		writeCommittedRoutes(t, dir, "apiroutes", "apiroutes", "other.perm", "verified")
+		if err := os.MkdirAll(filepath.Join(dir, "admin"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "admin", "h.go"), []byte(`package admin
+import "net/http"
+type H struct{}
+//h:key admin.list
+//h:method GET
+//h:path /list
+//h:desc List
+//h:perm orders.read from apiroutes
+func (h *H) List(w http.ResponseWriter, r *http.Request) error { return nil }
+`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		code, stdout, _ := runBin(t, bin, dir, "", "vet", "./admin")
+		if code != 1 {
+			t.Fatalf("exit = %d, want 1", code)
+		}
+		want := `permission "orders.read" in admin: apiroutes doesn't declare it`
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
+
+	t.Run("unverified_mismatch", func(t *testing.T) {
+		dir := setupMod(t)
+		writeCommittedRoutes(t, dir, "apiroutes", "apiroutes", "orders.read", "verified")
+		if err := os.MkdirAll(filepath.Join(dir, "admin"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "admin", "h.go"), []byte(`package admin
+import "net/http"
+type H struct{}
+//h:key admin.list
+//h:method GET
+//h:path /list
+//h:desc List
+//h:auth unverified
+//h:perm orders.read from apiroutes
+func (h *H) List(w http.ResponseWriter, r *http.Request) error { return nil }
+`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		code, stdout, _ := runBin(t, bin, dir, "", "vet", "./admin")
+		if code != 1 {
+			t.Fatalf("exit = %d, want 1", code)
+		}
+		want := `permission "orders.read" in admin: admin.list is unverified and the declaration in apiroutes isn't`
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout = %q, want %q", stdout, want)
+		}
+	})
 }
