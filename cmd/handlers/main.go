@@ -85,7 +85,8 @@ func runVet(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	var allDiags []directive.Diagnostic
 	var vetted []vettedPkg
 	for _, dir := range dirs {
-		pkg, diags, err := analyzePackageDir(dir, "", "", nil)
+		routesPkg, extCounts := vetContext(dir)
+		pkg, diags, err := analyzePackageDir(dir, "", routesPkg, extCounts)
 		if err != nil {
 			fmt.Fprintf(stderr, "handlers vet: %v\n", err)
 			return 1
@@ -223,8 +224,30 @@ func expandPackages(patterns []string) ([]string, error) {
 }
 
 func checkPackageDir(dir string) ([]directive.Diagnostic, error) {
-	_, diags, err := analyzePackageDir(dir, "", "", nil)
+	routesPkg, extCounts := vetContext(dir)
+	_, diags, err := analyzePackageDir(dir, "", routesPkg, extCounts)
 	return diags, err
+}
+
+// vetContext finds, for a handler package directory checked without gen's
+// flags, the name of its routes package (from the committed routes file
+// whose source is dir) and the routes of other committed files that take
+// its permissions, as gen computes them.
+func vetContext(dir string) (string, map[string]int) {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", nil
+	}
+	modRoot, ok := findGoModUp(abs)
+	if !ok {
+		return "", nil
+	}
+	sourceRel, err := relSlash(modRoot, abs)
+	if err != nil {
+		return "", nil
+	}
+	pkgName, outRel := committedRoutesFor(modRoot, sourceRel)
+	return pkgName, countCommittedTakingRoutes(modRoot, sourceRel, outRel)
 }
 
 func analyzePackageDir(dir, out, routesPkg string, extCounts map[string]int) (*directive.Package, []directive.Diagnostic, error) {

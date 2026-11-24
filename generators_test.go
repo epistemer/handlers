@@ -368,15 +368,18 @@ func TestPermissionsA7TakenCases(t *testing.T) {
 		pDecl2 := writeDoc(t, tmp, "internal/api2", "apiroutes", "api2.list", "perm.two", "", "verified")
 		pTaken := writeDoc(t, tmp, "internal/admin", "adminroutes", "admin.list", "perm.one", "apiroutes", "verified")
 
-		got := renderFails(t, func(tb testing.TB) {
-			genxtest.Render(tb, ".", "permissions",
-				genxtest.Input{Path: pDecl1},
-				genxtest.Input{Path: pDecl2},
-				genxtest.Input{Path: pTaken})
-		})
 		want := `permission "perm.one" in internal/admin: two routes packages are named apiroutes, in internal/api1 and internal/api2`
-		if !strings.Contains(got, want) {
-			t.Fatalf("error = %q, want substring %q", got, want)
+		// The same message whichever order the files come in.
+		for _, order := range [][]string{{pDecl1, pDecl2, pTaken}, {pDecl2, pDecl1, pTaken}} {
+			got := renderFails(t, func(tb testing.TB) {
+				genxtest.Render(tb, ".", "permissions",
+					genxtest.Input{Path: order[0]},
+					genxtest.Input{Path: order[1]},
+					genxtest.Input{Path: order[2]})
+			})
+			if !strings.Contains(got, want) {
+				t.Fatalf("error = %q, want substring %q", got, want)
+			}
 		}
 	})
 

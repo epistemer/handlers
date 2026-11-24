@@ -42,6 +42,38 @@ func TestConformanceSchema(t *testing.T) {
 	}
 }
 
+// TestSchemaPermissionFrom checks the conditional on a permission entry:
+// with from, no var or text; without, both.
+func TestSchemaPermissionFrom(t *testing.T) {
+	b, err := os.ReadFile("../../schema/routes.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema map[string]any
+	if err := json.Unmarshal(b, &schema); err != nil {
+		t.Fatal(err)
+	}
+	items := schema["properties"].(map[string]any)["permissions"].(map[string]any)["items"].(map[string]any)
+	for _, tc := range []struct {
+		entry string
+		ok    bool
+	}{
+		{`{"key":"a.b","var":"PermAB","text":"A B","level":"verified"}`, true},
+		{`{"key":"a.b","from":"apiroutes","level":"verified"}`, true},
+		{`{"key":"a.b","level":"verified"}`, false},
+		{`{"key":"a.b","from":"apiroutes","var":"PermAB","level":"verified"}`, false},
+		{`{"key":"a.b","from":"apiroutes","text":"A B","level":"verified"}`, false},
+	} {
+		var v any
+		if err := json.Unmarshal([]byte(tc.entry), &v); err != nil {
+			t.Fatal(err)
+		}
+		if got := len(validate(items, v, "$")) == 0; got != tc.ok {
+			t.Errorf("%s: valid = %v, want %v", tc.entry, got, tc.ok)
+		}
+	}
+}
+
 // checkKeywords fails when the schema uses a keyword validate doesn't
 // implement, so the test can't pass by ignoring it.
 func checkKeywords(t *testing.T, s map[string]any, at string) {
@@ -59,6 +91,11 @@ func checkKeywords(t *testing.T, s map[string]any, at string) {
 		"minimum":     true,
 		"pattern":     true,
 		"enum":        true,
+		"if":          true,
+		"then":        true,
+		"else":        true,
+		"not":         true,
+		"anyOf":       true,
 	}
 	for k, v := range s {
 		if !known[k] {
@@ -69,8 +106,12 @@ func checkKeywords(t *testing.T, s map[string]any, at string) {
 			for name, sub := range v.(map[string]any) {
 				checkKeywords(t, sub.(map[string]any), at+".properties."+name)
 			}
-		case "items":
-			checkKeywords(t, v.(map[string]any), at+".items")
+		case "items", "if", "then", "else", "not":
+			checkKeywords(t, v.(map[string]any), at+"."+k)
+		case "anyOf":
+			for i, sub := range v.([]any) {
+				checkKeywords(t, sub.(map[string]any), at+".anyOf["+strconv.Itoa(i)+"]")
+			}
 		}
 	}
 }
@@ -92,6 +133,43 @@ func validate(s map[string]any, v any, at string) []string {
 		}
 		if !found {
 			bad("value not in enum")
+		}
+	}
+	if cond, ok := s["if"].(map[string]any); ok {
+		branch := "else"
+		if len(validate(cond, v, at)) == 0 {
+			branch = "then"
+		}
+		if sub, ok := s[branch].(map[string]any); ok {
+			problems = append(problems, validate(sub, v, at)...)
+		}
+	}
+	if sub, ok := s["not"].(map[string]any); ok && len(validate(sub, v, at)) == 0 {
+		bad("matches a schema it must not")
+	}
+	if subs, ok := s["anyOf"].([]any); ok {
+		matched := false
+		for _, sub := range subs {
+			if len(validate(sub.(map[string]any), v, at)) == 0 {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			bad("matches none of anyOf")
+		}
+	}
+	// A subschema without a type (as in if/then/else) still checks an
+	// object's required properties.
+	if _, typed := s["type"]; !typed {
+		if obj, ok := v.(map[string]any); ok {
+			if req, ok := s["required"].([]any); ok {
+				for _, r := range req {
+					if _, ok := obj[r.(string)]; !ok {
+						bad(r.(string) + " is required")
+					}
+				}
+			}
 		}
 	}
 	switch s["type"] {

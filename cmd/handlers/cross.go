@@ -480,3 +480,33 @@ func countCommittedTakingRoutes(modRoot, skipSource, skipOutRel string) map[stri
 	})
 	return counts
 }
+
+// committedRoutesFor returns the package name and directory of the committed
+// routes file whose source is sourceRel, or "" when there is none.
+func committedRoutesFor(modRoot, sourceRel string) (pkgName, outRel string) {
+	_ = filepath.WalkDir(modRoot, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || pkgName != "" {
+			return nil
+		}
+		name := d.Name()
+		if d.IsDir() {
+			if path != modRoot && (name == "testdata" || name == "vendor" || strings.HasPrefix(name, ".")) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasPrefix(name, "zz_") || !strings.HasSuffix(name, ".routes.json") {
+			return nil
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		var doc routesDoc
+		if json.Unmarshal(b, &doc) == nil && doc.Source == sourceRel {
+			pkgName, outRel = doc.Package.Name, doc.Package.Dir
+		}
+		return nil
+	})
+	return pkgName, outRel
+}

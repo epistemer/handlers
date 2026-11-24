@@ -134,7 +134,7 @@ generators:
           | $doc.package.dir as $dir
           | $p.key as $k
           | $p.from as $P
-          | [ $docs[] | select(.package.name == $P) ] as $targets
+          | ([ $docs[] | select(.package.name == $P) ] | sort_by(.package.dir)) as $targets
           | if ($targets | length) > 1 then
               error("permission \"\($k)\" in \($dir): two routes packages are named \($P), in \($targets[0].package.dir) and \($targets[1].package.dir)")
             elif ($targets | length) == 0 then

@@ -70,7 +70,10 @@
           "var": {"type": "string", "pattern": "^Perm[A-Za-z0-9_]+$"},
           "text": {"type": "string", "minLength": 1},
           "level": {"type": "string", "enum": ["verified", "unverified"]}
-        }
+        },
+        "if": {"required": ["from"]},
+        "then": {"not": {"anyOf": [{"required": ["var"]}, {"required": ["text"]}]}},
+        "else": {"required": ["var", "text"]}
       }
     }
   }
