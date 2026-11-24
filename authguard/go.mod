@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/epistemer/auth v0.3.0
 	github.com/epistemer/errors v0.1.0
-	github.com/epistemer/handlers v0.3.0
+	github.com/epistemer/handlers v0.4.0
 	github.com/epistemer/i18n v0.3.1
 	go.etcd.io/bbolt v1.5.0
 )

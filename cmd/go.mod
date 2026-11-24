@@ -3,12 +3,10 @@ module github.com/epistemer/handlers/cmd
 go 1.26.0
 
 require (
-	github.com/epistemer/handlers v0.3.0
+	github.com/epistemer/handlers v0.4.0
 	github.com/getkin/kin-openapi v0.153.0
 	golang.org/x/tools v0.53.0
 )
-
-replace github.com/epistemer/handlers => ../
 
 require (
 	github.com/go-openapi/jsonpointer v0.22.5 // indirect

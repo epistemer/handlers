@@ -6,8 +6,8 @@ github.com/epistemer/errors v0.1.0 h1:i+y3tko4m+WPdVQPCOY+d0103wu0PNWO6owAONR6SO
 github.com/epistemer/errors v0.1.0/go.mod h1:V7Tjdt8m6dN48qfFFeAks21lgphuTh3woJCbRAshLiI=
 github.com/epistemer/genx v0.2.0 h1:NWMghvIaN9H13uPirfq9ehSzb3ESnq9/HyCsKNL6Ub0=
 github.com/epistemer/genx v0.2.0/go.mod h1:sdoRMzVTB78zpaxh/YfMeopfOUTlXMpncx5RyIZi0Bg=
-github.com/epistemer/handlers v0.3.0 h1:C4jU2RvH66kObIRy/6+4DNmow7t7UkrmVQBPJNuuH0E=
-github.com/epistemer/handlers v0.3.0/go.mod h1:QSmMauttLN0zeOojum0AEcM5bXR474b27f2F4tG4MRg=
+github.com/epistemer/handlers v0.4.0 h1:ry6sqSy3U76znSCxzGdi5rv+/mRX5YKlTD4j3RGs6y8=
+github.com/epistemer/handlers v0.4.0/go.mod h1:QSmMauttLN0zeOojum0AEcM5bXR474b27f2F4tG4MRg=
 github.com/epistemer/i18n v0.3.1 h1:/Q+L4Yl8VRxutEhPrDE66Kj5DA/vftSo4BAUbFtUAP8=
 github.com/epistemer/i18n v0.3.1/go.mod h1:vd7+xIQSNyUiWTEAirccNZXTJ5IWyWpBWcaO2texdlM=
 github.com/getkin/kin-openapi v0.153.0 h1:Qo4qWW+Pj8o90LUTE6MDyG5TJAtWnfvrcWOBcWg7eBw=
