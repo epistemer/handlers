@@ -1,16 +1,16 @@
 {
   "domain": "routes/v1",
   "producer": "handlers",
-  "source": "missing_builder",
+  "source": "unused_routes_import",
   "package": {
     "name": "adminroutes",
     "dir": "adminroutes"
   },
   "surface": "html",
-  "prefix": "/missingbuilder",
+  "prefix": "/unusedimport",
   "routes": [
     {
-      "key": "missingbuilder.events.list",
+      "key": "unusedimport.events.list",
       "method": "GET",
       "pattern": "/events",
       "name": "EventsList",
