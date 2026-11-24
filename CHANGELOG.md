@@ -5,9 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v0.4.0] - 2026-11-24
+
+Confab's first iteration (neozp decisions D4 and D6). Amendment A7 (ADR
+0007), locked by epistemer with the defaults of N1–N11, and A6, a
+clarification. All four modules: `handlers`, `authguard`, `openapi`, `cmd`.
+
+### Added
+- `handlers/middleware`: `Recover`, `HTMX`, `Boosted`, `Redirect`,
+  `ErrNotLocal` (400, `errors.handlers.not_local`), `ErrorPage`, and the
+  flash: `Flash`, `NewFlash`, `FlashName`, `FlashInsecure`,
+  `Flash.Middleware`, `Flash.Add`, `Flash.Messages`, `LevelInfo`,
+  `LevelSuccess`, `LevelWarning`, `LevelError` (interface §11.8).
+- `ErrPanic` (`errors.handlers.panic`, 500) and `Panic{Value, Stack}`.
+- `//h:perm <key> <text>` and `x-permission: <key> <text>`: a permission's
+  text (§13.2).
+- `//h:perm <key> from <package>` and `x-permission: <key> from <package>`:
+  a permission another routes package of the app declares; `routes/v1`
+  permission `from` (schema, `Check`, conformance files). The `permissions`
+  generator and `vet` check references.
 
 ### Changed
+- `Register` and `Mount` recover a panic in every route and catch-all
+  (§12.1, step 0): logged once with its stack, written as `ErrPanic`, or
+  the connection aborted after a started response. No opt-out. The default
+  writers don't log `ErrPanic` a second time.
+- A permission key declared in two routes packages stops the `permissions`
+  generator with `...; declare it in one and take it from there with "from
+  <package>"`.
 - `handlers gen`, `vet` and the language server name a missing URL builder
   when a handler package links to it before it was generated:
   `<pkg>.<Name> doesn't exist yet: generate the route before linking to it`,

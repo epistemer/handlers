@@ -26,6 +26,7 @@ permissions.
 |---|---|---|
 | `github.com/epistemer/handlers` | `handlers` | Runtime, `Table.Search`, and `genx.meta.yaml` generators (`routes`, `labels`, `permissions`) |
 | | `handlers/handlerstest` | Fake `Guard` and `AssertPublic` for tests |
+| | `handlers/middleware` | Recovery for the app's own handlers, htmx-aware `Redirect`, `ErrorPage`, and a flash carried across a redirect |
 | `github.com/epistemer/handlers/authguard` | `authguard` | `Guard` over `auth` and `auth/access` |
 | `github.com/epistemer/handlers/openapi` | `openapi` | Adapter for oapi-codegen's strict `std-http` server |
 | `github.com/epistemer/handlers/cmd` | `cmd/handlers` | CLI (`gen`, `openapi`, `vet`, `lsp`) |

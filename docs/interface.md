@@ -813,9 +813,11 @@ Every registered route answers in this order:
    written, `ErrPanic.Wrap(&Panic{…})` goes to the error writer (the
    default writers don't log `ErrPanic` again); if the response had
    started, the connection is aborted (`panic(http.ErrAbortHandler)`). A
-   panic in the error writer is logged and, with nothing written, its
-   headers are cleared and `WriteText` answers; otherwise, or if that
-   panics, the connection is aborted.
+   panic in the error writer is logged and, with nothing written,
+   `WriteText` answers; otherwise, or if that panics, the connection is
+   aborted. Before the error writer or `WriteText` answers, the headers are
+   put back as they were before the route ran: an outer middleware's stay,
+   the handler's go.
 1. If `Route.MaxBody > 0`, the body is limited to it; else if the registration's `maxBody > 0` (`WithMaxBody`), to that; else not at all.
 2. The route goes into the context (`From`).
 3. The guard checks it, unless it is public.
