@@ -348,3 +348,276 @@ func TestTypesParamInfo(t *testing.T) {
 		}
 	}
 }
+
+func TestParsePerm(t *testing.T) {
+	cases := []struct {
+		in     string
+		prefix string
+		want   directive.PermValue
+		errMsg string
+	}{
+		{
+			in:     "orders.manage",
+			prefix: "h:perm",
+			want:   directive.PermValue{Key: "orders.manage"},
+		},
+		{
+			in:     "orders.manage Manage all store orders",
+			prefix: "h:perm",
+			want:   directive.PermValue{Key: "orders.manage", Text: "Manage all store orders"},
+		},
+		{
+			in:     "orders.manage from apiroutes",
+			prefix: "h:perm",
+			want:   directive.PermValue{Key: "orders.manage", From: "apiroutes"},
+		},
+		{
+			in:     "",
+			prefix: "h:perm",
+			errMsg: `h:perm: "" is not a key`,
+		},
+		{
+			in:     "bad-key",
+			prefix: "h:perm",
+			errMsg: `h:perm: "bad-key" is not a key`,
+		},
+		{
+			in:     "orders.manage from",
+			prefix: "h:perm",
+			errMsg: `h:perm: write "h:perm orders.manage from <package>", with nothing after`,
+		},
+		{
+			in:     "orders.manage from apiroutes extra",
+			prefix: "h:perm",
+			errMsg: `h:perm: write "h:perm orders.manage from <package>", with nothing after`,
+		},
+		{
+			in:     "orders.manage from 123pkg",
+			prefix: "h:perm",
+			errMsg: `h:perm: write "h:perm orders.manage from <package>", with nothing after`,
+		},
+		{
+			in:     "orders.manage from _",
+			prefix: "h:perm",
+			errMsg: `h:perm: write "h:perm orders.manage from <package>", with nothing after`,
+		},
+		{
+			in:     "orders.manage from func",
+			prefix: "h:perm",
+			errMsg: `h:perm: write "h:perm orders.manage from <package>", with nothing after`,
+		},
+		{
+			in:     "orders.manage from",
+			prefix: "x-permission",
+			errMsg: `x-permission: write "orders.manage from <package>", with nothing after`,
+		},
+		{
+			in:     "orders.manage from apiroutes",
+			prefix: "x-permission",
+			want:   directive.PermValue{Key: "orders.manage", From: "apiroutes"},
+		},
+	}
+
+	for _, tc := range cases {
+		got, errStr := directive.ParsePerm(tc.in, tc.prefix)
+		if errStr != tc.errMsg {
+			t.Errorf("ParsePerm(%q, %q) err = %q, want %q", tc.in, tc.prefix, errStr, tc.errMsg)
+		}
+		if got != tc.want {
+			t.Errorf("ParsePerm(%q, %q) = %+v, want %+v", tc.in, tc.prefix, got, tc.want)
+		}
+	}
+}
+
+func TestPermDirectiveDiagnostics(t *testing.T) {
+	const header = `package admin
+import "net/http"
+type H struct{}
+`
+	t.Run("from_naming_this_package", func(t *testing.T) {
+		src := header + `
+//h:key orders.list
+//h:method GET
+//h:path /orders
+//h:desc Orders
+//h:perm orders.manage from adminroutes
+func (h *H) Orders(w http.ResponseWriter, r *http.Request) error { return nil }
+`
+		_, diags := directive.Syntax(map[string][]byte{"handlers.go": []byte(src)}, directive.WithRoutesPackage("adminroutes"))
+		var errs []directive.Diagnostic
+		for _, d := range diags {
+			if d.Severity == directive.Error {
+				errs = append(errs, d)
+			}
+		}
+		if len(errs) != 1 {
+			t.Fatalf("got %d errs, want 1: %v", len(errs), errs)
+		}
+		want := `handlers.go:9:1: h:perm: adminroutes is this routes package; declare the permission here`
+		if errs[0].String() != want {
+			t.Fatalf("err = %q, want %q", errs[0].String(), want)
+		}
+	})
+
+	t.Run("two_different_texts", func(t *testing.T) {
+		src := header + `
+//h:key orders.list
+//h:method GET
+//h:path /orders
+//h:desc Orders
+//h:perm orders.manage Text A
+func (h *H) Orders(w http.ResponseWriter, r *http.Request) error { return nil }
+
+//h:key orders.detail
+//h:method GET
+//h:path /orders/detail
+//h:desc Order detail
+//h:perm orders.manage Text B
+func (h *H) Order(w http.ResponseWriter, r *http.Request) error { return nil }
+`
+		_, diags := directive.Syntax(map[string][]byte{"handlers.go": []byte(src)})
+		var errs []directive.Diagnostic
+		for _, d := range diags {
+			if d.Severity == directive.Error {
+				errs = append(errs, d)
+			}
+		}
+		if len(errs) != 1 {
+			t.Fatalf("got %d errs, want 1: %v", len(errs), errs)
+		}
+		want := `handlers.go:16:1: permission "orders.manage": text "Text B" differs from "Text A" at handlers.go:9`
+		if errs[0].String() != want {
+			t.Fatalf("err = %q, want %q", errs[0].String(), want)
+		}
+	})
+
+	t.Run("declared_and_taken_declared_first", func(t *testing.T) {
+		src := header + `
+//h:key orders.list
+//h:method GET
+//h:path /orders
+//h:desc Orders
+//h:perm orders.manage
+func (h *H) Orders(w http.ResponseWriter, r *http.Request) error { return nil }
+
+//h:key orders.detail
+//h:method GET
+//h:path /orders/detail
+//h:desc Order detail
+//h:perm orders.manage from apiroutes
+func (h *H) Order(w http.ResponseWriter, r *http.Request) error { return nil }
+`
+		_, diags := directive.Syntax(map[string][]byte{"handlers.go": []byte(src)})
+		var errs []directive.Diagnostic
+		for _, d := range diags {
+			if d.Severity == directive.Error {
+				errs = append(errs, d)
+			}
+		}
+		if len(errs) != 1 {
+			t.Fatalf("got %d errs, want 1: %v", len(errs), errs)
+		}
+		want := `handlers.go:16:1: permission "orders.manage" is declared in this package at handlers.go:9, so it can't be taken from apiroutes`
+		if errs[0].String() != want {
+			t.Fatalf("err = %q, want %q", errs[0].String(), want)
+		}
+	})
+
+	t.Run("declared_and_taken_taken_first", func(t *testing.T) {
+		src := header + `
+//h:key orders.detail
+//h:method GET
+//h:path /orders/detail
+//h:desc Order detail
+//h:perm orders.manage from apiroutes
+func (h *H) Order(w http.ResponseWriter, r *http.Request) error { return nil }
+
+//h:key orders.list
+//h:method GET
+//h:path /orders
+//h:desc Orders
+//h:perm orders.manage
+func (h *H) Orders(w http.ResponseWriter, r *http.Request) error { return nil }
+`
+		_, diags := directive.Syntax(map[string][]byte{"handlers.go": []byte(src)})
+		var errs []directive.Diagnostic
+		for _, d := range diags {
+			if d.Severity == directive.Error {
+				errs = append(errs, d)
+			}
+		}
+		if len(errs) != 1 {
+			t.Fatalf("got %d errs, want 1: %v", len(errs), errs)
+		}
+		want := `handlers.go:9:1: permission "orders.manage" is declared in this package at handlers.go:16, so it can't be taken from apiroutes`
+		if errs[0].String() != want {
+			t.Fatalf("err = %q, want %q", errs[0].String(), want)
+		}
+	})
+
+	t.Run("taken_from_two_packages", func(t *testing.T) {
+		src := header + `
+//h:key orders.list
+//h:method GET
+//h:path /orders
+//h:desc Orders
+//h:perm orders.manage from pkgA
+func (h *H) Orders(w http.ResponseWriter, r *http.Request) error { return nil }
+
+//h:key orders.detail
+//h:method GET
+//h:path /orders/detail
+//h:desc Order detail
+//h:perm orders.manage from pkgB
+func (h *H) Order(w http.ResponseWriter, r *http.Request) error { return nil }
+`
+		_, diags := directive.Syntax(map[string][]byte{"handlers.go": []byte(src)})
+		var errs []directive.Diagnostic
+		for _, d := range diags {
+			if d.Severity == directive.Error {
+				errs = append(errs, d)
+			}
+		}
+		if len(errs) != 1 {
+			t.Fatalf("got %d errs, want 1: %v", len(errs), errs)
+		}
+		want := `handlers.go:16:1: permission "orders.manage" is taken from pkgA at handlers.go:9, not pkgB`
+		if errs[0].String() != want {
+			t.Fatalf("err = %q, want %q", errs[0].String(), want)
+		}
+	})
+
+	t.Run("single_use_warning_suppressed_by_external_takes", func(t *testing.T) {
+		src := header + `
+//h:key orders.list
+//h:method GET
+//h:path /orders
+//h:desc Orders
+//h:perm orders.manage
+func (h *H) Orders(w http.ResponseWriter, r *http.Request) error { return nil }
+`
+		// Without external taking routes: emits single-use warning
+		_, diags := directive.Syntax(map[string][]byte{"handlers.go": []byte(src)})
+		var warns []directive.Diagnostic
+		for _, d := range diags {
+			if d.Severity == directive.Warning {
+				warns = append(warns, d)
+			}
+		}
+		if len(warns) != 1 || warns[0].Message != `h:perm "orders.manage" is used by this route only` {
+			t.Fatalf("expected single-use warning, got %v", warns)
+		}
+
+		// With external taking route: single-use warning is suppressed
+		_, diags = directive.Syntax(map[string][]byte{"handlers.go": []byte(src)}, directive.WithExternalPermCounts(map[string]int{"orders.manage": 1}))
+		var warns2 []directive.Diagnostic
+		for _, d := range diags {
+			if d.Severity == directive.Warning {
+				warns2 = append(warns2, d)
+			}
+		}
+		if len(warns2) != 0 {
+			t.Fatalf("expected 0 warnings with external count, got %v", warns2)
+		}
+	})
+}

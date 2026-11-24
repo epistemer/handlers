@@ -64,8 +64,9 @@ type paramDoc struct {
 
 type permDoc struct {
 	Key   string `json:"key"`
-	Var   string `json:"var"`
-	Text  string `json:"text"`
+	From  string `json:"from,omitempty"`
+	Var   string `json:"var,omitempty"`
+	Text  string `json:"text,omitempty"`
 	Level string `json:"level"`
 }
 
@@ -261,7 +262,8 @@ func runGen(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	pkg, diags, err := analyzePackageDir(pkgDir, cfg.absOutDir)
+	extCounts := countCommittedTakingRoutes(cfg.modRoot, cfg.sourceRel, cfg.outRel)
+	pkg, diags, err := analyzePackageDir(pkgDir, cfg.absOutDir, cfg.pkgName, extCounts)
 	if err != nil {
 		fmt.Fprintf(stderr, "handlers gen: %v\n", err)
 		return 1
@@ -349,7 +351,11 @@ func buildRoutesDoc(pkg *directive.Package, sourceRel, pkgName, outRel, prefix s
 			if permKey == "" {
 				permKey = r.Key
 			}
-			pb.add(permKey, text, r.Auth == "unverified")
+			if r.PermFrom != "" {
+				pb.addTaken(permKey, r.PermFrom, r.Auth == "unverified")
+			} else {
+				pb.addDeclared(permKey, text, r.PermText, r.Auth == "unverified")
+			}
 		}
 
 		restParam := restParamName(r.Path)
@@ -409,10 +415,12 @@ func buildRoutesDoc(pkg *directive.Package, sourceRel, pkgName, outRel, prefix s
 }
 
 type permAccum struct {
-	key        string
-	count      int
-	firstText  string
-	unverified bool
+	key            string
+	count          int
+	firstRouteText string
+	explicitText   string
+	from           string
+	unverified     bool
 }
 
 type permBuilder struct {
@@ -424,16 +432,42 @@ func newPermBuilder() *permBuilder {
 	return &permBuilder{byKey: make(map[string]*permAccum)}
 }
 
-func (b *permBuilder) add(key, routeText string, unverified bool) {
+func (b *permBuilder) addDeclared(key, routeText, explicitText string, unverified bool) {
+	pa, exists := b.byKey[key]
+	if !exists {
+		pa = &permAccum{
+			key:            key,
+			firstRouteText: routeText,
+			explicitText:   explicitText,
+			unverified:     unverified,
+		}
+		b.byKey[key] = pa
+		b.order = append(b.order, key)
+	} else {
+		if pa.explicitText == "" && explicitText != "" {
+			pa.explicitText = explicitText
+		}
+		if unverified {
+			pa.unverified = true
+		}
+	}
+	pa.count++
+}
+
+func (b *permBuilder) addTaken(key, from string, unverified bool) {
 	pa, exists := b.byKey[key]
 	if !exists {
 		pa = &permAccum{
 			key:        key,
-			firstText:  routeText,
+			from:       from,
 			unverified: unverified,
 		}
 		b.byKey[key] = pa
 		b.order = append(b.order, key)
+	} else {
+		if unverified {
+			pa.unverified = true
+		}
 	}
 	pa.count++
 }
@@ -442,13 +476,23 @@ func (b *permBuilder) docs() []permDoc {
 	out := make([]permDoc, 0, len(b.order))
 	for _, key := range b.order {
 		pa := b.byKey[key]
-		text := directive.Readable(key)
-		if pa.count == 1 {
-			text = pa.firstText
-		}
 		level := "verified"
 		if pa.unverified {
 			level = "unverified"
+		}
+		if pa.from != "" {
+			out = append(out, permDoc{
+				Key:   key,
+				From:  pa.from,
+				Level: level,
+			})
+			continue
+		}
+		text := directive.Readable(key)
+		if pa.explicitText != "" {
+			text = pa.explicitText
+		} else if pa.count == 1 {
+			text = pa.firstRouteText
 		}
 		out = append(out, permDoc{
 			Key:   key,

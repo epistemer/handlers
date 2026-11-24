@@ -98,11 +98,15 @@ func Check(v any) error {
 	}
 
 	// package: required object
+	docPkgName := ""
 	if raw, ok := obj["package"]; !ok {
 		add("package", "required")
 	} else if pkg, ok := raw.(map[string]any); !ok {
 		add("package", "must be an object")
 	} else {
+		if nameRaw, ok := pkg["name"].(string); ok {
+			docPkgName = nameRaw
+		}
 		checkPackage(pkg, add)
 	}
 
@@ -165,7 +169,7 @@ func Check(v any) error {
 				add(loc, "must be an object")
 				continue
 			}
-			checkPermission(k, loc, p, usedPerms, seenPermKey, seenPermVar, add)
+			checkPermission(k, loc, p, docPkgName, usedPerms, seenPermKey, seenPermVar, add)
 		}
 	}
 
@@ -796,6 +800,7 @@ func checkPermission(
 	k int,
 	loc string,
 	p map[string]any,
+	docPkgName string,
 	usedPerms map[string]bool,
 	seenPermKey, seenPermVar map[string]int,
 	add func(loc, msg string),
@@ -820,36 +825,60 @@ func checkPermission(
 		}
 	}
 
-	// var: Go identifier starting with Perm
-	if raw, ok := p["var"]; !ok {
-		add(loc+".var", "required")
-	} else if s, ok := raw.(string); !ok {
-		add(loc+".var", "must be a string")
-	} else if s == "" {
-		add(loc+".var", "must not be empty")
-	} else if !strings.HasPrefix(s, "Perm") {
-		add(loc+".var", `must start with "Perm"`)
-	} else if s == "Perm" {
-		add(loc+".var", `must not be empty after "Perm"`)
-	} else if token.IsKeyword(s) {
-		add(loc+".var", fmt.Sprintf("%q is a Go keyword", s))
-	} else if !token.IsIdentifier(s) {
-		add(loc+".var", fmt.Sprintf("%q is not a Go identifier", s))
-	} else {
-		if first, ok := seenPermVar[s]; ok {
-			add(loc+".var", fmt.Sprintf("%q also at permissions[%d]", s, first))
-		} else {
-			seenPermVar[s] = k
+	rawFrom, hasFrom := p["from"]
+	if hasFrom {
+		if s, ok := rawFrom.(string); !ok {
+			add(loc+".from", "must be a string")
+		} else if s == "" {
+			add(loc+".from", "must not be empty")
+		} else if token.IsKeyword(s) {
+			add(loc+".from", fmt.Sprintf("%q is a Go keyword", s))
+		} else if !token.IsIdentifier(s) {
+			add(loc+".from", fmt.Sprintf("%q is not a Go identifier", s))
+		} else if s == "_" {
+			add(loc+".from", `"_"`+" is the blank identifier")
+		} else if docPkgName != "" && s == docPkgName {
+			add(loc+".from", fmt.Sprintf("%q is the document's own package name", s))
 		}
-	}
 
-	// text: non-empty string
-	if raw, ok := p["text"]; !ok {
-		add(loc+".text", "required")
-	} else if s, ok := raw.(string); !ok {
-		add(loc+".text", "must be a string")
-	} else if s == "" {
-		add(loc+".text", "must not be empty")
+		if _, ok := p["var"]; ok {
+			add(loc+".var", "must be absent with from")
+		}
+		if _, ok := p["text"]; ok {
+			add(loc+".text", "must be absent with from")
+		}
+	} else {
+		// var: Go identifier starting with Perm
+		if raw, ok := p["var"]; !ok {
+			add(loc+".var", "required")
+		} else if s, ok := raw.(string); !ok {
+			add(loc+".var", "must be a string")
+		} else if s == "" {
+			add(loc+".var", "must not be empty")
+		} else if !strings.HasPrefix(s, "Perm") {
+			add(loc+".var", `must start with "Perm"`)
+		} else if s == "Perm" {
+			add(loc+".var", `must not be empty after "Perm"`)
+		} else if token.IsKeyword(s) {
+			add(loc+".var", fmt.Sprintf("%q is a Go keyword", s))
+		} else if !token.IsIdentifier(s) {
+			add(loc+".var", fmt.Sprintf("%q is not a Go identifier", s))
+		} else {
+			if first, ok := seenPermVar[s]; ok {
+				add(loc+".var", fmt.Sprintf("%q also at permissions[%d]", s, first))
+			} else {
+				seenPermVar[s] = k
+			}
+		}
+
+		// text: non-empty string
+		if raw, ok := p["text"]; !ok {
+			add(loc+".text", "required")
+		} else if s, ok := raw.(string); !ok {
+			add(loc+".text", "must be a string")
+		} else if s == "" {
+			add(loc+".text", "must not be empty")
+		}
 	}
 
 	// level: verified or unverified

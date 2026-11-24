@@ -8,6 +8,8 @@ require (
 	golang.org/x/tools v0.53.0
 )
 
+replace github.com/epistemer/handlers => ../
+
 require (
 	github.com/go-openapi/jsonpointer v0.22.5 // indirect
 	github.com/go-openapi/swag/jsonname v0.25.5 // indirect

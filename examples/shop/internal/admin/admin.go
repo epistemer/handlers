@@ -257,7 +257,7 @@ func (h *H) Product(w http.ResponseWriter, r *http.Request, id ids.ProductID) er
 //h:method GET
 //h:path /orders
 //h:desc Orders
-//h:perm orders.manage
+//h:perm orders.read from apiroutes
 //h:view
 //h:search
 func (h *H) Orders(w http.ResponseWriter, r *http.Request) error {
@@ -301,7 +301,7 @@ func (h *H) Orders(w http.ResponseWriter, r *http.Request) error {
 //h:method GET
 //h:path /orders/{id}
 //h:desc Order detail
-//h:perm orders.manage
+//h:perm orders.manage Manage orders
 //h:view
 //h:entity orders.list
 //h:param id label Order ID
@@ -346,7 +346,7 @@ func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID) error 
 //h:method POST
 //h:path /orders/{id}/cancel
 //h:desc Cancel order
-//h:perm orders.manage
+//h:perm orders.manage Manage orders
 //h:body 20MiB
 //h:param id label Order ID
 func (h *H) OrderCancel(w http.ResponseWriter, r *http.Request, id ids.OrderID) error {

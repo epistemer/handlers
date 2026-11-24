@@ -79,7 +79,8 @@ func runOpenAPI(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	doc, diags := analyzeOpenAPI(spec, cfg.sourceRel, cfg.pkgName, cfg.outRel, *keyPrefix)
+	extCounts := countCommittedTakingRoutes(cfg.modRoot, cfg.sourceRel, cfg.outRel)
+	doc, diags := analyzeOpenAPI(spec, cfg.sourceRel, cfg.pkgName, cfg.outRel, *keyPrefix, extCounts)
 
 	hasError := false
 	for _, d := range diags {
@@ -114,13 +115,19 @@ type openAPIOpInfo struct {
 	routeKey string
 	auth     string
 	permKey  string
+	permText string
+	permFrom string
 	hasXPerm bool
 	label    string
 	maxBody  int64
 	params   []paramDoc
 }
 
-func analyzeOpenAPI(spec *openapi3.T, sourceRel, pkgName, outRel, keyPrefix string) (routesDoc, []openAPIDiag) {
+func analyzeOpenAPI(spec *openapi3.T, sourceRel, pkgName, outRel, keyPrefix string, extCounts ...map[string]int) (routesDoc, []openAPIDiag) {
+	var externalTakes map[string]int
+	if len(extCounts) > 0 {
+		externalTakes = extCounts[0]
+	}
 	var diags []openAPIDiag
 	addErr := func(loc, msg string) {
 		diags = append(diags, openAPIDiag{location: loc, message: msg, severity: directive.Error})
@@ -201,7 +208,7 @@ func analyzeOpenAPI(spec *openapi3.T, sourceRel, pkgName, outRel, keyPrefix stri
 					}
 				}
 
-				auth, permKey, hasXPerm := checkOpenAPISecurity(loc, spec, op, addErr)
+				auth, permKey, permText, permFrom, hasXPerm := checkOpenAPISecurity(loc, spec, op, pkgName, addErr)
 
 				routeKey := ""
 				if rawKey, hasXKey := op.Extensions["x-route-key"]; hasXKey {
@@ -254,6 +261,8 @@ func analyzeOpenAPI(spec *openapi3.T, sourceRel, pkgName, outRel, keyPrefix stri
 					routeKey: routeKey,
 					auth:     auth,
 					permKey:  permKey,
+					permText: permText,
+					permFrom: permFrom,
 					hasXPerm: hasXPerm,
 					label:    label,
 					maxBody:  maxBody,
@@ -272,14 +281,74 @@ func analyzeOpenAPI(spec *openapi3.T, sourceRel, pkgName, outRel, keyPrefix stri
 	}
 	labelVars := make(map[string]labelOwner)
 
+	type openAPIPermTrack struct {
+		hasDecl     bool
+		declLoc     string
+		declCount   int
+		declText    string
+		declTextLoc string
+		hasTaken    bool
+		takenPkg    string
+		takenLoc    string
+	}
+	type openAPITakenOccur struct {
+		permKey string
+		pkg     string
+		loc     string
+	}
+	permTracks := make(map[string]*openAPIPermTrack)
+	var takenOccurs []openAPITakenOccur
+
 	for _, info := range ops {
 		if info.auth == "permission" && info.permKey != "" {
-			pb.add(info.permKey, info.label, false)
-			gn := permGoName(info.permKey)
-			if prev, clash := permVars[gn]; clash && prev != info.permKey {
-				addErr(info.loc, fmt.Sprintf("keys %q and %q both give the Go name %s", prev, info.permKey, gn))
+			pt := permTracks[info.permKey]
+			if pt == nil {
+				pt = &openAPIPermTrack{}
+				permTracks[info.permKey] = pt
+			}
+			if info.permFrom != "" {
+				takenOccurs = append(takenOccurs, openAPITakenOccur{
+					permKey: info.permKey,
+					pkg:     info.permFrom,
+					loc:     info.loc,
+				})
+				if pt.hasDecl {
+					addErr(info.loc, fmt.Sprintf("permission %q is declared in this package at %s, so it can't be taken from %s", info.permKey, pt.declLoc, info.permFrom))
+				} else if pt.hasTaken && pt.takenPkg != info.permFrom {
+					addErr(info.loc, fmt.Sprintf("permission %q is taken from %s at %s, not %s", info.permKey, pt.takenPkg, pt.takenLoc, info.permFrom))
+				} else if !pt.hasTaken {
+					pt.hasTaken = true
+					pt.takenPkg = info.permFrom
+					pt.takenLoc = info.loc
+				}
+				pb.addTaken(info.permKey, info.permFrom, false)
 			} else {
-				permVars[gn] = info.permKey
+				pt.declCount++
+				if !pt.hasDecl {
+					pt.hasDecl = true
+					pt.declLoc = info.loc
+					for _, prevTaken := range takenOccurs {
+						if prevTaken.permKey == info.permKey {
+							addErr(prevTaken.loc, fmt.Sprintf("permission %q is declared in this package at %s, so it can't be taken from %s", info.permKey, info.loc, prevTaken.pkg))
+						}
+					}
+				}
+				if info.permText != "" {
+					if pt.declText != "" && pt.declText != info.permText {
+						addErr(info.loc, fmt.Sprintf("permission %q: text %q differs from %q at %s", info.permKey, info.permText, pt.declText, pt.declTextLoc))
+					} else if pt.declText == "" {
+						pt.declText = info.permText
+						pt.declTextLoc = info.loc
+					}
+				}
+				pb.addDeclared(info.permKey, info.label, info.permText, false)
+
+				gn := permGoName(info.permKey)
+				if prev, clash := permVars[gn]; clash && prev != info.permKey {
+					addErr(info.loc, fmt.Sprintf("keys %q and %q both give the Go name %s", prev, info.permKey, gn))
+				} else {
+					permVars[gn] = info.permKey
+				}
 			}
 		}
 		if info.goName != "" && info.routeKey != "" {
@@ -312,8 +381,13 @@ func analyzeOpenAPI(spec *openapi3.T, sourceRel, pkgName, outRel, keyPrefix stri
 	}
 
 	for _, info := range ops {
-		if info.auth == "permission" && info.hasXPerm && info.permKey != "" {
-			if pa := pb.byKey[info.permKey]; pa != nil && pa.count == 1 {
+		if info.auth == "permission" && info.hasXPerm && info.permKey != "" && info.permFrom == "" {
+			pt := permTracks[info.permKey]
+			ext := 0
+			if externalTakes != nil {
+				ext = externalTakes[info.permKey]
+			}
+			if pt != nil && pt.declCount+ext == 1 {
 				addWarn(info.loc, fmt.Sprintf("x-permission %q is used by this operation only", info.permKey))
 			}
 		}
@@ -688,7 +762,7 @@ func schemaTypeDesc(s *openapi3.Schema) string {
 	return "schema"
 }
 
-func checkOpenAPISecurity(loc string, spec *openapi3.T, op *openapi3.Operation, addErr func(loc, msg string)) (auth, permKey string, hasXPerm bool) {
+func checkOpenAPISecurity(loc string, spec *openapi3.T, op *openapi3.Operation, pkgName string, addErr func(loc, msg string)) (auth, permKey, permText, permFrom string, hasXPerm bool) {
 	isPublic := op.Security != nil && len(*op.Security) == 0
 	if !isPublic {
 		var reqs openapi3.SecurityRequirements
@@ -737,7 +811,7 @@ func checkOpenAPISecurity(loc string, spec *openapi3.T, op *openapi3.Operation, 
 		if hasXAuth {
 			addErr(loc, "x-auth on a public operation")
 		}
-		return "public", "", false
+		return "public", "", "", "", false
 	}
 
 	if hasXAuth {
@@ -748,32 +822,37 @@ func checkOpenAPISecurity(loc string, spec *openapi3.T, op *openapi3.Operation, 
 			addErr(loc, "x-auth: session takes no x-permission")
 		}
 		if hasXPermExt {
-			checkXPermValue(loc, rawPerm, addErr)
+			checkXPermValue(loc, rawPerm, pkgName, addErr)
 		}
-		return "session", "", false
+		return "session", "", "", "", false
 	}
 
 	if hasXPermExt {
-		xp, valid := checkXPermValue(loc, rawPerm, addErr)
+		pv, valid := checkXPermValue(loc, rawPerm, pkgName, addErr)
 		if valid {
-			return "permission", xp, true
+			return "permission", pv.Key, pv.Text, pv.From, true
 		}
-		return "permission", "", true
+		return "permission", "", "", "", true
 	}
 
-	return "permission", "", false
+	return "permission", "", "", "", false
 }
 
-func checkXPermValue(loc string, raw any, addErr func(loc, msg string)) (string, bool) {
+func checkXPermValue(loc string, raw any, pkgName string, addErr func(loc, msg string)) (directive.PermValue, bool) {
 	xp, ok := raw.(string)
 	if !ok {
 		xp = fmt.Sprint(raw)
 	}
-	if !directive.IsValidKey(xp) {
-		addErr(loc, fmt.Sprintf("x-permission %q is not a key", xp))
-		return "", false
+	pv, errStr := directive.ParsePerm(xp, "x-permission")
+	if errStr != "" {
+		addErr(loc, errStr)
+		return directive.PermValue{}, false
 	}
-	return xp, true
+	if pkgName != "" && pv.From != "" && pv.From == pkgName {
+		addErr(loc, fmt.Sprintf("x-permission: %s is this routes package; declare the permission here", pv.From))
+		return directive.PermValue{}, false
+	}
+	return pv, true
 }
 
 func resolveOpenAPIOpLabel(loc string, op *openapi3.Operation, opID string, addErr func(loc, msg string)) string {

@@ -1,0 +1,44 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "internal/shop",
+  "package": {
+    "name": "shoproutes",
+    "dir": "internal/shop/shoproutes"
+  },
+  "surface": "html",
+  "prefix": "/shop",
+  "routes": [
+    {
+      "key": "orders.detail",
+      "method": "GET",
+      "pattern": "/orders/{id}",
+      "name": "OrderDetail",
+      "var": "L10nOrderDetail",
+      "text": "Order detail",
+      "auth": "permission",
+      "permission": "orders.manage",
+      "view": true,
+      "search": false,
+      "params": [
+        {
+          "name": "id",
+          "go": "orderID",
+          "var": "L10nOrderID",
+          "type": "int64",
+          "import": "",
+          "parse": "int",
+          "kind": "segment",
+          "label": "Order ID"
+        }
+      ]
+    }
+  ],
+  "permissions": [
+    {
+      "key": "orders.manage",
+      "from": "shoproutes",
+      "level": "verified"
+    }
+  ]
+}

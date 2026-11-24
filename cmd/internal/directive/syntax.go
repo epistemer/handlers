@@ -77,9 +77,36 @@ var knownDirectives = map[string]bool{
 	"param":  true,
 }
 
+type syntaxConfig struct {
+	routesPkg     string
+	externalTakes map[string]int
+}
+
+// SyntaxOption configures directive syntax checking.
+type SyntaxOption func(*syntaxConfig)
+
+// WithRoutesPackage specifies the routes package name for the package being checked.
+func WithRoutesPackage(pkg string) SyntaxOption {
+	return func(c *syntaxConfig) {
+		c.routesPkg = pkg
+	}
+}
+
+// WithExternalPermCounts specifies counts of external taking routes for single-use warning.
+func WithExternalPermCounts(counts map[string]int) SyntaxOption {
+	return func(c *syntaxConfig) {
+		c.externalTakes = counts
+	}
+}
+
 // Syntax checks one package from its files' contents without type information.
 // It tolerates files that do not fully parse and never panics.
-func Syntax(files map[string][]byte) (*Package, []Diagnostic) {
+func Syntax(files map[string][]byte, opts ...SyntaxOption) (*Package, []Diagnostic) {
+	var cfg syntaxConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
 	pkg := &Package{}
 	var diags []Diagnostic
 
@@ -169,7 +196,7 @@ func Syntax(files map[string][]byte) (*Package, []Diagnostic) {
 				})
 			}
 
-			rec, rDiags := validateDirectives(lines, fn, funcPos, params, sigErr == "")
+			rec, rDiags := validateDirectives(lines, fn, funcPos, params, sigErr == "", cfg.routesPkg)
 			diags = append(diags, rDiags...)
 			if sigErr == "" {
 				recs = append(recs, rec)
@@ -204,7 +231,7 @@ func Syntax(files map[string][]byte) (*Package, []Diagnostic) {
 	}
 
 	// Package-level checks across valid handler routes.
-	diags = append(diags, checkPackageRoutes(recs)...)
+	diags = append(diags, checkPackageRoutes(recs, cfg)...)
 
 	for _, rec := range recs {
 		pkg.Routes = append(pkg.Routes, rec.route)
@@ -400,7 +427,7 @@ func isHTTPSelector(expr ast.Expr, selName string, aliases map[string]bool, dot 
 	}
 }
 
-func validateDirectives(lines []parsedLine, fn *ast.FuncDecl, funcPos token.Position, params []Param, isHandler bool) (routeRec, []Diagnostic) {
+func validateDirectives(lines []parsedLine, fn *ast.FuncDecl, funcPos token.Position, params []Param, isHandler bool, routesPkg string) (routeRec, []Diagnostic) {
 	var diags []Diagnostic
 	handlerName := ""
 	if fn.Name != nil {
@@ -547,15 +574,24 @@ func validateDirectives(lines []parsedLine, fn *ast.FuncDecl, funcPos token.Posi
 
 		case "perm":
 			rec.permPos = l.pos
-			if !isValidKey(l.val) {
+			pv, errMsg := ParsePerm(l.val, "h:perm")
+			if errMsg != "" {
 				diags = append(diags, Diagnostic{
 					Pos:      l.pos,
 					Severity: Error,
-					Message:  fmt.Sprintf("h:perm: %q is not a key", l.val),
+					Message:  errMsg,
+				})
+			} else if routesPkg != "" && pv.From != "" && pv.From == routesPkg {
+				diags = append(diags, Diagnostic{
+					Pos:      l.pos,
+					Severity: Error,
+					Message:  fmt.Sprintf("h:perm: %s is this routes package; declare the permission here", pv.From),
 				})
 			} else {
 				rec.permValid = true
-				rec.route.Perm = l.val
+				rec.route.Perm = pv.Key
+				rec.route.PermText = pv.Text
+				rec.route.PermFrom = pv.From
 			}
 
 		case "view":
@@ -743,7 +779,7 @@ func testServeMuxPattern(pattern string) (reason string, ok bool) {
 	return "", true
 }
 
-func checkPackageRoutes(recs []routeRec) []Diagnostic {
+func checkPackageRoutes(recs []routeRec, cfg syntaxConfig) []Diagnostic {
 	var diags []Diagnostic
 
 	// Known route keys for h:entity lookup.
@@ -812,21 +848,38 @@ func checkPackageRoutes(recs []routeRec) []Diagnostic {
 		registered = append(registered, r)
 	}
 
-	// Permissions: unverified agreement, single-use warning, and Perm Go-name collisions.
-	type permEntry struct {
-		key        string
-		pos        token.Position
-		unverified string
-		verified   string
-		count      int
-		reported   bool
+	// Permissions: declared vs taken, texts, unverified agreement, single-use warning, and Perm Go-name collisions.
+	type permTrack struct {
+		key string
+
+		hasDecl     bool
+		declPos     token.Position
+		declText    string
+		declTextPos token.Position
+
+		hasTaken bool
+		takenPkg string
+		takenPos token.Position
+
+		unverifiedKey      string
+		verifiedKey        string
+		unverifiedReported bool
+
+		declCount int
 	}
-	perms := make(map[string]*permEntry)
+	perms := make(map[string]*permTrack)
 	type goNameEntry struct {
 		key string
 		pos token.Position
 	}
 	permVars := make(map[string]goNameEntry)
+
+	type takenOccur struct {
+		permKey string
+		pkg     string
+		pos     token.Position
+	}
+	var takenOccurs []takenOccur
 
 	for _, r := range recs {
 		if r.route.Auth == "public" || r.route.Auth == "session" {
@@ -834,9 +887,16 @@ func checkPackageRoutes(recs []routeRec) []Diagnostic {
 		}
 		var permKey string
 		var permPos token.Position
+		var isTaken bool
+		var fromPkg string
+		var text string
+
 		if r.permValid {
 			permKey = r.route.Perm
 			permPos = r.permPos
+			isTaken = r.route.PermFrom != ""
+			fromPkg = r.route.PermFrom
+			text = r.route.PermText
 		} else if r.keyValid {
 			permKey = r.route.Key
 			permPos = r.keyPos
@@ -844,11 +904,64 @@ func checkPackageRoutes(recs []routeRec) []Diagnostic {
 			continue
 		}
 
-		pe, exists := perms[permKey]
+		pt, exists := perms[permKey]
 		if !exists {
-			pe = &permEntry{key: permKey, pos: permPos}
-			perms[permKey] = pe
+			pt = &permTrack{key: permKey}
+			perms[permKey] = pt
+		}
 
+		if isTaken {
+			takenOccurs = append(takenOccurs, takenOccur{
+				permKey: permKey,
+				pkg:     fromPkg,
+				pos:     permPos,
+			})
+			if pt.hasDecl {
+				diags = append(diags, Diagnostic{
+					Pos:      permPos,
+					Severity: Error,
+					Message:  fmt.Sprintf("permission %q is declared in this package at %s:%d, so it can't be taken from %s", permKey, filepath.Base(pt.declPos.Filename), pt.declPos.Line, fromPkg),
+				})
+			} else if pt.hasTaken && pt.takenPkg != fromPkg {
+				diags = append(diags, Diagnostic{
+					Pos:      permPos,
+					Severity: Error,
+					Message:  fmt.Sprintf("permission %q is taken from %s at %s:%d, not %s", permKey, pt.takenPkg, filepath.Base(pt.takenPos.Filename), pt.takenPos.Line, fromPkg),
+				})
+			} else if !pt.hasTaken {
+				pt.hasTaken = true
+				pt.takenPkg = fromPkg
+				pt.takenPos = permPos
+			}
+		} else {
+			pt.declCount++
+			if !pt.hasDecl {
+				pt.hasDecl = true
+				pt.declPos = permPos
+				for _, prevTaken := range takenOccurs {
+					if prevTaken.permKey == permKey {
+						diags = append(diags, Diagnostic{
+							Pos:      prevTaken.pos,
+							Severity: Error,
+							Message:  fmt.Sprintf("permission %q is declared in this package at %s:%d, so it can't be taken from %s", permKey, filepath.Base(permPos.Filename), permPos.Line, prevTaken.pkg),
+						})
+					}
+				}
+			}
+			if text != "" {
+				if pt.declText != "" && pt.declText != text {
+					diags = append(diags, Diagnostic{
+						Pos:      permPos,
+						Severity: Error,
+						Message:  fmt.Sprintf("permission %q: text %q differs from %q at %s:%d", permKey, text, pt.declText, filepath.Base(pt.declTextPos.Filename), pt.declTextPos.Line),
+					})
+				} else if pt.declText == "" {
+					pt.declText = text
+					pt.declTextPos = permPos
+				}
+			}
+
+			// Perm Go-name collisions (only for declared permissions)
 			gn := permGoName(permKey)
 			if prev, taken := permVars[gn]; taken && prev.key != permKey {
 				diags = append(diags, Diagnostic{
@@ -860,31 +973,40 @@ func checkPackageRoutes(recs []routeRec) []Diagnostic {
 				permVars[gn] = goNameEntry{key: permKey, pos: permPos}
 			}
 		}
-		pe.count++
+
+		// Unverified agreement among routes in this package (both declared and taken)
 		if r.route.Auth == "unverified" {
-			if pe.unverified == "" {
-				pe.unverified = r.route.Key
+			if pt.unverifiedKey == "" {
+				pt.unverifiedKey = r.route.Key
 			}
 		} else {
-			if pe.verified == "" {
-				pe.verified = r.route.Key
+			if pt.verifiedKey == "" {
+				pt.verifiedKey = r.route.Key
 			}
 		}
-		if pe.unverified != "" && pe.verified != "" && !pe.reported {
-			pe.reported = true
+		if pt.unverifiedKey != "" && pt.verifiedKey != "" && !pt.unverifiedReported {
+			pt.unverifiedReported = true
 			diags = append(diags, Diagnostic{
 				Pos:      permPos,
 				Severity: Error,
-				Message:  fmt.Sprintf("permission %q: %s is unverified and %s isn't", permKey, pe.unverified, pe.verified),
+				Message:  fmt.Sprintf("permission %q: %s is unverified and %s isn't", permKey, pt.unverifiedKey, pt.verifiedKey),
 			})
 		}
 	}
 
+	// Single-use warning: only for declared permissions (not taken)
 	for _, r := range recs {
 		if !r.permValid || r.route.Auth == "public" || r.route.Auth == "session" {
 			continue
 		}
-		if pe := perms[r.route.Perm]; pe != nil && pe.count == 1 {
+		if r.route.PermFrom != "" {
+			continue
+		}
+		ext := 0
+		if cfg.externalTakes != nil {
+			ext = cfg.externalTakes[r.route.Perm]
+		}
+		if pt := perms[r.route.Perm]; pt != nil && (pt.declCount+ext) == 1 {
 			diags = append(diags, Diagnostic{
 				Pos:      r.permPos,
 				Severity: Warning,

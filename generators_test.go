@@ -270,10 +270,166 @@ func TestPermissionsTwoFilesError(t *testing.T) {
 			genxtest.Input{Path: bPath},
 			genxtest.Input{Path: aPath})
 	})
-	want := `permission "orders.manage" is in internal/a and internal/b; a permission belongs to one routes package`
+	want := `permission "orders.manage" is in internal/a and internal/b; declare it in one and take it from there with "from <package>"`
 	if !strings.Contains(got, want) {
 		t.Fatalf("error = %q, want substring %q", got, want)
 	}
+}
+
+func TestPermissionsA7TakenCases(t *testing.T) {
+	makeDoc := func(dir, pkg, routeKey, permKey, from, level string) string {
+		permObj := map[string]any{
+			"key":   permKey,
+			"level": level,
+		}
+		if from != "" {
+			permObj["from"] = from
+		} else {
+			permObj["var"] = "Perm" + strings.ReplaceAll(permKey, ".", "")
+			permObj["text"] = "Permission text"
+		}
+		doc := map[string]any{
+			"domain":   "routes/v1",
+			"producer": "handlers",
+			"source":   dir,
+			"package":  map[string]any{"name": pkg, "dir": dir},
+			"surface":  "html",
+			"prefix":   "/" + pkg,
+			"routes": []any{
+				map[string]any{
+					"key":        routeKey,
+					"method":     "GET",
+					"pattern":    "/",
+					"name":       "TestRoute",
+					"var":        "L10nTestRoute",
+					"text":       "Test route",
+					"auth":       "permission",
+					"permission": permKey,
+					"view":       false,
+					"search":     false,
+					"params":     []any{},
+				},
+			},
+			"permissions": []any{permObj},
+		}
+		b, err := json.Marshal(doc)
+		if err != nil {
+			panic(err)
+		}
+		return string(b)
+	}
+
+	writeDoc := func(t *testing.T, tmpDir, dir, pkg, routeKey, permKey, from, level string) string {
+		p := filepath.Join(tmpDir, dir, "zz_"+pkg+".routes.json")
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		body := makeDoc(dir, pkg, routeKey, permKey, from, level)
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+
+	t.Run("all_taken_produces_no_output_file", func(t *testing.T) {
+		tmp := t.TempDir()
+		pDecl := writeDoc(t, tmp, "internal/api", "apiroutes", "api.list", "orders.read", "", "verified")
+		pTaken := writeDoc(t, tmp, "internal/admin", "adminroutes", "admin.list", "orders.read", "apiroutes", "verified")
+
+		files := genxtest.Render(t, ".", "permissions",
+			genxtest.Input{Path: pDecl},
+			genxtest.Input{Path: pTaken})
+		// Only apiroutes should have a generated permissions file, not adminroutes!
+		if len(files) != 1 {
+			t.Fatalf("expected 1 file, got %v", mapKeys(files))
+		}
+		wantKey := "internal/api/zz_apiroutes_permissions.go"
+		if _, ok := files[wantKey]; !ok {
+			t.Fatalf("expected %s in output, got %v", wantKey, mapKeys(files))
+		}
+	})
+
+	t.Run("no_routes_package", func(t *testing.T) {
+		tmp := t.TempDir()
+		pTaken := writeDoc(t, tmp, "internal/admin", "adminroutes", "admin.list", "orders.read", "missingpkg", "verified")
+
+		got := renderFails(t, func(tb testing.TB) {
+			genxtest.Render(tb, ".", "permissions", genxtest.Input{Path: pTaken})
+		})
+		want := `permission "orders.read" in internal/admin: no routes package missingpkg`
+		if !strings.Contains(got, want) {
+			t.Fatalf("error = %q, want substring %q", got, want)
+		}
+	})
+
+	t.Run("two_routes_packages_named", func(t *testing.T) {
+		tmp := t.TempDir()
+		pDecl1 := writeDoc(t, tmp, "internal/api1", "apiroutes", "api1.list", "perm.one", "", "verified")
+		pDecl2 := writeDoc(t, tmp, "internal/api2", "apiroutes", "api2.list", "perm.two", "", "verified")
+		pTaken := writeDoc(t, tmp, "internal/admin", "adminroutes", "admin.list", "perm.one", "apiroutes", "verified")
+
+		want := `permission "perm.one" in internal/admin: two routes packages are named apiroutes, in internal/api1 and internal/api2`
+		// The same message whichever order the files come in.
+		for _, order := range [][]string{{pDecl1, pDecl2, pTaken}, {pDecl2, pDecl1, pTaken}} {
+			got := renderFails(t, func(tb testing.TB) {
+				genxtest.Render(tb, ".", "permissions",
+					genxtest.Input{Path: order[0]},
+					genxtest.Input{Path: order[1]},
+					genxtest.Input{Path: order[2]})
+			})
+			if !strings.Contains(got, want) {
+				t.Fatalf("error = %q, want substring %q", got, want)
+			}
+		}
+	})
+
+	t.Run("target_package_doesnt_declare_it", func(t *testing.T) {
+		tmp := t.TempDir()
+		pDecl := writeDoc(t, tmp, "internal/api", "apiroutes", "api.list", "other.perm", "", "verified")
+		pTaken := writeDoc(t, tmp, "internal/admin", "adminroutes", "admin.list", "orders.read", "apiroutes", "verified")
+
+		got := renderFails(t, func(tb testing.TB) {
+			genxtest.Render(tb, ".", "permissions",
+				genxtest.Input{Path: pDecl},
+				genxtest.Input{Path: pTaken})
+		})
+		want := `permission "orders.read" in internal/admin: apiroutes doesn't declare it`
+		if !strings.Contains(got, want) {
+			t.Fatalf("error = %q, want substring %q", got, want)
+		}
+	})
+
+	t.Run("taking_is_unverified_decl_isnt", func(t *testing.T) {
+		tmp := t.TempDir()
+		pDecl := writeDoc(t, tmp, "internal/api", "apiroutes", "api.list", "orders.read", "", "verified")
+		pTaken := writeDoc(t, tmp, "internal/admin", "adminroutes", "admin.list", "orders.read", "apiroutes", "unverified")
+
+		got := renderFails(t, func(tb testing.TB) {
+			genxtest.Render(tb, ".", "permissions",
+				genxtest.Input{Path: pDecl},
+				genxtest.Input{Path: pTaken})
+		})
+		want := `permission "orders.read" in internal/admin: admin.list is unverified and the declaration in apiroutes isn't`
+		if !strings.Contains(got, want) {
+			t.Fatalf("error = %q, want substring %q", got, want)
+		}
+	})
+
+	t.Run("taking_isnt_unverified_decl_is", func(t *testing.T) {
+		tmp := t.TempDir()
+		pDecl := writeDoc(t, tmp, "internal/api", "apiroutes", "api.list", "orders.read", "", "unverified")
+		pTaken := writeDoc(t, tmp, "internal/admin", "adminroutes", "admin.list", "orders.read", "apiroutes", "verified")
+
+		got := renderFails(t, func(tb testing.TB) {
+			genxtest.Render(tb, ".", "permissions",
+				genxtest.Input{Path: pDecl},
+				genxtest.Input{Path: pTaken})
+		})
+		want := `permission "orders.read" in internal/admin: admin.list isn't unverified and the declaration in apiroutes is`
+		if !strings.Contains(got, want) {
+			t.Fatalf("error = %q, want substring %q", got, want)
+		}
+	})
 }
 
 func TestPermissionsUnknownLevelError(t *testing.T) {
