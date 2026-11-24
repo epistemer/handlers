@@ -3,6 +3,34 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-24 — A7 built: recovery, middleware, shared permissions (v0.4.0)
+
+**Locked** by epistemer with the defaults of N1–N11 (#24).
+**Built:**
+- **#25**: recovery on by default in every route and catch-all (`ErrPanic`,
+  `Panic`), and `handlers/middleware`: `Recover`, `Redirect`, `HTMX`,
+  `Boosted`, `ErrorPage`, `Flash`. Gemini 4 Hydrogen (High) wrote it
+  (about 288k tokens).
+- **#26**: `//h:perm <key> <text>`, `<key> from <package>`, the same in
+  `x-permission`, `routes/v1` `from`, and checks in the generator and `vet`.
+  The example's admin takes `orders.read` from its API. Gemini 3.8 Flash
+  (High) wrote it (about 1.06M tokens).
+
+Claude reviewed both. Gemini reviewed each diff against the spec:
+- #25: Hydrogen (High), about 79k tokens; seven of its twelve findings
+  were fixed.
+- #26: Flash (High), about 198k tokens; three of six were fixed.
+
+Gemini's quota ran out before the fixes, so Claude wrote them. Recovery
+restores the headers from before the route rather than clearing them, so an
+outer middleware's headers stay on the 500 page.
+
+**Decided for you:** a reference's message quotes the actual key
+(`write "h:perm orders.read from <package>"`); `ErrorPage`'s fallback is
+plain text; the flash cookie is rewritten to drop entries it can't read.
+
+**Next.** Release v0.4.0 with `authguard`, `openapi` and `cmd`.
+
 ## 2026-11-24 — Confab iteration 1: A6 built, A7 drafted
 
 From Confab's findings and epistemer's answers of 2026-11-24 (neozp D4,
