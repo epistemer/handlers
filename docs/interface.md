@@ -693,6 +693,29 @@ var (
 func AssertPublic(t testing.TB, routes []handlers.Route, keys ...string)
 ```
 
+### 11.7 Search
+
+```go
+type Table struct{ /* unexported */ }
+
+func NewTable(routes ...[]Route) *Table // panics on a key in two tables
+func (t *Table) ByKey(key string) (Route, bool)
+func (t *Table) Routes() []Route
+
+type Query struct {
+	Text  string           // matched, ignoring case, against the text in the request's locale and the source text
+	Only  func(Route) bool // optional, e.g. searchable pages
+	Limit int              // 0 means no limit
+}
+
+type Hit struct {
+	Route Route
+	Text  string // the label in the request's locale
+}
+
+func (t *Table) Search(r *http.Request, g Guard, tr *i18n.Translator, q Query) ([]Hit, error)
+```
+
 ### 11.8 `middleware` (A7)
 
 ```go
@@ -755,8 +778,10 @@ func (f *Flash) Messages(ctx context.Context) iter.Seq2[string, i18n.Ter]
   request.
 - **Delivery.** When the final header is written (1xx ignored, a `Flush`
   counts, never after a hijack; or when the handler returns without
-  writing): the messages are delivered by a `text/html` response with a
-  status below 300 or from 400 to 599, to a request that received them; a
+  writing): the messages are delivered by a `text/html` response (the
+  content type set, else sniffed from the first write as `net/http` does)
+  with a status below 300 or from 400 to 599, to a request that received
+  them; a
   status of 500 or more drops what this request added; `Set-Cookie` is
   written only when delivered messages are removed or messages were added
   (appended to those the request arrived with).
@@ -771,29 +796,6 @@ func (f *Flash) Messages(ctx context.Context) iter.Seq2[string, i18n.Ter]
 - Wrap the HTML surfaces with `f.Middleware`, not the API or static files.
 - ui shows flashes through its own interface of these two methods (neozp
   D4); `*Flash` satisfies it structurally.
-
-### 11.7 Search
-
-```go
-type Table struct{ /* unexported */ }
-
-func NewTable(routes ...[]Route) *Table // panics on a key in two tables
-func (t *Table) ByKey(key string) (Route, bool)
-func (t *Table) Routes() []Route
-
-type Query struct {
-	Text  string           // matched, ignoring case, against the text in the request's locale and the source text
-	Only  func(Route) bool // optional, e.g. searchable pages
-	Limit int              // 0 means no limit
-}
-
-type Hit struct {
-	Route Route
-	Text  string // the label in the request's locale
-}
-
-func (t *Table) Search(r *http.Request, g Guard, tr *i18n.Translator, q Query) ([]Hit, error)
-```
 
 ## 12. Behaviour
 

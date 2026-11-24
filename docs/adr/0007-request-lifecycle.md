@@ -185,11 +185,13 @@ func (f *Flash) Add(ctx context.Context, level string, msg i18n.Ter, args ...any
 func (f *Flash) Messages(ctx context.Context) iter.Seq2[string, i18n.Ter]
 ```
 
-An app wires it once, around its muxes, inside i18n's middleware:
+An app wires it once per HTML surface, inside i18n's middleware (§3.3's
+wiring, with the flash around the admin mux):
 
 ```go
 fl := middleware.NewFlash()
-srv := &http.Server{Handler: tr.Middleware()(fl.Middleware(root))}
+root.Handle(adminroutes.Prefix+"/", a.Load(auth.Cookie())(fl.Middleware(admin)))
+srv := &http.Server{Handler: tr.Middleware()(root)}
 
 // in a handler
 fl.Add(r.Context(), middleware.LevelSuccess, L10nEventSaved, ev.Name)
@@ -249,7 +251,13 @@ language whenever it can:
    - **delivered**: a response with a `text/html` content type and a status
      below 300 or from 400 to 599, to a request that received the
      messages. Only such a page can have shown them. A `text/plain` 404 for
-     `/favicon.ico`, a JSON answer or a download delivers nothing;
+     `/favicon.ico`, a JSON answer or a download delivers nothing. The
+     content type is the one `net/http` would send: when the handler sets
+     none, the middleware sniffs the first write with
+     `http.DetectContentType`, as `net/http` does, so a templ page written
+     straight to `w` counts. An HTML page that renders no toast region
+     still counts as delivered, and its messages are lost: the app's shell
+     (ui's layouts) shows them on every page;
    - a response with status 500 or more drops what was added during this
      request (a "saved" added before the failure isn't true);
    - `Set-Cookie` is written only when something changed: the delivered
@@ -259,7 +267,7 @@ language whenever it can:
      a stale copy.
 
    So `POST → 303 → GET` shows the flash on the GET; `POST → 303 → GET →
-   303 (sign in) → GET` shows it on the sign-in page, the first page; an
+   303 (sign in) → GET` delivers it to the sign-in page, the first page; an
    htmx form answered by `Redirect` (`HX-Redirect`) shows it on the page
    htmx loads; a boosted form answered with a plain 303, which htmx
    follows, shows it on the page it swaps in.
@@ -377,10 +385,10 @@ Each has a default; ⚠ marks a reversal of something locked or documented.
 | N4 | The flash's methods: `Add(ctx, level string, msg i18n.Ter, args ...any)` and `Messages(ctx) iter.Seq2[string, i18n.Ter]`, levels as four untyped string constants `Level*`, so ui's interface matches structurally | Yes |
 | N5 | A key travels as key and args and renders in the reader's locale; an error or another `Ter` renders when added, in the writer's | Yes |
 | N6 | Delivery: dropped by the first `text/html` page (not a redirect or a 204) to a request that isn't `HEAD` or a non-boosted htmx request; a 5xx drops what its request added; `Set-Cookie` only when something changed; `Messages` doesn't return this request's own adds | Yes |
-| N7 | The cookie: `__Host-flash`, unsigned, `Max-Age` 300 s, `FlashInsecure` for plain HTTP. Alternative: signed with a key from the app's settings (needs a getter interface, and a key to rotate) | Unsigned |
+| N7 | The cookie: `__Host-flash`, unsigned, `Max-Age` 300 s. Alternative: signed with a key from the app's settings (a key to rotate). And plain HTTP in development through an option, `FlashInsecure()`; the alternative is a getter interface, `NewFlash(c interface{ FlashCookieInsecure() bool })`, with a cfgx schema fragment, as auth reads `cookie.insecure`. An option because it is one bool fixed at startup that an app usually ties to auth's own setting (`if s.AuthCookieInsecure() { … }`), and a schema fragment would add a second setting to keep in step | Unsigned; the option |
 | N8 | `Redirect` answers htmx with 204 and `HX-Redirect` (a full load, as ui's `Reply.Go`), not `HX-Location` (an htmx swap); `ErrNotLocal` is a declared 400 (`errors.handlers.not_local`), since a return address comes from the request | `HX-Redirect`; 400 |
-| N9 | ⚠ Reverses §9's "a permission belongs to one routes package", as D6 decided. A reference is written `<key> from <package>`, in `perm` and `x-permission`; the word `from` after the key always makes a reference, with nothing after the package. Alternative: a directive of its own, `//h:uses <key> <package>`, with `x-permission-from` | `from <package>` |
-| N10 | The reference is checked by the `permissions` generator and `vet`, not by the producer, which can't see the other package's new file | Yes |
+| N9 | ⚠ Reverses §9's "a permission belongs to one routes package", as D6 decided; ⚠ also departs from your answer's bare `//h:perm api.talks.review`, which can't say which package declares a key two packages name. A reference is written `<key> from <package>`, in `perm` and `x-permission`; the word `from` after the key always makes a reference, with nothing after the package. Alternative: a directive of its own, `//h:uses <key> <package>`, with `x-permission-from` | `from <package>` |
+| N10 | ⚠ Departs from your answer's "gen checks that the key exists": the reference is checked by the `permissions` generator (which runs within `go tool genx`) and `vet`, not by the producer `handlers gen`, which can't see the other package's new file when both change in one edit | Yes |
 | N11 | Text after the key; sharers must agree; a reference has none; without a text, today's rule counting the declaring package's routes only | Yes |
 
 ## Consequences
