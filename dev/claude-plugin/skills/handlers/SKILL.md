@@ -1,12 +1,12 @@
 ---
 name: handlers
-description: How to use handlers (github.com/epistemer/handlers), neozp's route package, with //h: directives for admin pages, OpenAPI 3.0.x specs for JSON APIs, genx generators (routes, labels, permissions), authguard, the openapi adapter, Table.Search, handlerstest, and editor/agent tools. Use it when writing or checking //h: route directives, setting up genx.yaml with handlers gen/openapi/vet, wiring adminroutes.Register or apiroutes.Mount with authguard and oapi-codegen, handling handlers errors (ErrBadParam, ErrNotFound, ErrTooLarge, ErrInvalidRequest, ErrInvalidField), implementing route search with Table.Search, testing routes with handlerstest and authtest, or configuring handlers lsp and hooks.
+description: How to use handlers (github.com/epistemer/handlers), neozp's route package, with //h: directives for admin pages, OpenAPI 3.0.x specs for JSON APIs, genx generators (routes, labels, permissions), authguard, the openapi adapter, Table.Search, handlerstest, and editor/agent tools. Use it when writing or checking //h: route directives, setting up genx.yaml with handlers gen/openapi/vet, wiring adminroutes.Register or apiroutes.Mount with authguard and oapi-codegen, handling handlers errors (ErrBadParam, ErrNotFound, ErrTooLarge, ErrInvalidRequest, ErrInvalidField, ErrPanic), recovering panics, redirecting with or without htmx, rendering error pages or carrying a flash message across a redirect (handlers/middleware: Recover, Redirect, HTMX, Boosted, ErrorPage, Flash), sharing a permission between routes packages (//h:perm <key> from <package>) or giving one its text, implementing route search with Table.Search, testing routes with handlerstest and authtest, or configuring handlers lsp and hooks.
 ---
 
 # Using handlers
 
-Written for **handlers v0.3.0** (2026-11-22), with `authguard/v0.3.0`,
-`openapi/v0.3.0`, `cmd/v0.3.0`, `genx v0.2.0`, `i18n v0.3.1`, `errors v0.1.0`,
+Written for **handlers v0.4.0** (2026-11-24), with `authguard/v0.4.0`,
+`openapi/v0.4.0`, `cmd/v0.4.0`, `genx v0.2.0`, `i18n v0.3.1`, `errors v0.1.0`,
 and `auth v0.3.0`. Look at `go.mod`; if newer, read `CHANGELOG.md`.
 `docs/interface.md` is the locked contract and `examples/shop` is a complete
 app with end-to-end tests; **the contract is `docs/interface.md`; when this
@@ -22,7 +22,8 @@ skill and that file disagree, the file wins**. Load the `genx`, `i18n`,
   `handlers: labels` (`zz_<pkg>.labels.json` -> `i18n: labels` ->
   `zz_<pkg>_i18n.go`), and `handlers: permissions` (`zz_<pkg>_permissions.go`).
 - **`net/http` `ServeMux` only.** No third-party router. Every registered
-  route runs in fixed order: body limit (`WithMaxBody`) -> `Route` into
+  route runs in fixed order: panic recovery (v0.4.0, always on) -> body
+  limit (`WithMaxBody`) -> `Route` into
   context (`handlers.From`) -> `Guard.Check` (unless `public`) ->
   `WithMiddleware` -> API request validation (JSON surface) -> path parameter
   binding (HTML surface) -> handler.
@@ -57,7 +58,7 @@ func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID) error
 | `path` | starts `/`, no trailing `/` (unless `/`), `{name}` and trailing `{name...}`, no `{$}` | required |
 | `desc` | non-empty text | readable `key`, with warning |
 | `auth` | `public`, `session`, `unverified` | route's permission at `Verified` |
-| `perm` | key (only when `auth` is default or `unverified`) | route's `key` |
+| `perm` | `<key>`, `<key> <text>` (the permission's text), or `<key> from <package>` (a permission another routes package declares); only when `auth` is default or `unverified` | route's `key` |
 | `view` | none, or `true` | off (`false`) |
 | `search` | none, or `true` | off (`false`) |
 | `entity` | another route's `key` in the same package | none (`""`) |
@@ -191,12 +192,76 @@ Runtime (`github.com/epistemer/handlers`):
   else `errors.KindOf(err).Status()`. Writers log statuses `>= 500` via
   `slog.Default()` and never leak `err.Error()`.
 - Sentinel errors: `ErrBadParam` (`%s is not valid`, 400), `ErrNotFound`
-  (404), `ErrTooLarge` (413), `ErrInvalidRequest` (400), `ErrInvalidField` (400).
+  (404), `ErrTooLarge` (413), `ErrInvalidRequest` (400), `ErrInvalidField`
+  (400), `ErrPanic` (500, "the server failed to answer"; its cause is a
+  `*handlers.Panic{Value, Stack}`, for `errors.As`).
+- **Recovery** (v0.4.0): every route and catch-all recovers a panic. It is
+  logged once (`handlers: panic`, with `route`, `panic`, `stack`), then
+  `ErrPanic` goes to the error writer (the default writers don't log it
+  again); after a started response the connection is aborted. Headers the
+  handler set are dropped, those from before it (outer middleware) kept.
+  No opt-out: report panics from the error writer via `*Panic`. Remove an
+  app's own recovering wrapper.
 - Without a prefix, `Done` registers no catch-all (so `ServeMux` 405 with
   `Allow` remains). `HEAD` hits `GET` routes; `/` registers `<prefix>/{$}`.
 - `Mount`, `NewMount`, `Handle`, `HandleHTTP`, `Writer`, `Done`, `Param*`,
   `Segment`, `Rest`, `Text` are for generated code and `openapi`; apps don't
   call them directly.
+
+## `handlers/middleware` (v0.4.0)
+
+The request's lifecycle around handlers, in the root module (errors and
+i18n only).
+
+```go
+import "github.com/epistemer/handlers/middleware"
+
+fl := middleware.NewFlash() // dev over plain HTTP: middleware.NewFlash(middleware.FlashInsecure())
+root.Handle(adminroutes.Prefix+"/", a.Load(auth.Cookie())(fl.Middleware(adminMux)))
+srv := &http.Server{Handler: tr.Middleware()(root)} // i18n outside the flash
+
+// A handler that saved:
+fl.Add(r.Context(), middleware.LevelSuccess, L10nEventSaved, ev.Name)
+return middleware.Redirect(w, r, adminroutes.Event(ev.ID))
+
+// The shell shows the messages that came with this request:
+for level, msg := range fl.Messages(ctx) { /* toast(level, msg.T(ctx)) */ }
+```
+
+- `Redirect(w, r, to interface{ URL() string })`: htmx → 204 +
+  `HX-Redirect`; else 303. Another site's address returns `ErrNotLocal`
+  (400, `errors.handlers.not_local`), writing nothing: safe for a return
+  address from a query. `HTMX(r)`, `Boosted(r)` read `HX-Request`,
+  `HX-Boosted`.
+- `ErrorPage(page func(w, r, status int, err error) error)` is an
+  `ErrorWriter` for `handlers.WithErrors`: it logs like `WriteText`, calls
+  `page` with `handlers.Status(err)`, and falls back to text if `page`
+  fails before writing. A 404/500 page is still a returned error
+  (`handlers.ErrNotFound`, any error's kind); `page` branches on `HTMX(r)`.
+- `Recover(ew)` gives an app's own handlers (outside routes packages) the
+  same recovery as routes.
+- **The flash.** `Add(ctx, level, msg i18n.Ter, args...)` with `level` one
+  of `LevelInfo`, `LevelSuccess`, `LevelWarning`, `LevelError` (plain
+  strings). A key travels as key and args and renders in the reader's
+  locale; an error or other `Ter` (a `Static`) is rendered when added, as
+  text. Args keep their kind (strings, bools, integers including defined
+  types, floats, keys). `Add` panics outside `fl.Middleware` (wrap a test
+  handler with it) and on another level.
+- **When it shows.** `Messages(ctx)` returns the messages the request
+  arrived with, never this request's own adds. The first `text/html` page
+  (status < 300 or 400–599; content type set, or sniffed) to a request that
+  isn't `HEAD` or a non-boosted htmx request delivers them; redirects, 204s,
+  JSON, text/plain and downloads carry them on; a 5xx drops what its own
+  request added. A page that renders no toast region still uses them up:
+  show them in the shell of every page. Wrap the HTML surfaces only.
+- The cookie: `__Host-flash` (`FlashName` changes the base), Secure,
+  HttpOnly, SameSite=Lax, Path=/, 5 minutes, unsigned base64url JSON;
+  `FlashInsecure()` drops Secure and the prefix (tie it to auth's
+  `cookie.insecure`).
+- **ui** shows flashes as toasts through its own interface,
+  `Add(ctx, level string, msg i18n.Ter, args ...any)` and
+  `Messages(ctx) iter.Seq2[string, i18n.Ter]`, which `*middleware.Flash`
+  satisfies; see the ui skill for how its `Reply` and toasts use it.
 
 ## Permissions and `authguard`
 
@@ -209,8 +274,24 @@ root.Handle(adminroutes.Prefix+"/", a.Load(auth.Cookie())(adminMux))
 
 - Every route is `Permission` (`Verified`) by default, keyed by `//h:perm` or
   its own `//h:key`. Routes sharing `//h:perm` must agree on `unverified`.
-- Permission text is the route's text when used once, or the readable key
-  when shared.
+- **A permission's text** (v0.4.0): `//h:perm talks.review Review talks`
+  (`x-permission: talks.review Review talks`). Routes that give one give
+  the same. Without it: the route's text when one route of the declaring
+  package uses it, else the readable key. Give shared permissions a text:
+  it's what an admin sees when granting.
+- **Taking a permission from another routes package** (v0.4.0):
+  `//h:perm api.talks.review from apiroutes`, `x-permission: talks.review
+  from adminroutes`. `<package>` is the routes package's name (`-package`).
+  The word `from` after the key always makes a reference; nothing may follow
+  the package (`h:perm: write "h:perm <key> from <package>", with nothing
+  after`), and a text can't begin with "from". The taking routes agree with
+  the declaration on `unverified`; one grant then opens both surfaces.
+  Declaring a key in two packages is still an error. The `permissions`
+  generator (inside `go tool genx`) and `vet` check that the package exists
+  and declares the key; `gen` checks only its own file, so both can change
+  in one edit. Nothing is generated for a reference, and a binary that
+  mounts the taking package must link the declaring one, or `Register`
+  panics with authguard's `permission "<p>" isn't declared`.
 - `authguard.New(a, ac)` panics if `a` or `ac` is nil. `Prepare` fails if
   any `Permission` route's key is not declared in `access.Permissions()`.
 - `Check` calls `a.Check(ctx)` for `Session`, `a.Check(ctx, ac.Can(p))` for
@@ -312,8 +393,10 @@ either translated or source text, returning `Hit{Route, Text}` in key order.
   any generated `L10n*` or `Perm*` variable.
 - **One handler type per package:** all `//h:` methods in a Go package must
   be on the same receiver type.
-- **One routes package per permission:** declaring the same permission key in
-  two `routes/v1` files fails `permissions` generation and `handlers vet`.
+- **Declare a permission in one routes package:** declaring the same key in
+  two `routes/v1` files fails `permissions` generation and `handlers vet`
+  (`...; declare it in one and take it from there with "from <package>"`).
+  Take it elsewhere with `from`.
 - **Generated code is a separate package:** never pass `-out` to the handler
   package itself, and put custom path-parameter types in a separate package
   (e.g. `internal/ids`) so both packages can import them without a cycle.
