@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/epistemer/handlers/internal/recovery"
 )
 
 // Mount registers a route table on an http.ServeMux. Generated Register and
@@ -121,21 +123,23 @@ func (m *Mount) handle(i int, handlerNil bool, build func(ew ErrorWriter) http.H
 		pat = "/{$}"
 	}
 	m.mux.HandleFunc(rt.Method+" "+rt.Prefix+pat, func(w http.ResponseWriter, r *http.Request) {
-		limit := m.opts.maxBody
-		if rt.MaxBody > 0 {
-			limit = rt.MaxBody
-		}
-		if limit > 0 && r.Body != nil {
-			r.Body = http.MaxBytesReader(w, r.Body, limit)
-		}
-		r = r.WithContext(WithRoute(r.Context(), rt))
-		if rt.Auth != Public {
-			if err := m.guard.Check(r, rt); err != nil {
-				ew(w, r, err)
-				return
+		recovery.Serve(w, r, rt.Key, ew, wrapPanic, WriteText, func(w http.ResponseWriter, r *http.Request) {
+			limit := m.opts.maxBody
+			if rt.MaxBody > 0 {
+				limit = rt.MaxBody
 			}
-		}
-		chained.ServeHTTP(w, r)
+			if limit > 0 && r.Body != nil {
+				r.Body = http.MaxBytesReader(w, r.Body, limit)
+			}
+			r = r.WithContext(WithRoute(r.Context(), rt))
+			if rt.Auth != Public {
+				if err := m.guard.Check(r, rt); err != nil {
+					ew(w, r, err)
+					return
+				}
+			}
+			chained.ServeHTTP(w, r)
+		})
 	})
 }
 
@@ -156,7 +160,9 @@ func (m *Mount) Done() {
 	}
 	ew := m.errorWriterFor(m.routes[0].Surface)
 	m.mux.HandleFunc(prefix+"/", func(w http.ResponseWriter, r *http.Request) {
-		ew(w, r, ErrNotFound)
+		recovery.Serve(w, r, "", ew, wrapPanic, WriteText, func(w http.ResponseWriter, r *http.Request) {
+			ew(w, r, ErrNotFound)
+		})
 	})
 }
 

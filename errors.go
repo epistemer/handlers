@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -83,7 +84,43 @@ var (
 	ErrTooLarge       = errors.Key("errors.handlers.too_large", "the request is too large", errors.Invalid)
 	ErrInvalidRequest = errors.Key("errors.handlers.invalid_request", "the request is not valid", errors.Invalid)
 	ErrInvalidField   = errors.Key1[string]("errors.handlers.invalid_field", "the request is not valid at %s", errors.Invalid)
+	ErrPanic          = errors.Key("errors.handlers.panic", "the server failed to answer", errors.Internal)
 )
+
+// Panic is a recovered panic, ErrPanic's cause.
+type Panic struct {
+	Value any    // what was panicked
+	Stack []byte // runtime/debug.Stack() where it was recovered
+}
+
+// Error returns "panic: <Value>", formatting Value defensively so a value whose
+// String or Error method panics prints as its Go type instead.
+func (p *Panic) Error() string {
+	if p == nil {
+		return "panic: <nil>"
+	}
+	return "panic: " + formatPanicValue(p.Value)
+}
+
+func formatPanicValue(v any) (s string) {
+	defer func() {
+		if recover() != nil {
+			s = fmt.Sprintf("%T", v)
+		}
+	}()
+	switch x := v.(type) {
+	case error:
+		return x.Error()
+	case fmt.Stringer:
+		return x.String()
+	default:
+		return fmt.Sprint(v)
+	}
+}
+
+func wrapPanic(val any, stack []byte) error {
+	return ErrPanic.Wrap(&Panic{Value: val, Stack: stack})
+}
 
 // Status returns the HTTP status code for err: 413 for ErrTooLarge or
 // *http.MaxBytesError, otherwise errors.KindOf(err).Status().
@@ -99,10 +136,11 @@ func Status(err error) int {
 }
 
 // WriteText writes err as text/plain; charset=utf-8 with errors.T in the
-// request's locale, logging errors with status 500 or greater via slog.Default.
+// request's locale, logging errors with status 500 or greater via slog.Default
+// (except ErrPanic, which recovery already logged).
 func WriteText(w http.ResponseWriter, r *http.Request, err error) {
 	status := Status(err)
-	if status >= http.StatusInternalServerError {
+	if status >= http.StatusInternalServerError && !errors.Is(err, ErrPanic) {
 		logServerError(status, err)
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -113,10 +151,11 @@ func WriteText(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 // WriteJSON writes err as application/json with {"code": ..., "message": ...},
-// logging errors with status 500 or greater via slog.Default.
+// logging errors with status 500 or greater via slog.Default (except ErrPanic,
+// which recovery already logged).
 func WriteJSON(w http.ResponseWriter, r *http.Request, err error) {
 	status := Status(err)
-	if status >= http.StatusInternalServerError {
+	if status >= http.StatusInternalServerError && !errors.Is(err, ErrPanic) {
 		logServerError(status, err)
 	}
 	var code, msg string
