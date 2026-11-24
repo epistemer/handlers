@@ -1,0 +1,26 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "unused_routes_import",
+  "package": {
+    "name": "adminroutes",
+    "dir": "adminroutes"
+  },
+  "surface": "html",
+  "prefix": "/unusedimport",
+  "routes": [
+    {
+      "key": "unusedimport.events.list",
+      "method": "GET",
+      "pattern": "/events",
+      "name": "EventsList",
+      "var": "L10nEventsList",
+      "text": "Events",
+      "auth": "public",
+      "view": true,
+      "search": false,
+      "params": []
+    }
+  ],
+  "permissions": []
+}

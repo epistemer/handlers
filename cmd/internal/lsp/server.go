@@ -193,7 +193,7 @@ func (s *Server) typeWorker() {
 		delete(s.workerPending, key)
 		s.workerMu.Unlock()
 
-		diags, err := directive.Types(job.dir, job.pkg)
+		diags, err := directive.Types(job.dir, job.pkg, "")
 		select {
 		case s.typeResCh <- typePassResult{
 			pkgKey: job.pkgKey,

@@ -1,0 +1,1 @@
+handlers.go:6:2: the package doesn't type-check: *

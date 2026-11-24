@@ -261,7 +261,7 @@ func runGen(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	pkg, diags, err := analyzePackageDir(pkgDir)
+	pkg, diags, err := analyzePackageDir(pkgDir, cfg.absOutDir)
 	if err != nil {
 		fmt.Fprintf(stderr, "handlers gen: %v\n", err)
 		return 1

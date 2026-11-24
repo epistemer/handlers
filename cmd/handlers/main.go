@@ -85,7 +85,7 @@ func runVet(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	var allDiags []directive.Diagnostic
 	var vetted []vettedPkg
 	for _, dir := range dirs {
-		pkg, diags, err := analyzePackageDir(dir)
+		pkg, diags, err := analyzePackageDir(dir, "")
 		if err != nil {
 			fmt.Fprintf(stderr, "handlers vet: %v\n", err)
 			return 1
@@ -223,11 +223,11 @@ func expandPackages(patterns []string) ([]string, error) {
 }
 
 func checkPackageDir(dir string) ([]directive.Diagnostic, error) {
-	_, diags, err := analyzePackageDir(dir)
+	_, diags, err := analyzePackageDir(dir, "")
 	return diags, err
 }
 
-func analyzePackageDir(dir string) (*directive.Package, []directive.Diagnostic, error) {
+func analyzePackageDir(dir, out string) (*directive.Package, []directive.Diagnostic, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, nil, err
@@ -258,7 +258,7 @@ func analyzePackageDir(dir string) (*directive.Package, []directive.Diagnostic, 
 
 	pkg, diags := directive.Syntax(files)
 	if len(pkg.Routes) > 0 {
-		tDiags, err := directive.Types(dir, pkg)
+		tDiags, err := directive.Types(dir, pkg, out)
 		if err != nil {
 			return nil, nil, err
 		}

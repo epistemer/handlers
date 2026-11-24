@@ -2,9 +2,14 @@ package directive
 
 import (
 	"fmt"
+	"go/ast"
+	"go/parser"
 	"go/token"
 	"go/types"
+	"os"
+	"path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -43,14 +48,15 @@ func buildTextUnmarshaler() *types.Interface {
 
 // Types type-checks the package in dir with go/packages and checks parameter types (§4.2).
 // It returns only the diagnostics that need type information.
-func Types(dir string, pkg *Package) ([]Diagnostic, error) {
+func Types(dir string, pkg *Package, out string) ([]Diagnostic, error) {
 	if pkg == nil || len(pkg.Routes) == 0 {
 		return nil, nil
 	}
 
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
-			packages.NeedTypes | packages.NeedTypesInfo,
+			packages.NeedImports | packages.NeedTypes | packages.NeedTypesInfo |
+			packages.NeedSyntax | packages.NeedModule,
 		Dir: dir,
 	}
 	lpkgs, err := packages.Load(cfg, ".")
@@ -63,6 +69,9 @@ func Types(dir string, pkg *Package) ([]Diagnostic, error) {
 	lpkg := lpkgs[0]
 
 	if len(lpkg.Errors) > 0 {
+		if diag, ok := findRouteDiagnostic(lpkg, dir, out); ok {
+			return []Diagnostic{diag}, nil
+		}
 		pos, msg := formatPackageError(lpkg.Errors[0], dir)
 		return []Diagnostic{{
 			Pos:      pos,
@@ -306,4 +315,298 @@ func parsePackageErrorPos(posStr, fallbackDir string) token.Position {
 	}
 	pos.Filename = posStr
 	return pos
+}
+
+func findRouteDiagnostic(lpkg *packages.Package, dir, out string) (Diagnostic, bool) {
+	if out != "" && !filepath.IsAbs(out) {
+		if abs, err := filepath.Abs(out); err == nil {
+			out = abs
+		}
+	}
+	if out != "" {
+		out = filepath.Clean(out)
+	}
+
+	modDir, modPath := findModuleInfo(dir)
+	if lpkg.Module != nil {
+		if lpkg.Module.Dir != "" {
+			modDir = lpkg.Module.Dir
+		}
+		if lpkg.Module.Path != "" {
+			modPath = lpkg.Module.Path
+		}
+	}
+	outImportPath := computeOutImportPath(out, modDir, modPath)
+
+	var qualifying []Diagnostic
+	for _, e := range lpkg.Errors {
+		pos, msg := formatPackageError(e, dir)
+
+		if ident, name, ok := parseUndefinedPkgMember(msg); ok {
+			if isGeneratedRoutesImport(lpkg, dir, pos.Filename, ident, out, modDir, modPath, outImportPath) {
+				qualifying = append(qualifying, Diagnostic{
+					Pos:      pos,
+					Severity: Error,
+					Message:  fmt.Sprintf("%s.%s doesn't exist yet: generate the route before linking to it", ident, name),
+				})
+				continue
+			}
+		}
+
+		if outImportPath != "" && !hasGoFiles(out) && namesImport(e.Msg, outImportPath) {
+			qualifying = append(qualifying, Diagnostic{
+				Pos:      pos,
+				Severity: Error,
+				Message:  fmt.Sprintf("%s doesn't exist yet: generate the routes before linking to them", outImportPath),
+			})
+			continue
+		}
+	}
+
+	if len(qualifying) > 0 {
+		sortDiagnostics(qualifying)
+		return qualifying[0], true
+	}
+	return Diagnostic{}, false
+}
+
+func parseUndefinedPkgMember(msg string) (ident, name string, ok bool) {
+	msg = strings.TrimSpace(msg)
+	const prefix = "undefined: "
+	if !strings.HasPrefix(msg, prefix) {
+		return "", "", false
+	}
+	target := strings.TrimPrefix(msg, prefix)
+	parts := strings.Split(target, ".")
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	ident, name = parts[0], parts[1]
+	if !isGoIdent(ident) || !isGoIdent(name) || !token.IsExported(name) {
+		return "", "", false
+	}
+	return ident, name, true
+}
+
+func isGoIdent(s string) bool {
+	if s == "" || token.Lookup(s) != token.IDENT {
+		return false
+	}
+	return token.IsIdentifier(s)
+}
+
+func isGeneratedRoutesImport(lpkg *packages.Package, dir, filename, ident, out, modDir, modPath, outImportPath string) bool {
+	absFile := filename
+	if !filepath.IsAbs(absFile) {
+		absFile = filepath.Join(dir, absFile)
+	}
+	absFile = filepath.Clean(absFile)
+
+	fileImports := findFileImports(lpkg, dir, absFile)
+	for _, spec := range fileImports {
+		impPath, err := strconv.Unquote(spec.Path.Value)
+		if err != nil {
+			continue
+		}
+		var localName string
+		if spec.Name != nil {
+			localName = spec.Name.Name
+		} else {
+			if impPkg, ok := lpkg.Imports[impPath]; ok && impPkg.Name != "" {
+				localName = impPkg.Name
+			} else {
+				localName = resolvePkgName(impPath, dir, modDir, modPath, out, outImportPath)
+			}
+		}
+		if localName != ident {
+			continue
+		}
+
+		pkgDir := resolvePkgDir(lpkg, impPath, dir, modDir, modPath, out, outImportPath)
+		if pkgDir != "" {
+			cleanPkgDir := filepath.Clean(pkgDir)
+			if out != "" && cleanPkgDir == filepath.Clean(out) {
+				return true
+			}
+			if hasRoutesJSON(cleanPkgDir) {
+				return true
+			}
+		}
+		if outImportPath != "" && impPath == outImportPath {
+			return true
+		}
+	}
+	return false
+}
+
+func findFileImports(lpkg *packages.Package, dir, absFile string) []*ast.ImportSpec {
+	for _, f := range lpkg.Syntax {
+		fPos := lpkg.Fset.Position(f.Pos())
+		fName := fPos.Filename
+		if !filepath.IsAbs(fName) {
+			fName = filepath.Join(dir, fName)
+		}
+		if sameFilePath(fName, absFile) {
+			return f.Imports
+		}
+	}
+	fset := token.NewFileSet()
+	if f, err := parser.ParseFile(fset, absFile, nil, parser.ImportsOnly); err == nil {
+		return f.Imports
+	}
+	return nil
+}
+
+func sameFilePath(a, b string) bool {
+	if a == b {
+		return true
+	}
+	if filepath.Clean(a) == filepath.Clean(b) {
+		return true
+	}
+	if aReal, err := filepath.EvalSymlinks(a); err == nil {
+		if bReal, err := filepath.EvalSymlinks(b); err == nil {
+			return filepath.Clean(aReal) == filepath.Clean(bReal)
+		}
+	}
+	return false
+}
+
+func resolvePkgDir(lpkg *packages.Package, impPath, dir, modDir, modPath, out, outImportPath string) string {
+	if lpkg != nil {
+		if impPkg, ok := lpkg.Imports[impPath]; ok && len(impPkg.GoFiles) > 0 {
+			return filepath.Dir(impPkg.GoFiles[0])
+		}
+	}
+	if outImportPath != "" && impPath == outImportPath && out != "" {
+		return out
+	}
+	if modDir != "" && modPath != "" {
+		if impPath == modPath {
+			return modDir
+		}
+		if strings.HasPrefix(impPath, modPath+"/") {
+			sub := strings.TrimPrefix(impPath, modPath+"/")
+			return filepath.Join(modDir, filepath.FromSlash(sub))
+		}
+	}
+	return ""
+}
+
+func resolvePkgName(impPath, dir, modDir, modPath, out, outImportPath string) string {
+	pkgDir := resolvePkgDir(nil, impPath, dir, modDir, modPath, out, outImportPath)
+	if pkgDir != "" {
+		entries, err := os.ReadDir(pkgDir)
+		if err == nil {
+			var names []string
+			for _, e := range entries {
+				n := e.Name()
+				if e.IsDir() || !strings.HasSuffix(n, ".go") || strings.HasSuffix(n, "_test.go") {
+					continue
+				}
+				f, err := parser.ParseFile(token.NewFileSet(), filepath.Join(pkgDir, n), nil, parser.PackageClauseOnly)
+				if err == nil && !strings.HasSuffix(f.Name.Name, "_test") {
+					names = append(names, f.Name.Name)
+				}
+			}
+			if len(names) > 0 {
+				slices.Sort(names)
+				return names[0]
+			}
+		}
+	}
+	return path.Base(impPath)
+}
+
+func hasRoutesJSON(dir string) bool {
+	if dir == "" {
+		return false
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasPrefix(e.Name(), "zz_") && strings.HasSuffix(e.Name(), ".routes.json") {
+			return true
+		}
+	}
+	return false
+}
+
+func findModuleInfo(startDir string) (modDir, modPath string) {
+	cur := filepath.Clean(startDir)
+	for {
+		data, err := os.ReadFile(filepath.Join(cur, "go.mod"))
+		if err == nil {
+			for line := range strings.SplitSeq(string(data), "\n") {
+				line = strings.TrimSpace(line)
+				if strings.HasPrefix(line, "module ") {
+					return cur, strings.TrimSpace(strings.TrimPrefix(line, "module "))
+				}
+			}
+			return cur, ""
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			break
+		}
+		cur = parent
+	}
+	return "", ""
+}
+
+func computeOutImportPath(out, modDir, modPath string) string {
+	if out == "" || modDir == "" || modPath == "" {
+		return ""
+	}
+	if r, err := filepath.EvalSymlinks(modDir); err == nil {
+		modDir = r
+	}
+	if r, err := filepath.EvalSymlinks(out); err == nil {
+		out = r
+	} else if r, err := filepath.EvalSymlinks(filepath.Dir(out)); err == nil {
+		out = filepath.Join(r, filepath.Base(out))
+	}
+	rel, err := filepath.Rel(modDir, out)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return ""
+	}
+	if rel == "." {
+		return modPath
+	}
+	return path.Join(modPath, filepath.ToSlash(rel))
+}
+
+// hasGoFiles reports whether dir holds a non-test Go file.
+func hasGoFiles(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".go") && !strings.HasSuffix(e.Name(), "_test.go") {
+			return true
+		}
+	}
+	return false
+}
+
+// namesImport reports whether msg is an import failure naming exactly path
+// (quoted, or followed by a space, a parenthesis, a colon or the end).
+func namesImport(msg, path string) bool {
+	if !strings.Contains(msg, "import") && !strings.Contains(msg, "package") {
+		return false
+	}
+	for i := 0; ; {
+		j := strings.Index(msg[i:], path)
+		if j < 0 {
+			return false
+		}
+		end := i + j + len(path)
+		if end == len(msg) || strings.ContainsRune("\" ( ):", rune(msg[end])) {
+			return true
+		}
+		i = end
+	}
 }

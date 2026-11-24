@@ -1,0 +1,26 @@
+{
+  "domain": "routes/v1",
+  "producer": "handlers",
+  "source": "missing_builder",
+  "package": {
+    "name": "adminroutes",
+    "dir": "adminroutes"
+  },
+  "surface": "html",
+  "prefix": "/missingbuilder",
+  "routes": [
+    {
+      "key": "missingbuilder.events.list",
+      "method": "GET",
+      "pattern": "/events",
+      "name": "EventsList",
+      "var": "L10nEventsList",
+      "text": "Events",
+      "auth": "public",
+      "view": true,
+      "search": false,
+      "params": []
+    }
+  ],
+  "permissions": []
+}
