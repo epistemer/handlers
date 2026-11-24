@@ -215,7 +215,14 @@ func TestTypesCases(t *testing.T) {
 			caseDir := filepath.Join(typesRoot, name)
 			files := readGoFiles(t, caseDir)
 			pkg, diags := directive.Syntax(files)
-			tDiags, err := directive.Types(caseDir, pkg)
+			out := ""
+			if b, err := os.ReadFile(filepath.Join(caseDir, "out.txt")); err == nil {
+				outRel := strings.TrimSpace(string(b))
+				if outRel != "" {
+					out = filepath.Join(caseDir, filepath.FromSlash(outRel))
+				}
+			}
+			tDiags, err := directive.Types(caseDir, pkg, out)
 			if err != nil {
 				t.Fatalf("Types(%s): %v", caseDir, err)
 			}
@@ -311,7 +318,7 @@ func TestTypesParamInfo(t *testing.T) {
 	if len(diags) != 0 {
 		t.Fatalf("unexpected syntax diags: %v", diags)
 	}
-	tDiags, err := directive.Types(dir, pkg)
+	tDiags, err := directive.Types(dir, pkg, "")
 	if err != nil {
 		t.Fatal(err)
 	}

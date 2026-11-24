@@ -190,6 +190,12 @@ for word, except the part a message quotes from Go (`ServeMux`'s reason, a
 type error), which tests match by its fixed prefix. A run with an error writes nothing; warnings don't stop it unless
 `-strict` is given.
 
+A handler package is written, generated, then linked: write the handler,
+run `handlers gen` (or `genx`), then use its builder. A package that links
+to a builder before it exists doesn't type-check, and the two A6 rows below
+say which builder is missing. Of the type errors, the first of these two
+kinds is reported; otherwise the first error, as `doesn't type-check`.
+
 ### 5.2 Errors
 
 | Case | Message |
@@ -224,6 +230,8 @@ type error), which tests match by its fixed prefix. A run with an error writes n
 | Two keys, one Go name | `keys "<a>" and "<b>" both give the Go name <Name>` |
 | A reserved or taken Go name | `<Name> is a name the generated package declares` · `<Name> is also the label variable of <key>` · `<Name> is also the variable of permission <key>` |
 | The package doesn't type-check | `the package doesn't type-check: <first error>` |
+| The package links to a builder its routes package doesn't have yet (A6) | `<pkg>.<Name> doesn't exist yet: generate the route before linking to it`, at the use; `<pkg>` as the file imports it |
+| The package imports its routes package before it exists (A6, `gen` only) | `<import path> doesn't exist yet: generate the routes before linking to them`, at the import |
 
 ### 5.3 Warnings
 
@@ -800,4 +808,5 @@ client SDK pipeline; a language server in the Claude Code plugin.
 - **A3** (2026-11-18, M6, Claude), clarifications found by the API review: a `-key-prefix` that isn't a key is a usage error (`handlers openapi: -key-prefix "<v>" is not a key`, exit 2), not a spec diagnostic; `authguard`'s `Admit` checks lazily, so its error is always nil and a failure to read a permission is logged once and refuses; a routes package with no routes registers no catch-all, since its table carries no prefix.
 - **A4** (2026-11-22, for v0.2.0, accepted by epistemer with the defaults of H1–H4): URL builders return `handlers.Link` (`URL`, `Method`, `Route`, `With`, `String`), and `handlers.Gate` adapts a guard's `Admit` check to ui's actions gate. Breaking. The design is [ADR 0005](adr/0005-builders-return-a-link.md); §10.1 and §11.1 state it.
 - **A5** (2026-11-22, for v0.3.0, accepted by epistemer: H6 decided as replace, H5 and H7–H9 on their defaults): a route can set its own body limit with `//h:body <size>` or `x-max-body: <size>` (`^[1-9][0-9]*(B|KiB|MiB|GiB)$`, fitting in `int64`, absent on `GET`), carried in `routes/v1` `maxBody` and `Route.MaxBody`, replacing `WithMaxBody`'s limit for that route. The design is [ADR 0006](adr/0006-route-body-limit.md); §4.2, §5.2, §7.2, §7.3, §8, §11.1, §12.1 and §15 state it.
+- **A6** (2026-11-24, Claude, a clarification; Confab's F4, downgraded to low by epistemer): `handlers gen` still refuses a handler package that doesn't type-check, but when the cause is a link to a builder its routes package doesn't have yet, or an import of a routes package that doesn't exist yet, the message names it and says to generate first (§5.1, §5.2). A routes package is the `-out` directory, or a package holding a `zz_*.routes.json`. `vet` and the language server give the first message too.
 

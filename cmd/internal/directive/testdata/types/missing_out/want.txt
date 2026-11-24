@@ -1,0 +1,1 @@
+handlers.go:6:2: toy/missing_out/adminroutes doesn't exist yet: generate the routes before linking to them

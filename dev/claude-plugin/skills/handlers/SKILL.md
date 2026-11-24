@@ -93,7 +93,9 @@ func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID) error
     `parameter <name>: a {<name>...} wildcard needs a string type`,
     `parameter <name>: type <T> can't be read from a path`,
     `parameter <name>: type <T> is declared in this package; declare it in another so the generated package can import it`,
-    `the package doesn't type-check: <first error>`.
+    `the package doesn't type-check: <first error>`, or, when the cause is a
+    link made before generating, `<pkg>.<Name> doesn't exist yet: generate the route before linking to it`
+    and `<import path> doesn't exist yet: generate the routes before linking to them`.
   - Duplicates/collisions: `key "<k>" also at <file>:<line>`,
     `<METHOD> <prefix><path> also at <file>:<line>`,
     `<METHOD> <prefix><path> conflicts with <METHOD> <prefix><path> at <file>:<line>`,
@@ -321,9 +323,13 @@ either translated or source text, returning `Hit{Route, Text}` in key order.
 - **Upgrading from v0.1.0:** require v0.2.0, run `go tool genx` first (the
   handler package still type-checks against the old string builders), then
   add `.URL()` where the compiler asks.
-- **Run `go tool genx` (or `handlers gen`) before using new URL builders or
-  `L10n*`/`Perm*` variables**, and remember `internal/admin` cannot import
-  `adminroutes` before `adminroutes` exists or `handlers gen`'s type pass fails.
+- **Write the handler, generate, then link.** Run `go tool genx` (or
+  `handlers gen`) after adding a route and before using its URL builder or
+  its `L10n*`/`Perm*` variables. A package that links to a builder that
+  doesn't exist yet doesn't type-check, so gen refuses it and names the
+  builder (`adminroutes.EventsDelete doesn't exist yet: generate the route
+  before linking to it`): remove the link, generate, link again. No stub
+  tool is needed.
 - **Surface isolation:** mount admin (`auth.Cookie()`) and API
   (`auth.Bearer()`) on separate `http.ServeMux` instances so cookies cannot
   reach API routes or bearer tokens reach admin routes.

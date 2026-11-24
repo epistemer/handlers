@@ -244,6 +244,32 @@ func (h *H) Home(w http.ResponseWriter, r *http.Request) error { return nil }
 		if _, err := os.Stat(filepath.Join(tmpMod, "out2")); !os.IsNotExist(err) {
 			t.Fatalf("error run wrote output dir")
 		}
+
+		// Missing out package linked before gen -> exit 1 with guidance
+		if err := os.WriteFile(filepath.Join(tmpMod, "h.go"), []byte(`package w
+
+import (
+	"net/http"
+
+	"example.com/w/adminroutes"
+)
+
+type H struct{}
+
+//h:key home
+//h:method GET
+//h:path /
+func (h *H) Home(w http.ResponseWriter, r *http.Request) error {
+	_ = adminroutes.EventsList()
+	return nil
+}
+`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		code, stdout, _ = runBin(t, bin, tmpMod, "", "gen", "-out", "adminroutes", ".")
+		if code != 1 || !strings.Contains(stdout, "example.com/w/adminroutes doesn't exist yet: generate the routes before linking to them") {
+			t.Fatalf("missing out gen = (%d, %q), want message *example.com/w/adminroutes doesn't exist yet: generate the routes before linking to them*", code, stdout)
+		}
 	})
 }
 

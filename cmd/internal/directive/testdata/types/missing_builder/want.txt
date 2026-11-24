@@ -1,0 +1,1 @@
+handlers.go:16:18: adminroutes.EventsDelete doesn't exist yet: generate the route before linking to it
