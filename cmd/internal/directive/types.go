@@ -496,13 +496,17 @@ func resolvePkgDir(lpkg *packages.Package, impPath, dir, modDir, modPath, out, o
 func resolvePkgName(impPath, dir, modDir, modPath, out, outImportPath string) string {
 	pkgDir := resolvePkgDir(nil, impPath, dir, modDir, modPath, out, outImportPath)
 	if pkgDir != "" {
-		fset := token.NewFileSet()
-		pkgs, err := parser.ParseDir(fset, pkgDir, nil, parser.PackageClauseOnly)
+		entries, err := os.ReadDir(pkgDir)
 		if err == nil {
-			names := make([]string, 0, len(pkgs))
-			for name := range pkgs {
-				if !strings.HasSuffix(name, "_test") {
-					names = append(names, name)
+			var names []string
+			for _, e := range entries {
+				n := e.Name()
+				if e.IsDir() || !strings.HasSuffix(n, ".go") || strings.HasSuffix(n, "_test.go") {
+					continue
+				}
+				f, err := parser.ParseFile(token.NewFileSet(), filepath.Join(pkgDir, n), nil, parser.PackageClauseOnly)
+				if err == nil && !strings.HasSuffix(f.Name.Name, "_test") {
+					names = append(names, f.Name.Name)
 				}
 			}
 			if len(names) > 0 {
@@ -555,6 +559,14 @@ func findModuleInfo(startDir string) (modDir, modPath string) {
 func computeOutImportPath(out, modDir, modPath string) string {
 	if out == "" || modDir == "" || modPath == "" {
 		return ""
+	}
+	if r, err := filepath.EvalSymlinks(modDir); err == nil {
+		modDir = r
+	}
+	if r, err := filepath.EvalSymlinks(out); err == nil {
+		out = r
+	} else if r, err := filepath.EvalSymlinks(filepath.Dir(out)); err == nil {
+		out = filepath.Join(r, filepath.Base(out))
 	}
 	rel, err := filepath.Rel(modDir, out)
 	if err != nil || strings.HasPrefix(rel, "..") {
