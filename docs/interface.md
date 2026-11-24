@@ -6,6 +6,10 @@
 > choices Claude made in it were confirmed by epistemer the same day. Reviewed before the lock:
 > [review 0005](reviews/0005-interface.md).
 >
+> Amendment A7 ([ADR 0007](adr/0007-request-lifecycle.md)) was locked by
+> epistemer on 2026-11-24 with the defaults of N1–N11; the parts marked
+> (A7) describe it.
+>
 > This document says what an app writes and what it gets back. The design
 > and its reasons are [ADR 0001](adr/0001-routes-domain.md) and
 > [brief.md](brief.md); the spikes are ADRs 0002–0004.
@@ -16,6 +20,7 @@
 |---|---|---|---|
 | `github.com/epistemer/handlers` | `handlers` | The runtime (§11) and `genx.meta.yaml` with the generators `routes`, `labels`, `permissions` (§9) | errors, i18n |
 | | `handlers/handlerstest` | Test helpers (§11.6) | |
+| | `handlers/middleware` | (A7) Recovery for the app's own handlers, redirects and htmx, the error page, the flash (§11.8) | |
 | `github.com/epistemer/handlers/authguard` | `authguard` | A `Guard` over auth (§11.4) | auth |
 | `github.com/epistemer/handlers/openapi` | `openapi` | The adapter for oapi-codegen's server (§11.5) | kin-openapi |
 | `github.com/epistemer/handlers/cmd` | `cmd/handlers` | The command: `gen`, `openapi`, `vet`, `lsp` (§6) | golang.org/x/tools, kin-openapi |
@@ -47,7 +52,7 @@ The brief's table (D1–D19) and the spikes, as they stand at the freeze.
 | D14 | Handlers return errors; handlers writes them from `errors.Public` and `errors.KindOf` | brief |
 | D15 | The core depends on errors and i18n only; auth, kin-openapi and x/tools are in nested modules | brief; this document |
 | D16 | Route keys are permanent; a removed key is a warning | epistemer |
-| D17 | Rendering, menus and CRUD tables are out of scope | brief |
+| D17 | Rendering, menus and CRUD tables are out of scope. Recovery, redirects, htmx helpers and the flash are in (A7, `handlers/middleware`; neozp D4) | brief; epistemer |
 | D18 | `//h:param <name> label <text>` replaces `//p[<name>]:label` | epistemer |
 | D19 | The VS Code extension is a client of `handlers lsp`; the Claude Code plugin ships the hook, not a language server | epistemer; ADR 0004 |
 
@@ -162,7 +167,7 @@ func (h *H) Category(w http.ResponseWriter, r *http.Request, id int64) error {
 | `path` | starts with `/`; doesn't end with `/` unless it is `/`; `ServeMux` wildcards `{name}` and, last, `{name...}`; no `{$}` | required |
 | `desc` | text, not empty | the key made readable (§13.3), with a warning |
 | `auth` | `public`, `session`, `unverified` | the route's permission at `Verified` |
-| `perm` | a key, as `key` | the route's key |
+| `perm` | `<key>`; (A7) `<key> <text>`, the permission's text; (A7) `<key> from <package>`, a permission another routes package declares | the route's key |
 | `view` | none, or `true` | off |
 | `search` | none, or `true` | off |
 | `entity` | another route's key, in the same package, not its own | none |
@@ -171,6 +176,17 @@ func (h *H) Category(w http.ResponseWriter, r *http.Request, id int64) error {
 
 - `unverified` declares the route's permission at `auth.Unverified`.
 - `perm` is only for routes whose `auth` is the default or `unverified`.
+- (A7) `perm`'s value is `<key> from <package>` when the word after the
+  key is `from` (then exactly one Go identifier must follow), else
+  `<key> <text>` when more follows, else `<key>`. A text can't begin with
+  the word "from". With `from`, the route takes the permission that
+  the routes package named `<package>` (its `-package`) declares, and this
+  package declares nothing for it. The `permissions` generator and `vet`
+  check that the package exists and declares it (§9); `gen` checks only
+  its own file.
+- (A7) Routes of one package that give a permission a text give the same
+  one. A permission is declared or taken in a package, not both, and taken
+  from one package only.
   Routes that share one must agree on `unverified`.
 - Parameter types: `string`, `bool`, the integer types other than `uintptr`, a type whose
   underlying type is one of those, or a type `T` with `*T` implementing
@@ -213,6 +229,11 @@ kinds is reported; otherwise the first error, as `doesn't type-check`.
 | `param` | `h:param: write "h:param <name> label <text>"` · `h:param: no parameter <name>` |
 | `perm` with `public` or `session` | `h:perm needs a permission route, not auth <auth>` |
 | Routes sharing a permission disagree on `unverified` | `permission "<k>": <key a> is unverified and <key b> isn't` |
+| (A7) `from` naming this package | `h:perm: <package> is this routes package; declare the permission here` |
+| (A7) `from` not followed by exactly one Go identifier | `h:perm: write "h:perm <key> from <package>", with nothing after` |
+| (A7) Two texts for one permission | `permission "<k>": text "<b>" differs from "<a>" at <file>:<line>` |
+| (A7) Declared and taken in one package | `permission "<k>" is declared in this package at <file>:<line>, so it can't be taken from <package>` |
+| (A7) Taken from two packages | `permission "<k>" is taken from <other> at <file>:<line>, not <package>` |
 | `entity` naming its own route | `h:entity names the route itself` |
 | Directives on two types | `directives on <A> and <B>: one handler type per package` |
 | A missing directive | `missing h:<name>` (key, method, path) |
@@ -313,6 +334,7 @@ Messages are `<spec>: <location>: <message>`, the location as
 | An empty `x-label` | `<M> <p>: x-label is empty` |
 | `x-max-body` | `<M> <p>: x-max-body must be a string, as "20MiB"` · `<M> <p>: x-max-body: "<v>" is not a size: write a positive whole number and B, KiB, MiB or GiB, as 20MiB` · `<M> <p>: x-max-body: "<v>" is larger than a body can be` · `<M> <p>: x-max-body on a GET route, which has no body` |
 | An operation name equal to a label or permission variable | as §5.2 |
+| (A7) `x-permission`: `from` naming this package, two texts, declared and taken, taken from two | `<M> <p>: ` and §5.2's A7 messages, with `x-permission:` for `h:perm:`, and `<M> <p>` in place of `<file>:<line>` |
 | An error response without the `Error` schema | `<M> <p>: response <code> doesn't use #/components/schemas/Error` (every `4XX`, `5XX` and `default` response with a JSON body) |
 | `Error` missing or wrong | `components/schemas/Error: needs string properties code and message` |
 | A path the mux can't route | `<M> <p>: path parameter "<n>" is not a Go identifier` · `<M> <p>: parameter {<n>} doesn't fill its segment` · `<M> <p>: parameter "<n>" sets allowReserved` |
@@ -329,7 +351,7 @@ are resolved before any check. `openapi -check` fails as `gen -check` does.
 | Extension | On | Means |
 |---|---|---|
 | `x-route-key` | operation | The whole route key (no `-key-prefix`), pinned across an `operationId` rename |
-| `x-permission` | operation | The permission's whole key; default the route key |
+| `x-permission` | operation | The permission's whole key; default the route key. (A7) As `perm`'s value (§4.2): `<key>`, `<key> <text>`, or `<key> from <package>` |
 | `x-auth: session` | operation | A signed-in session without a permission |
 | `x-label` | operation, path parameter | The label text; default the operation's `summary`, else the `operationId` made readable; a parameter's name made readable |
 | `x-max-body` | operation | The route's own body limit, a string with `body`'s syntax (`20MiB`); replaces `WithMaxBody` |
@@ -368,6 +390,7 @@ Go names, resolved by the producer:
 | Permission `var` | `Perm` + the key split at `.`, `_` and `-`, each part's first letter upper-cased (`pricingPlans.fees` → `PermPricingPlansFees`) |
 | `type`, `import`, `alias` | The parameter's type as the generated package spells it (`shop.OrderID`), its package's import path (`""` for predeclared types) and the qualifier it is imported as. Aliases are the package's name, numbered on a collision (`shop2`), and never a name under which the generated file imports its own packages (`handlers`, `http`, `strconv`, `url`, `access`, `auth`, `openapi`, `openapi3`) |
 | `parse` | `text` for a text type; else the underlying type: `string`, `bool`, `int`, `int8` … `int64`, `uint`, `uint8` … `uint64` |
+| Permission `from` | (A7) Optional: the name of the routes package that declares it, never the file's own. An entry with `from` has `key` and `level` (the taking routes'), and no `var` or `text` |
 | `maxBody` | Optional integer of bytes (at least 1, absent on a `GET` route), from `//h:body` or `x-max-body` |
 | `source` | The handler package's directory, or the spec's path, relative to the module root |
 
@@ -379,7 +402,7 @@ In `github.com/epistemer/handlers`'s `genx.meta.yaml`. No parameters.
 |---|---|---|
 | `routes` | `routes/v1` | `<dir>/zz_<package>_routes.go` per routes file (§10) |
 | `labels` | `routes/v1` | emits `labels/v1`: `<dir>/zz_<package>.labels.json` (§13) |
-| `permissions` | `routes/v1` | `<dir>/zz_<package>_permissions.go` per routes file that declares a permission. A permission belongs to one routes package: a key in two routes files stops it with `permission "<k>" is in <dir a> and <dir b>; a permission belongs to one routes package` (sharing across packages is §16's) |
+| `permissions` | `routes/v1` | `<dir>/zz_<package>_permissions.go` per routes file that declares a permission (an entry without `from`). A key declared in two routes files stops it with `permission "<k>" is in <dir a> and <dir b>; declare it in one and take it from there with "from <package>"` (A7). (A7) A taken permission stops it with `permission "<k>" in <dir>: no routes package <P>` · `permission "<k>" in <dir>: two routes packages are named <P>, in <dir a> and <dir b>` · `permission "<k>" in <dir>: <P> doesn't declare it` · `permission "<k>" in <dir>: <key> is unverified and the declaration in <P> isn't` (or `isn't unverified and the declaration in <P> is`). `vet` gives the same messages at the taking route |
 
 ## 10. Generated Go
 
@@ -552,7 +575,16 @@ var (
 	ErrTooLarge       = errors.Key("errors.handlers.too_large", "the request is too large", errors.Invalid)
 	ErrInvalidRequest = errors.Key("errors.handlers.invalid_request", "the request is not valid", errors.Invalid)
 	ErrInvalidField   = errors.Key1[string]("errors.handlers.invalid_field", "the request is not valid at %s", errors.Invalid)
+	ErrPanic          = errors.Key("errors.handlers.panic", "the server failed to answer", errors.Internal) // A7
 )
+
+// Panic is a recovered panic (A7), ErrPanic's cause.
+type Panic struct {
+	Value any    // what was panicked
+	Stack []byte // runtime/debug.Stack() where it was recovered
+}
+
+func (p *Panic) Error() string // "panic: <Value>"
 ```
 
 - `ErrBadParam`'s argument is the parameter's label, which errors renders
@@ -685,12 +717,105 @@ type Hit struct {
 func (t *Table) Search(r *http.Request, g Guard, tr *i18n.Translator, q Query) ([]Hit, error)
 ```
 
+### 11.8 `middleware` (A7)
+
+```go
+package middleware // import "github.com/epistemer/handlers/middleware"
+
+// Recover recovers a panic in next as registration does (§12.1, step 0),
+// writing ErrPanic with ew.
+func Recover(ew handlers.ErrorWriter) func(http.Handler) http.Handler
+
+func HTMX(r *http.Request) bool    // HX-Request: true
+func Boosted(r *http.Request) bool // HX-Boosted: true
+
+// Redirect: with htmx, 204 and HX-Redirect; without, 303 See Other.
+// Another site's address (not one leading slash; a scheme, a host, a
+// backslash or a control character) returns ErrNotLocal, writing nothing.
+// A nil to panics.
+func Redirect(w http.ResponseWriter, r *http.Request, to interface{ URL() string }) error
+
+var ErrNotLocal = errors.Key("errors.handlers.not_local", "the address isn't this site's", errors.Invalid)
+
+// ErrorPage logs err as WriteText does, then calls page with
+// handlers.Status(err); page writes the whole answer. An error from page
+// is logged; if nothing was written, err is written as WriteText writes
+// it (not logged again); else the connection is aborted.
+func ErrorPage(page func(w http.ResponseWriter, r *http.Request, status int, err error) error) handlers.ErrorWriter
+
+const (
+	LevelInfo    = "info"
+	LevelSuccess = "success"
+	LevelWarning = "warning"
+	LevelError   = "error"
+)
+
+type Flash struct{ /* unexported */ }
+type FlashOption func(*flashOptions)
+
+func NewFlash(opts ...FlashOption) *Flash
+func FlashName(name string) FlashOption // the cookie's base name; default "flash"
+func FlashInsecure() FlashOption        // no Secure and no __Host- prefix
+
+func (f *Flash) Middleware(next http.Handler) http.Handler
+func (f *Flash) Add(ctx context.Context, level string, msg i18n.Ter, args ...any)
+func (f *Flash) Messages(ctx context.Context) iter.Seq2[string, i18n.Ter]
+```
+
+- **Recovery** is on in every `Register` and `Mount` (§12.1, step 0);
+  `Recover` is for the app's own handlers.
+- **`Add`** panics on another level (`middleware: unknown flash level
+  "<l>"`), and outside `f.Middleware` (`middleware: Flash.Add outside its
+  Middleware`). A `msg` that is an `i18n.Ker` and not an `error` travels as
+  its key and args and renders in the locale of the request that shows
+  it; an `error` or another `Ter` is rendered when added, in the request's
+  locale. Args kept as they are: `string`, `bool`, integers, `float32`,
+  `float64`, and keys (rendered in the reader's locale); others are
+  rendered when added (a `Ter` in the request's locale, the rest with
+  `fmt.Sprint`).
+- **`Messages`** returns the messages that came with the request, oldest
+  first, any number of times; nothing outside `f.Middleware`, nothing to a
+  `HEAD` or an htmx request that isn't boosted, and none added during this
+  request.
+- **Delivery.** When the final header is written (1xx ignored, a `Flush`
+  counts, never after a hijack; or when the handler returns without
+  writing): the messages are delivered by a `text/html` response (the
+  content type set, else sniffed from the first write as `net/http` does)
+  with a status below 300 or from 400 to 599, to a request that received
+  them; a
+  status of 500 or more drops what this request added; `Set-Cookie` is
+  written only when delivered messages are removed or messages were added
+  (appended to those the request arrived with).
+- **The cookie**: `__Host-<name>`, `Secure`, `HttpOnly`, `SameSite=Lax`,
+  `Path=/`, `Max-Age=300`; with `FlashInsecure`, `<name>` without
+  `Secure`. Base64url JSON, unsigned. A cookie over 4 KiB is ignored
+  undecoded; a malformed cookie, an unknown level or argument is dropped
+  (debug log); past 3 KiB written, the oldest messages are dropped (warn
+  log). Argument kinds are kept (a defined integer type stays an integer);
+  errors are tested before keys. The wrapped `ResponseWriter` has `Unwrap`,
+  `Flush` and `Hijack`.
+- Wrap the HTML surfaces with `f.Middleware`, not the API or static files.
+- ui shows flashes through its own interface of these two methods (neozp
+  D4); `*Flash` satisfies it structurally.
+
 ## 12. Behaviour
 
 ### 12.1 The chain
 
 Every registered route answers in this order:
 
+0. (A7) A panic below — the body limit, the guard, the middleware,
+   validation, binding, the handler, the catch-all — is recovered. It is
+   logged once at error level (`handlers: panic`, with `route`, `panic` and
+   `stack`; `middleware.Recover` logs `method` and `path` for `route`);
+   `http.ErrAbortHandler` is panicked again. A flush or a hijack counts as
+   started. If nothing was
+   written, `ErrPanic.Wrap(&Panic{…})` goes to the error writer (the
+   default writers don't log `ErrPanic` again); if the response had
+   started, the connection is aborted (`panic(http.ErrAbortHandler)`). A
+   panic in the error writer is logged and, with nothing written, its
+   headers are cleared and `WriteText` answers; otherwise, or if that
+   panics, the connection is aborted.
 1. If `Route.MaxBody > 0`, the body is limited to it; else if the registration's `maxBody > 0` (`WithMaxBody`), to that; else not at all.
 2. The route goes into the context (`From`).
 3. The guard checks it, unless it is public.
@@ -752,10 +877,12 @@ No `meta`.
 
 ### 13.2 Permissions
 
-`access.Permission(<key>, <text>[, auth.Unverified])` per permission of the
-routes file: the key `permission.<key>` in i18n, registered by auth. A
-permission's text is its route's text when one route uses it, and its key
-made readable when several do.
+`access.Permission(<key>, <text>[, auth.Unverified])` per permission the
+routes file declares: the key `permission.<key>` in i18n, registered by
+auth. A permission's text is (A7) the text its routes give after the key;
+else its route's text when one route of the declaring package uses it;
+else its key made readable. (A7) Routes that take it from another package
+don't count, and get nothing generated.
 
 ### 13.3 Readable text
 
@@ -797,8 +924,7 @@ entry. `Search` returns `Admit`'s error.
 
 Breadcrumbs and menus; API keys; query and body parameters for admin
 handlers; OpenAPI 3.1; `x-go-type` and other schemas on path parameters;
-a permission shared by several routes packages, or declared outside
-handlers; generated request validators; a
+a permission declared outside handlers; generated request validators; a
 client SDK pipeline; a language server in the Claude Code plugin.
 
 ## 17. Amendments
@@ -809,4 +935,5 @@ client SDK pipeline; a language server in the Claude Code plugin.
 - **A4** (2026-11-22, for v0.2.0, accepted by epistemer with the defaults of H1–H4): URL builders return `handlers.Link` (`URL`, `Method`, `Route`, `With`, `String`), and `handlers.Gate` adapts a guard's `Admit` check to ui's actions gate. Breaking. The design is [ADR 0005](adr/0005-builders-return-a-link.md); §10.1 and §11.1 state it.
 - **A5** (2026-11-22, for v0.3.0, accepted by epistemer: H6 decided as replace, H5 and H7–H9 on their defaults): a route can set its own body limit with `//h:body <size>` or `x-max-body: <size>` (`^[1-9][0-9]*(B|KiB|MiB|GiB)$`, fitting in `int64`, absent on `GET`), carried in `routes/v1` `maxBody` and `Route.MaxBody`, replacing `WithMaxBody`'s limit for that route. The design is [ADR 0006](adr/0006-route-body-limit.md); §4.2, §5.2, §7.2, §7.3, §8, §11.1, §12.1 and §15 state it.
 - **A6** (2026-11-24, Claude, a clarification; Confab's F4, downgraded to low by epistemer): `handlers gen` still refuses a handler package that doesn't type-check, but when the cause is a link to a builder its routes package doesn't have yet, or an import of a routes package that doesn't exist yet, the message names it and says to generate first (§5.1, §5.2). A routes package is the `-out` directory, or a package holding a `zz_*.routes.json`. `vet` and the language server give the first message too.
+- **A7** (2026-11-24, for v0.4.0, locked by epistemer with the defaults of N1–N11; neozp D4 and D6, Confab's F16, F21, F22 and F25): `handlers/middleware` (recovery for the app's own handlers, `Redirect`, `HTMX`, `Boosted`, `ErrorPage`, `Flash`), recovery on by default in `Register` and `Mount` with `ErrPanic` and `Panic`, a permission's text after its key, and a permission taken from another routes package with `from <package>`. The design and its questions N1–N11 are [ADR 0007](adr/0007-request-lifecycle.md); §1, §2, §4.2, §5.2, §7.2, §7.3, §8, §9, §11.2, §11.8, §12.1, §13.2 and §16 state it.
 
