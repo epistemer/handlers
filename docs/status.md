@@ -3,6 +3,36 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-24 — Confab iteration 1: A6 built, A7 drafted
+
+From Confab's findings and epistemer's answers of 2026-11-24 (neozp D4,
+D6; the board's handlers Decision items).
+
+**Built: A6** (#23), a clarification, no lock (F4, downgraded to low by
+epistemer). The order is write the handler, generate, then link; when a
+package links first, `gen`, `vet` and the language server name the missing
+builder (`adminroutes.EventsDelete doesn't exist yet: generate the route
+before linking to it`) or the routes package that doesn't exist yet.
+Gemini 3.8 Flash (High) wrote it (about 314k tokens); Claude reviewed it;
+Gemini 3.8 Flash (High) reviewed the diff (about 79k tokens), and three of
+its findings changed the code.
+
+**Drafted: A7** (#24, docs only: ADR 0007, review 0008):
+`handlers/middleware` (recovery, on by default in `Register` and `Mount`;
+`Redirect`, `HTMX`, `Boosted`, `ErrorPage`; a flash ui mirrors through a
+structural interface), a permission taken from another routes package
+(`//h:perm <key> from <package>`), and a permission's text after its key.
+Reviewed by Gemini 4 Hydrogen (High), about 58k tokens; twelve of sixteen
+findings changed the draft. The flash's shape is in the session notes for
+the ui session to mirror.
+
+**Not this round:** H5 (search for routes with parameters) and H6 (method
+override), deferred by epistemer.
+
+**Waiting on epistemer** (API design): the lock of A7, questions N1–N11.
+
+**Next.** Build A7 once locked; release v0.4.0 with all four modules.
+
 ## 2026-11-22 — v0.3.0 released
 
 v0.3.0 (#20) with amendment A5, then `authguard`, `openapi` and `cmd`

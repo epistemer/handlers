@@ -136,6 +136,16 @@ M3 and M4 are independent and can run side by side.
 | ☑ | A5.2 | The directive, the extension, `routes/v1` `maxBody`, `Route.MaxBody`, registration, `vet`, the language server, the skill | M | An upload route in the example takes more than its siblings, end to end |
 | ☑ | A5.3 | Release v0.3.0 with `authguard`, `openapi` and `cmd` | S | Tags checked through the proxy |
 
+## Confab iteration 1 (v0.4.0)
+
+| ✓ | ID | Item | Size | Done when |
+|---|----|------|------|-----------|
+| ☑ | A6.1 | F4: gen names a builder linked before it was generated (a clarification) | S | Merged (#23) |
+| ☐ | A7.1 | [ADR 0007](adr/0007-request-lifecycle.md), questions N1–N11, reviewed ([0008](reviews/0008-request-lifecycle.md)) | S | epistemer locks it |
+| ☐ | A7.2 | Recovery on by default, `ErrPanic`, `Panic`, `handlers/middleware` (`Recover`, `Redirect`, `HTMX`, `Boosted`, `ErrorPage`, `Flash`) | M | httptest of every delivery and recovery case in ADR 0007 |
+| ☐ | A7.3 | `//h:perm <key> <text>`, `<key> from <package>`, `x-permission` the same; `routes/v1` `from`; the permissions generator and `vet` | M | The example's admin takes a permission from its API, end to end |
+| ☐ | A7.4 | Release v0.4.0 with `authguard`, `openapi` and `cmd`; the skill | S | Tags checked through the proxy |
+
 ## After v0.1.0 (backlog)
 
 1. Breadcrumbs from a `parent` directive.
