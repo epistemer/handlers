@@ -144,7 +144,7 @@ M3 and M4 are independent and can run side by side.
 | ☑ | A7.1 | [ADR 0007](adr/0007-request-lifecycle.md), questions N1–N11, reviewed ([0008](reviews/0008-request-lifecycle.md)) | S | Locked by epistemer, 2026-11-24 (#24) |
 | ☑ | A7.2 | Recovery on by default, `ErrPanic`, `Panic`, `handlers/middleware` (`Recover`, `Redirect`, `HTMX`, `Boosted`, `ErrorPage`, `Flash`) | M | httptest of every delivery and recovery case in ADR 0007 |
 | ☑ | A7.3 | `//h:perm <key> <text>`, `<key> from <package>`, `x-permission` the same; `routes/v1` `from`; the permissions generator and `vet` | M | The example's admin takes a permission from its API, end to end |
-| ☐ | A7.4 | Release v0.4.0 with `authguard`, `openapi` and `cmd`; the skill | S | Tags checked through the proxy |
+| ☑ | A7.4 | Release v0.4.0 with `authguard`, `openapi` and `cmd`; the skill | S | Tags checked through the proxy |
 
 ## After v0.1.0 (backlog)
 

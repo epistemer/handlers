@@ -3,6 +3,25 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-24 — v0.4.0 released
+
+v0.4.0 (A6 and A7) tagged on main after #27; `authguard`, `openapi` and
+`cmd` v0.4.0 on it (#28, `cmd` without its `replace`). All four were checked
+through proxy.golang.org, and a fresh module builds `handlers/middleware` and
+runs `go tool handlers`. The skill covers the middleware, recovery and
+shared permissions, and is installed.
+
+**Which Confab workaround each change deletes:**
+- `scripts/stub`: A6. Write the handler, generate, then link; gen names a
+  builder linked too early.
+- `Recover`: recovery is on in every `Register` and `Mount`. Its
+  `ErrorPage` can read `*handlers.Panic`, or become `middleware.ErrorPage`.
+- `flash.go`: `middleware.Flash`. Its toasts arrive once ui mirrors the
+  flash interface (ui U1).
+- The double grants: the admin route takes `//h:perm api.talks.review from
+  apiroutes`, and the seed grants it once. Shared permissions get a text
+  after their key.
+
 ## 2026-11-24 — A7 built: recovery, middleware, shared permissions (v0.4.0)
 
 **Locked** by epistemer with the defaults of N1–N11 (#24).
