@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Proposed, for epistemer's lock. Amendment A7, for v0.4.0. Reviewed: [0008](../reviews/0008-request-lifecycle.md) |
+| Status | Locked by epistemer on 2026-11-24 with the defaults of N1–N11. Amendment A7, for v0.4.0. Reviewed: [0008](../reviews/0008-request-lifecycle.md) |
 | Date | 2026-11-24 |
 | Roadmap item | Confab iteration 1: F16, F25 (with ui), F21, F22; neozp decisions D4 and D6 |
 | Deciders | epistemer decides (the decisions of 2026-11-24 settle the what; the questions N1–N11 below are the how). Claude proposes |

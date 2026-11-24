@@ -6,8 +6,9 @@
 > choices Claude made in it were confirmed by epistemer the same day. Reviewed before the lock:
 > [review 0005](reviews/0005-interface.md).
 >
-> **Amendment A7 is proposed, not locked** ([ADR 0007](adr/0007-request-lifecycle.md),
-> questions N1–N11): the parts marked (A7) describe it.
+> Amendment A7 ([ADR 0007](adr/0007-request-lifecycle.md)) was locked by
+> epistemer on 2026-11-24 with the defaults of N1–N11; the parts marked
+> (A7) describe it.
 >
 > This document says what an app writes and what it gets back. The design
 > and its reasons are [ADR 0001](adr/0001-routes-domain.md) and
@@ -934,5 +935,5 @@ client SDK pipeline; a language server in the Claude Code plugin.
 - **A4** (2026-11-22, for v0.2.0, accepted by epistemer with the defaults of H1–H4): URL builders return `handlers.Link` (`URL`, `Method`, `Route`, `With`, `String`), and `handlers.Gate` adapts a guard's `Admit` check to ui's actions gate. Breaking. The design is [ADR 0005](adr/0005-builders-return-a-link.md); §10.1 and §11.1 state it.
 - **A5** (2026-11-22, for v0.3.0, accepted by epistemer: H6 decided as replace, H5 and H7–H9 on their defaults): a route can set its own body limit with `//h:body <size>` or `x-max-body: <size>` (`^[1-9][0-9]*(B|KiB|MiB|GiB)$`, fitting in `int64`, absent on `GET`), carried in `routes/v1` `maxBody` and `Route.MaxBody`, replacing `WithMaxBody`'s limit for that route. The design is [ADR 0006](adr/0006-route-body-limit.md); §4.2, §5.2, §7.2, §7.3, §8, §11.1, §12.1 and §15 state it.
 - **A6** (2026-11-24, Claude, a clarification; Confab's F4, downgraded to low by epistemer): `handlers gen` still refuses a handler package that doesn't type-check, but when the cause is a link to a builder its routes package doesn't have yet, or an import of a routes package that doesn't exist yet, the message names it and says to generate first (§5.1, §5.2). A routes package is the `-out` directory, or a package holding a `zz_*.routes.json`. `vet` and the language server give the first message too.
-- **A7** (proposed 2026-11-24, for v0.4.0; neozp D4 and D6, Confab's F16, F21, F22 and F25; not locked): `handlers/middleware` (recovery for the app's own handlers, `Redirect`, `HTMX`, `Boosted`, `ErrorPage`, `Flash`), recovery on by default in `Register` and `Mount` with `ErrPanic` and `Panic`, a permission's text after its key, and a permission taken from another routes package with `from <package>`. The design and its questions N1–N11 are [ADR 0007](adr/0007-request-lifecycle.md); §1, §2, §4.2, §5.2, §7.2, §7.3, §8, §9, §11.2, §11.8, §12.1, §13.2 and §16 state it.
+- **A7** (2026-11-24, for v0.4.0, locked by epistemer with the defaults of N1–N11; neozp D4 and D6, Confab's F16, F21, F22 and F25): `handlers/middleware` (recovery for the app's own handlers, `Redirect`, `HTMX`, `Boosted`, `ErrorPage`, `Flash`), recovery on by default in `Register` and `Mount` with `ErrPanic` and `Panic`, a permission's text after its key, and a permission taken from another routes package with `from <package>`. The design and its questions N1–N11 are [ADR 0007](adr/0007-request-lifecycle.md); §1, §2, §4.2, §5.2, §7.2, §7.3, §8, §9, §11.2, §11.8, §12.1, §13.2 and §16 state it.
 
