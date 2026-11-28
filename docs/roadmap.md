@@ -146,6 +146,14 @@ M3 and M4 are independent and can run side by side.
 | ☑ | A7.3 | `//h:perm <key> <text>`, `<key> from <package>`, `x-permission` the same; `routes/v1` `from`; the permissions generator and `vet` | M | The example's admin takes a permission from its API, end to end |
 | ☑ | A7.4 | Release v0.4.0 with `authguard`, `openapi` and `cmd`; the skill | S | Tags checked through the proxy |
 
+## Searching routes with parameters (v0.5.0)
+
+| ✓ | ID | Item | Size | Done when |
+|---|----|------|------|-----------|
+| ☑ | A9.1 | [ADR 0008](adr/0008-param-sources.md), questions P1–P3, P9, P11, A9.1–A9.4, reviewed ([0009](reviews/0009-param-sources.md)) | S | Locked by epistemer, 2026-11-28 |
+| ☑ | A9.2 | `//h:param <name> from <key>` replacing `//h:entity`; `Param.Kind`, `Bits`, `From`, `Canon`; `Table.Link`; `Hit.Link`; `routes/v1` `from`; `vet` and the language server | M | `Table.Link` writes the builders' URLs in `testdata/app`, reviewed ([0010](reviews/0010-a9-build.md)) (#29) |
+| ☑ | A9.3 | Release v0.5.0 with `authguard`, `openapi` and `cmd`; the skill | S | Tags pushed (#30) |
+
 ## After v0.1.0 (backlog)
 
 1. Breadcrumbs from a `parent` directive.
