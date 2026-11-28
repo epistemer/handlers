@@ -31,7 +31,9 @@ func (h *H) Show(w http.ResponseWriter, r *http.Request, id int64) error { retur
 //h:param part from items.create label Part
 //h:param rev from items.show
 //h:param tag from Bad.Key
-func (h *H) Edit(w http.ResponseWriter, r *http.Request, id int64, part, rev, tag string) error { return nil }
+func (h *H) Edit(w http.ResponseWriter, r *http.Request, id int64, part, rev, tag string) error {
+	return nil
+}
 
 //h:key items.copy
 //h:method GET
