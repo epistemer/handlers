@@ -119,7 +119,8 @@ type Param struct {
 ```
 
 `Route.Entity` is removed. An entity route is derived, not declared: a
-searchable route whose single parameter has a `From` (neozp ADR 0002).
+searchable route that isn't a view and whose single parameter has a `From`
+(neozp ADR 0002).
 
 The generated table fills the new fields:
 
