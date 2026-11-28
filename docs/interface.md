@@ -153,8 +153,7 @@ handlers of a package are methods of one type.
 //h:method GET
 //h:path /categories/{id}
 //h:desc Category detail
-//h:param id label Category ID
-//h:entity categories.search
+//h:param id from categories.search label Category ID
 func (h *H) Category(w http.ResponseWriter, r *http.Request, id int64) error {
 ```
 
@@ -223,7 +222,9 @@ kinds is reported; otherwise the first error, as `doesn't type-check`.
 | `auth` | `h:auth: "<v>" is not public, session or unverified` |
 | `view`, `search` | `h:<name> takes no value or true, not "<v>"` |
 | `desc` empty | `h:desc is empty` |
-| `key`, `perm`, `entity` | `h:<name>: "<v>" is not a key` |
+| `key`, `perm` | `h:<name>: "<v>" is not a key` |
+| (A9) `entity` | `h:entity is retired: write "h:param <name> from <key>" on the parameter` |
+| (A9) `view`, `search` on a route that isn't GET | `h:<name> on a <METHOD> route: only GET pages are searched` |
 | `path` | `h:path: "<v>" must start with "/"` · `h:path: "<v>" must not end with "/"` · `h:path: "<v>": <ServeMux's reason>` |
 | `body` | `h:body: "<v>" is not a size: write a positive whole number and B, KiB, MiB or GiB, as 20MiB` · `h:body: "<v>" is larger than a body can be` · `h:body on a GET route, which has no body` |
 | `param` | `h:param: write "h:param <name> label <text>"` · `h:param: no parameter <name>`. (A9) the first becomes `h:param: write "h:param <name> [from <key>] [label <text>]"`; `from`'s diagnostics are in ADR 0008 §7 |
@@ -234,7 +235,6 @@ kinds is reported; otherwise the first error, as `doesn't type-check`.
 | (A7) Two texts for one permission | `permission "<k>": text "<b>" differs from "<a>" at <file>:<line>` |
 | (A7) Declared and taken in one package | `permission "<k>" is declared in this package at <file>:<line>, so it can't be taken from <package>` |
 | (A7) Taken from two packages | `permission "<k>" is taken from <other> at <file>:<line>, not <package>` |
-| `entity` naming its own route | `h:entity names the route itself` |
 | Directives on two types | `directives on <A> and <B>: one handler type per package` |
 | A missing directive | `missing h:<name>` (key, method, path) |
 | Directives outside a doc comment | `directives must be the doc comment of a handler method` |
@@ -247,7 +247,11 @@ kinds is reported; otherwise the first error, as `doesn't type-check`.
 | `{name...}` with a non-string parameter | `parameter <name>: a {<name>...} wildcard needs a string type` |
 | A type the binder can't parse | `parameter <name>: type <T> can't be read from a path` |
 | A type from the handler's package | `parameter <name>: type <T> is declared in this package; declare it in another so the generated package can import it` |
-| `entity` unknown | `h:entity: no route with key "<k>"` |
+| (A9) `param`'s `from` not a key | `h:param <name>: "<v>" is not a key` |
+| (A9) `from` naming its own route | `h:param <name>: from names the route itself` |
+| (A9) `from` unknown | `h:param <name>: no route with key "<k>"` |
+| (A9) A source that isn't GET | `h:param <name>: <k> is <METHOD>, and a source must be GET` |
+| (A9) A source with parameters | `h:param <name>: <k> has parameters, and a source can't` |
 | Two keys, one Go name | `keys "<a>" and "<b>" both give the Go name <Name>` |
 | A reserved or taken Go name | `<Name> is a name the generated package declares` · `<Name> is also the label variable of <key>` · `<Name> is also the variable of permission <key>` |
 | The package doesn't type-check | `the package doesn't type-check: <first error>` |
@@ -915,7 +919,19 @@ guard), then one `tr.Search` in the request's locale over the prefix
 `route.`. An entry whose text or source text contains `q.Text` (ignoring
 case), whose route is in the table, passes `q.Only` and is admitted becomes
 a hit, in key order, up to `q.Limit`; an empty `q.Text` matches every
-entry. `Search` returns `Admit`'s error.
+entry. `Search` returns `Admit`'s error. (A9) A hit for a route without
+parameters carries its link, `Prefix` + `Pattern`, which goes to the
+table's route; any other hit's `Link` is the zero `Link`.
+
+(A9) `Table.Link(key, v)` writes the route's parameters from `v` as its
+builder writes them, after parsing each by its kind as the binder does:
+`strconv` for `KindBool`, `KindInt` and `KindUint` at `Bits`, and `Canon`
+for `KindText`; a value is then escaped with `Segment`, or `Rest` for a
+rest parameter. A missing, repeated, empty or unparsable value is
+`ErrBadParam` with the label, and so is a rest value that starts or ends
+with `/` or has an empty segment. An unknown key is `ErrNotFound`. It
+consults no guard. Its link equals a builder's in `URL()` and `Route()`,
+but not with `==`: it points at the table's copy of the route.
 
 ## 15. Tools for editors and agents
 
@@ -923,7 +939,7 @@ entry. `Search` returns `Admit`'s error.
   open and change and from both passes on save; completion of directive
   names (`body` included), values (the four `body` units included) and
   parameter names; hover (`body` shows the byte count, as `20MiB = 20 971 520 bytes`);
-  definition for `entity`. It negotiates UTF-8 positions when the client
+  definition for `from`'s key (A9; for `entity` before). It negotiates UTF-8 positions when the client
   offers them, else UTF-16.
 - `dev/vscode`: the VS Code extension, a client of `handlers lsp`, with the
   TextMate grammar for directives.

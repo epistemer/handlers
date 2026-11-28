@@ -45,6 +45,8 @@ type Param struct {
 	PkgName    string // "" for predeclared types
 	TypeName   string // "<pkgname>.<Name>" or predeclared name
 	Parse      string // "text" or underlying basic type name
+	From       string // the source route's key, from h:param <name> from <key>; "" when not given
+	FromPos    token.Position
 	Pos        token.Position
 }
 
@@ -60,7 +62,6 @@ type Route struct {
 	PermText     string // "" when not given
 	PermFrom     string // "" when not given
 	View, Search bool
-	Entity       string
 	MaxBody      int64          // bytes; 0 when not given
 	Params       []Param        // signature order, after w and r
 	Pos          token.Position // the func keyword

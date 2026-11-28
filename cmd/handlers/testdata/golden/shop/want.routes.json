@@ -40,11 +40,11 @@
           "import": "",
           "parse": "int64",
           "kind": "segment",
-          "label": "Category ID"
+          "label": "Category ID",
+          "from": "categories.list"
         }
       ],
-      "permission": "categories.manage",
-      "entity": "categories.list"
+      "permission": "categories.manage"
     },
     {
       "key": "categories.update",

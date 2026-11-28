@@ -1,0 +1,7 @@
+handlers.go:23:1: h:param id: from names the route itself
+handlers.go:30:1: h:param id: no route with key "items.missing"
+handlers.go:31:1: h:param part: items.create is POST, and a source must be GET
+handlers.go:32:1: h:param rev: items.show has parameters, and a source can't
+handlers.go:33:1: h:param tag: "Bad.Key" is not a key
+handlers.go:47:1: h:search on a POST route: only GET pages are searched
+handlers.go:48:1: h:view on a POST route: only GET pages are searched

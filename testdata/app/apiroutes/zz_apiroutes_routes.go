@@ -67,7 +67,7 @@ var Routes = []handlers.Route{
 		Searchable: false,
 		Operation:  "getOrder",
 		Params: []handlers.Param{
-			{Name: "orderId", Rest: false, Label: L10nGetOrderOrderId},
+			{Name: "orderId", Rest: false, Label: L10nGetOrderOrderId, Kind: handlers.KindInt, Bits: 64},
 		},
 	},
 	{
@@ -83,7 +83,7 @@ var Routes = []handlers.Route{
 		MaxBody:    20971520,
 		Operation:  "uploadReceipt",
 		Params: []handlers.Param{
-			{Name: "orderId", Rest: false, Label: L10nUploadReceiptOrderId},
+			{Name: "orderId", Rest: false, Label: L10nUploadReceiptOrderId, Kind: handlers.KindInt, Bits: 64},
 		},
 	},
 }

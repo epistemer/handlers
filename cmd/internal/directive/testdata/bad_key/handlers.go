@@ -9,5 +9,4 @@ type H struct{}
 //h:path /items
 //h:desc Items
 //h:perm bad-perm
-//h:entity Bad.Entity
 func (h *H) List(w http.ResponseWriter, r *http.Request) error { return nil }

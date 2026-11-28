@@ -49,9 +49,8 @@ var Routes = []handlers.Route{
 		Label:      L10nOrderDetail,
 		View:       false,
 		Searchable: false,
-		Entity:     "orders.list",
 		Params: []handlers.Param{
-			{Name: "id", Rest: false, Label: L10nOrderDetailId},
+			{Name: "id", Rest: false, Label: L10nOrderDetailId, Kind: handlers.KindInt, Bits: 64, From: "orders.list"},
 		},
 	},
 	{
@@ -67,7 +66,7 @@ var Routes = []handlers.Route{
 		Searchable: false,
 		MaxBody:    20971520,
 		Params: []handlers.Param{
-			{Name: "id", Rest: false, Label: L10nOrderCancelId},
+			{Name: "id", Rest: false, Label: L10nOrderCancelId, Kind: handlers.KindInt, Bits: 64},
 		},
 	},
 	{
@@ -81,7 +80,7 @@ var Routes = []handlers.Route{
 		View:       false,
 		Searchable: false,
 		Params: []handlers.Param{
-			{Name: "path", Rest: true, Label: L10nFilesServePath},
+			{Name: "path", Rest: true, Label: L10nFilesServePath, Kind: handlers.KindString},
 		},
 	},
 	{
@@ -95,19 +94,31 @@ var Routes = []handlers.Route{
 		View:       false,
 		Searchable: false,
 		Params: []handlers.Param{
-			{Name: "s", Rest: false, Label: L10nItemsKindsS},
-			{Name: "b", Rest: false, Label: L10nItemsKindsB},
-			{Name: "t", Rest: false, Label: L10nItemsKindsT},
-			{Name: "i", Rest: false, Label: L10nItemsKindsI},
-			{Name: "i8", Rest: false, Label: L10nItemsKindsI8},
-			{Name: "i16", Rest: false, Label: L10nItemsKindsI16},
-			{Name: "i32", Rest: false, Label: L10nItemsKindsI32},
-			{Name: "i64", Rest: false, Label: L10nItemsKindsI64},
-			{Name: "u", Rest: false, Label: L10nItemsKindsU},
-			{Name: "u8", Rest: false, Label: L10nItemsKindsU8},
-			{Name: "u16", Rest: false, Label: L10nItemsKindsU16},
-			{Name: "u32", Rest: false, Label: L10nItemsKindsU32},
-			{Name: "u64", Rest: false, Label: L10nItemsKindsU64},
+			{Name: "s", Rest: false, Label: L10nItemsKindsS, Kind: handlers.KindString},
+			{Name: "b", Rest: false, Label: L10nItemsKindsB, Kind: handlers.KindBool},
+			{Name: "t", Rest: false, Label: L10nItemsKindsT, Kind: handlers.KindText,
+				Canon: func(s string) (string, error) {
+					var v ids.Token
+					if err := v.UnmarshalText([]byte(s)); err != nil {
+						return "", err
+					}
+					b, err := v.MarshalText()
+					if err != nil {
+						return "", err
+					}
+					return string(b), nil
+				},
+			},
+			{Name: "i", Rest: false, Label: L10nItemsKindsI, Kind: handlers.KindInt, Bits: strconv.IntSize},
+			{Name: "i8", Rest: false, Label: L10nItemsKindsI8, Kind: handlers.KindInt, Bits: 8},
+			{Name: "i16", Rest: false, Label: L10nItemsKindsI16, Kind: handlers.KindInt, Bits: 16},
+			{Name: "i32", Rest: false, Label: L10nItemsKindsI32, Kind: handlers.KindInt, Bits: 32},
+			{Name: "i64", Rest: false, Label: L10nItemsKindsI64, Kind: handlers.KindInt, Bits: 64},
+			{Name: "u", Rest: false, Label: L10nItemsKindsU, Kind: handlers.KindUint, Bits: strconv.IntSize},
+			{Name: "u8", Rest: false, Label: L10nItemsKindsU8, Kind: handlers.KindUint, Bits: 8},
+			{Name: "u16", Rest: false, Label: L10nItemsKindsU16, Kind: handlers.KindUint, Bits: 16},
+			{Name: "u32", Rest: false, Label: L10nItemsKindsU32, Kind: handlers.KindUint, Bits: 32},
+			{Name: "u64", Rest: false, Label: L10nItemsKindsU64, Kind: handlers.KindUint, Bits: 64},
 		},
 	},
 }

@@ -35,8 +35,10 @@ Directives are `//h:<name>` or `//h:<name> <value>` (no space after `//`):
 - `//h:body <size>` — the route's own body limit, as `20MiB` (not on `GET`).
 - `//h:view [true]` — mark route as a view page.
 - `//h:search [true]` — include route in search.
-- `//h:entity <key>` — another route's key in the same package.
-- `//h:param <name> label <text>` — label for a path parameter.
+- `//h:param <name> [from <key>] [label <text>]` — a path parameter's source
+  (a GET route of the same package without parameters, which suggests its
+  values) and its label. `//h:entity` is retired: write `from` on the
+  parameter.
 
 ## Checking directives
 

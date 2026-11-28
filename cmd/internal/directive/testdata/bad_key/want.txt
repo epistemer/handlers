@@ -1,3 +1,2 @@
 handlers.go:7:1: h:key: "Items.List" is not a key
 handlers.go:11:1: h:perm: "bad-perm" is not a key
-handlers.go:12:1: h:entity: "Bad.Entity" is not a key

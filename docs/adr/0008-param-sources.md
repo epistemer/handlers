@@ -204,7 +204,7 @@ palette opens the form or the entity flow for it.
 | `from` unknown | `h:param <name>: no route with key "<k>"` |
 | `from` naming its own route | `h:param <name>: from names the route itself` |
 | A source that isn't GET | `h:param <name>: <k> is <METHOD>, and a source must be GET` |
-| A source with parameters | `h:param <name>: <k> has parameters, and a source can't (yet)` |
+| A source with parameters | `h:param <name>: <k> has parameters, and a source can't` |
 | `entity` | `h:entity is retired: write "h:param <name> from <key>" on the parameter` (replaces every `entity` diagnostic) |
 | `search` or `view` not on GET | `h:<name> on a <METHOD> route: only GET pages are searched` |
 

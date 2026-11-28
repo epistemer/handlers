@@ -52,7 +52,8 @@
                 "alias": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
                 "parse": {"type": "string", "enum": ["string", "bool", "text", "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64"]},
                 "kind": {"type": "string", "enum": ["segment", "rest"]},
-                "label": {"type": "string", "minLength": 1}
+                "label": {"type": "string", "minLength": 1},
+                "from": {"type": "string", "pattern": "^[a-z0-9][A-Za-z0-9_]*(\\.[a-z0-9][A-Za-z0-9_]*)*$"}
               }
             }
           }

@@ -45,7 +45,6 @@ type routeDoc struct {
 	Search     bool       `json:"search"`
 	Params     []paramDoc `json:"params"`
 	Permission string     `json:"permission,omitempty"`
-	Entity     string     `json:"entity,omitempty"`
 	MaxBody    int64      `json:"maxBody,omitempty"`
 	Operation  string     `json:"operation,omitempty"`
 }
@@ -60,6 +59,7 @@ type paramDoc struct {
 	Kind   string `json:"kind"`
 	Label  string `json:"label"`
 	Alias  string `json:"alias,omitempty"`
+	From   string `json:"from,omitempty"`
 }
 
 type permDoc struct {
@@ -389,6 +389,7 @@ func buildRoutesDoc(pkg *directive.Package, sourceRel, pkgName, outRel, prefix s
 				Kind:   kind,
 				Label:  label,
 				Alias:  alias,
+				From:   p.From,
 			})
 		}
 
@@ -404,7 +405,6 @@ func buildRoutesDoc(pkg *directive.Package, sourceRel, pkgName, outRel, prefix s
 			Search:     r.Search,
 			Params:     params,
 			Permission: permKey,
-			Entity:     r.Entity,
 			MaxBody:    r.MaxBody,
 		})
 	}

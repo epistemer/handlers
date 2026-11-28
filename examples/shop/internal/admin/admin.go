@@ -216,8 +216,7 @@ func (h *H) Products(w http.ResponseWriter, r *http.Request) error {
 //h:desc Product profile
 //h:auth session
 //h:view
-//h:entity products.list
-//h:param id label Product ID
+//h:param id from products.list label Product ID
 func (h *H) Product(w http.ResponseWriter, r *http.Request, id ids.ProductID) error {
 	p, err := h.Store.Product(id)
 	if err != nil {
@@ -303,8 +302,7 @@ func (h *H) Orders(w http.ResponseWriter, r *http.Request) error {
 //h:desc Order detail
 //h:perm orders.manage Manage orders
 //h:view
-//h:entity orders.list
-//h:param id label Order ID
+//h:param id from orders.list label Order ID
 func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID) error {
 	o, err := h.Store.Order(id)
 	if err != nil {

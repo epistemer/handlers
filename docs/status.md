@@ -3,6 +3,34 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-28 — A9 built: a parameter's source, Table.Link, Hit.Link
+
+epistemer locked A9 with every default (P1–P3, P9, P11, A9.1–A9.4), and it
+is built on #29:
+- **Runtime:** `ParamKind` and `Param.Kind`, `Bits`, `From` and `Canon`;
+  `Table.Link`; `Hit.Link`; `Route.Entity` is removed.
+- **cmd:** the `param` grammar with `from` and its diagnostics, `entity`
+  retired, `search` and `view` on GET only, `gen` writing `from`, and
+  `handlers lsp` completing and following `from`.
+- **routes/v1:** a parameter's `from` in the schema, in `Check` and in four
+  new conformance files.
+- **Generators:** the routes template fills the new fields, with `Canon`
+  generated for text types.
+- **Elsewhere:** `examples/shop`, `testdata/app`, the VS Code grammar, the
+  Gemini context and the skill.
+
+**Decided for you:** `Bits` for `int` and `uint` is written as
+`strconv.IntSize`. `routesv1.Check` keeps accepting an `entity` in older
+files, and the generators ignore it.
+
+**Tests:** every new diagnostic has one, with its exact message.
+`TestTableLink` covers every kind and the refusals (missing, repeated,
+empty, unparsable, Rest's slashes). `TestTableLinkMatchesBuilders`, in
+`testdata/app`, checks that `Table.Link` writes the builder's URL for an
+int and a text parameter.
+
+**Next.** A pre-merge review, then v0.5.0 of all four modules, then ui A10.
+
 ## 2026-11-28 — A9 drafted: a parameter's source, and a link from values
 
 Docs only, for epistemer's lock. It follows neozp's decision of 2026-11-28

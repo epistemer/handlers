@@ -53,7 +53,8 @@
           "parse": "int64",
           "kind": "segment",
           "label": "Order ID",
-          "alias": "ids"
+          "alias": "ids",
+          "from": "orders.list"
         },
         {
           "name": "tok",
@@ -67,8 +68,7 @@
           "alias": "ids"
         }
       ],
-      "permission": "orders.manage",
-      "entity": "orders.list"
+      "permission": "orders.manage"
     },
     {
       "key": "orders.cancel",

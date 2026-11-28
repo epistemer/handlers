@@ -35,8 +35,8 @@ var Routes = []handlers.Route{
 		View:       true,
 		Searchable: true,
 		Params: []handlers.Param{
-			{Name: "slug", Rest: false, Label: L10nDocsPageSlug},
-			{Name: "rest", Rest: true, Label: L10nDocsPageRest},
+			{Name: "slug", Rest: false, Label: L10nDocsPageSlug, Kind: handlers.KindString},
+			{Name: "rest", Rest: true, Label: L10nDocsPageRest, Kind: handlers.KindString},
 		},
 	},
 }

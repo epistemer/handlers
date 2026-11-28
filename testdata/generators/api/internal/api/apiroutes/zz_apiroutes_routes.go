@@ -41,7 +41,7 @@ var Routes = []handlers.Route{
 		Searchable: false,
 		Operation:  "getProduct",
 		Params: []handlers.Param{
-			{Name: "id", Rest: false, Label: L10nProductsGetId},
+			{Name: "id", Rest: false, Label: L10nProductsGetId, Kind: handlers.KindInt, Bits: 64},
 		},
 	},
 }

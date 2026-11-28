@@ -56,7 +56,8 @@
           "alias": "shop",
           "parse": "int64",
           "kind": "segment",
-          "label": "Order ID"
+          "label": "Order ID",
+          "from": "orders.list"
         }
       ]
     },

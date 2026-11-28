@@ -33,7 +33,7 @@ Route: required key, method, pattern, name, var, text, auth, view, search, param
 - `text`: non-empty. `auth`: public, session or permission; anything else: `unknown auth "x"`.
 - `permission`: required and non-empty when auth is permission; must be absent when auth is
   public or session.
-- `view`, `search`: booleans. `entity`: optional non-empty string. `maxBody`: optional
+- `view`, `search`: booleans. `entity`: optional non-empty string; (A9) no longer written, and generators ignore it. `maxBody`: optional
   integer, at least 1; must be absent when method is GET. `operation`: optional
   non-empty string; required when surface is json, absent when html.
 - `params`: array, in signature order. Each param requires name, go, var, type, import,
@@ -42,6 +42,7 @@ Route: required key, method, pattern, name, var, text, auth, view, search, param
   `import` isn't "", a Go identifier, and the qualifier `type` starts with (`shop.OrderID`
   with alias `shop`); `parse` one of string bool text int int8 int16 int32 int64 uint
   uint8 uint16 uint32 uint64 (the underlying type's width); `kind` segment or rest; `label` non-empty.
+  (A9) Optional `from`: a non-empty string, the key of the param's source.
 
 Permission: required key, level. Optional `from` (a package name: a Go identifier, not `_`, not the document's own package name). Without `from`, required `var` (a Go identifier starting with `Perm`) and `text` (non-empty). With `from`, `var` and `text` must be absent; `level` verified or unverified.
 
@@ -55,7 +56,10 @@ Permission: required key, level. Optional `from` (a package name: a Go identifie
    one to one by name: `routes[0].params[1]: no wildcard {sid} in /a/{id}` and
    `routes[0].pattern: wildcard {x} has no param`.
 6. A param's kind is rest exactly when its wildcard is `{name...}`.
-7. `entity` names a route key in the document.
+7. `entity` names a route key in the document. (A9) A param's `from` names a route of the
+   document other than its own, whose method is GET and which has no params:
+   `routes[1].params[0].from: unknown route key "x"`, `"x" is the param's own route`,
+   `"x" is POST, not GET`, `"x" has params`.
 8. Permission keys and vars are unique.
 9. Every route's `permission` names an entry of `permissions`; every entry is named by at
    least one route (`permissions[2]: no route uses "x"`).
@@ -77,7 +81,7 @@ Permission: required key, level. Optional `from` (a package name: a Go identifie
 ## Conformance files
 
 `testdata/routes/valid/*.json`: minimal (no routes, no permissions), full html (every optional
-field, a rest wildcard, shared permission, entity, root pattern "/", unknown extra fields),
+field, a rest wildcard, shared permission, entity (no longer written, A9), a param's `from`, root pattern "/", unknown extra fields),
 json surface with operations, prefix "" and dir ".".
 
 `testdata/routes/invalid/*.json`: each breaks exactly one rule, with a sibling `.err`

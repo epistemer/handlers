@@ -1,12 +1,12 @@
 ---
 name: handlers
-description: How to use handlers (github.com/epistemer/handlers), neozp's route package, with //h: directives for admin pages, OpenAPI 3.0.x specs for JSON APIs, genx generators (routes, labels, permissions), authguard, the openapi adapter, Table.Search, handlerstest, and editor/agent tools. Use it when writing or checking //h: route directives, setting up genx.yaml with handlers gen/openapi/vet, wiring adminroutes.Register or apiroutes.Mount with authguard and oapi-codegen, handling handlers errors (ErrBadParam, ErrNotFound, ErrTooLarge, ErrInvalidRequest, ErrInvalidField, ErrPanic), recovering panics, redirecting with or without htmx, rendering error pages or carrying a flash message across a redirect (handlers/middleware: Recover, Redirect, HTMX, Boosted, ErrorPage, Flash), sharing a permission between routes packages (//h:perm <key> from <package>) or giving one its text, implementing route search with Table.Search, testing routes with handlerstest and authtest, or configuring handlers lsp and hooks.
+description: How to use handlers (github.com/epistemer/handlers), neozp's route package, with //h: directives for admin pages, OpenAPI 3.0.x specs for JSON APIs, genx generators (routes, labels, permissions), authguard, the openapi adapter, Table.Search, handlerstest, and editor/agent tools. Use it when writing or checking //h: route directives, setting up genx.yaml with handlers gen/openapi/vet, wiring adminroutes.Register or apiroutes.Mount with authguard and oapi-codegen, handling handlers errors (ErrBadParam, ErrNotFound, ErrTooLarge, ErrInvalidRequest, ErrInvalidField, ErrPanic), recovering panics, redirecting with or without htmx, rendering error pages or carrying a flash message across a redirect (handlers/middleware: Recover, Redirect, HTMX, Boosted, ErrorPage, Flash), sharing a permission between routes packages (//h:perm <key> from <package>) or giving one its text, implementing route search with Table.Search (Hit.Link) or reaching a route with parameters through Table.Link and a parameter's source (//h:param <name> from <key>, Param.Kind), testing routes with handlerstest and authtest, or configuring handlers lsp and hooks.
 ---
 
 # Using handlers
 
-Written for **handlers v0.4.0** (2026-11-24), with `authguard/v0.4.0`,
-`openapi/v0.4.0`, `cmd/v0.4.0`, `genx v0.2.0`, `i18n v0.3.1`, `errors v0.1.0`,
+Written for **handlers v0.5.0** (2026-11-28), with `authguard/v0.5.0`,
+`openapi/v0.5.0`, `cmd/v0.5.0`, `genx v0.2.0`, `i18n v0.3.1`, `errors v0.1.0`,
 and `auth v0.3.0`. Look at `go.mod`; if newer, read `CHANGELOG.md`.
 `docs/interface.md` is the locked contract and `examples/shop` is a complete
 app with end-to-end tests; **the contract is `docs/interface.md`; when this
@@ -46,8 +46,8 @@ line. Handlers are exported methods on **one** receiver type per package:
 //h:desc Order detail
 //h:perm orders.manage
 //h:view
-//h:entity orders.list
-//h:param id label Order ID
+//h:search
+//h:param id from orders.search label Order ID
 func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID) error
 ```
 
@@ -59,11 +59,14 @@ func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID) error
 | `desc` | non-empty text | readable `key`, with warning |
 | `auth` | `public`, `session`, `unverified` | route's permission at `Verified` |
 | `perm` | `<key>`, `<key> <text>` (the permission's text), or `<key> from <package>` (a permission another routes package declares); only when `auth` is default or `unverified` | route's `key` |
-| `view` | none, or `true` | off (`false`) |
-| `search` | none, or `true` | off (`false`) |
-| `entity` | another route's `key` in the same package | none (`""`) |
+| `view` | none, or `true`; GET only | off (`false`) |
+| `search` | none, or `true`; GET only | off (`false`) |
 | `body` | `^[1-9][0-9]*(B\|KiB\|MiB\|GiB)$` (`512KiB`, `20MiB`, fits in `int64`, not on `GET`) | registration's `WithMaxBody` |
-| `param` | `<name> label <text>` (`<name>` is a path parameter, once each) | readable parameter name |
+| `param` | `<name> [from <key>] [label <text>]`, at least one (`<name>` is a path parameter, once each). `from` names the parameter's **source**: a GET route of the same package without parameters that suggests its values (ui's suggestions protocol), which ui's palette turns into a remote select | readable parameter name; no source |
+
+`//h:entity` is retired (v0.5.0): write `from` on the parameter. An *entity
+route* is derived: a searchable route that isn't a view and whose single
+parameter has a source.
 
 - **Parameter types** (bound in signature order after `w` and `r`): `string`,
   `bool`, signed/unsigned integers except `uintptr`, named types over those,
@@ -77,15 +80,20 @@ func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID) error
   - Bad values: `h:method: "<v>" is not GET, POST, PUT, PATCH or DELETE`,
     `h:auth: "<v>" is not public, session or unverified`,
     `h:<view|search> takes no value or true, not "<v>"`,
-    `h:desc is empty`, `h:<key|perm|entity>: "<v>" is not a key`,
+    `h:desc is empty`, `h:<key|perm>: "<v>" is not a key`,
     `h:path: "<v>" must start with "/"`, `must not end with "/"`, `must not contain "{$}"` / `ServeMux` reason,
     `h:body: "<v>" is not a size: write a positive whole number and B, KiB, MiB or GiB, as 20MiB`,
     `h:body: "<v>" is larger than a body can be`,
     `h:body on a GET route, which has no body`,
-    `h:param: write "h:param <name> label <text>"`, `h:param: no parameter <name>`.
+    `h:param: write "h:param <name> [from <key>] [label <text>]"`, `h:param: no parameter <name>`,
+    `h:<view|search> on a <METHOD> route: only GET pages are searched`,
+    `h:entity is retired: write "h:param <name> from <key>" on the parameter`.
   - Auth/perm/entity rules: `h:perm needs a permission route, not auth <auth>`,
     `permission "<k>": <key a> is unverified and <key b> isn't`,
-    `h:entity names the route itself`, `h:entity: no route with key "<k>"`.
+    `h:param <name>: "<v>" is not a key`, `h:param <name>: from names the route itself`,
+    `h:param <name>: no route with key "<k>"`,
+    `h:param <name>: <k> is <METHOD>, and a source must be GET`,
+    `h:param <name>: <k> has parameters, and a source can't`.
   - Signatures/types: `directives on <A> and <B>: one handler type per package`,
     `missing h:<key|method|path>`,
     `directives must be the doc comment of a handler method`,
@@ -181,8 +189,13 @@ Runtime (`github.com/epistemer/handlers`):
   `actions.Gate.With(ctx, handlers.Gate(admit))`. Gate(nil) panics.
 - `Route` (`Key`, `Method`, `Prefix`, `Pattern`, `Surface` (`HTML`/`JSON`),
   `Auth` (`Public`/`Session`/`Permission`), `Permission`, `Label`, `View`,
-  `Searchable`, `Entity`, `MaxBody` (bytes; `0` uses the registration's limit,
-  else replaces `WithMaxBody`), `Operation`, `Params []Param{Name, Rest, Label}`).
+  `Searchable`, `MaxBody` (bytes; `0` uses the registration's limit,
+  else replaces `WithMaxBody`), `Operation`, `Params []Param`).
+- `Param{Name, Rest, Label, Kind, Bits, From, Canon}`: `Kind` is a
+  `ParamKind` (`KindString`, `KindBool`, `KindInt`, `KindUint`, `KindText`),
+  `Bits` the width of an integer (`strconv.IntSize` for `int`/`uint`),
+  `From` the source's key, `Canon` (text kinds only, generated) the value as
+  `UnmarshalText` then `MarshalText` leave it.
 - `From(ctx) (Route, bool)`, `WithRoute(ctx, rt)`.
 - `Guard` (`Prepare`, `Check`, `Admit`).
 - Options: `WithErrors(ErrorWriter)` (defaults: `WriteText` for HTML,
@@ -360,7 +373,21 @@ hits, err := table.Search(r, guard, tr, handlers.Query{
 `Table.Search` calls `g.Admit(r)` once (or admits `Public` only if `g == nil`),
 then runs one `tr.Search` over prefix `route.` in `i18n.Code(r.Context())`
 (falling back to `tr.Default()`), matching `Text` case-insensitively against
-either translated or source text, returning `Hit{Route, Text}` in key order.
+either translated or source text, returning `Hit{Route, Text, Link}` in key order.
+`Hit.Link` is the route's link when it has no parameters, else the zero
+`Link`.
+
+A route with parameters is reached through its values:
+
+```go
+l, err := table.Link("orders.detail", url.Values{"id": {"42"}})
+// l.URL() == adminroutes.Order(42).URL(); ErrNotFound for an unknown key,
+// ErrBadParam (with the label) for a missing, repeated, empty or bad value
+```
+
+`Table.Link` parses each value by its kind as the binder does and consults
+no guard: check the target route yourself before showing or following the
+link. ui's `ui/palette` does all of this for a command palette.
 
 ## Testing
 
@@ -379,8 +406,8 @@ either translated or source text, returning `Hit{Route, Text}` in key order.
 ## Editor and agent tools
 
 - `go tool handlers lsp`: syntax diagnostics on open/change, syntax + type
-  pass on save, completion (`//h:`, values, handler params, `entity`),
-  hover, `entity` go-to-definition, UTF-8/UTF-16 position negotiation.
+  pass on save, completion (`//h:`, values, handler params, `from`/`label`
+  and route keys after `from`), hover, go-to-definition on `from`'s key, UTF-8/UTF-16 position negotiation.
 - `dev/vscode`: VS Code client for `handlers lsp` + TextMate grammar.
 - `dev/claude-plugin`: `PostToolUse` hook (`handlers vet -hook`) + this skill
   (`handlers@epistemer-handlers`).

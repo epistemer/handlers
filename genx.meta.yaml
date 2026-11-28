@@ -13,6 +13,21 @@ generators:
         else 0
         end;
 
+      def kind_const:
+        if . == "string" then "handlers.KindString"
+        elif . == "bool" then "handlers.KindBool"
+        elif . == "text" then "handlers.KindText"
+        elif startswith("uint") then "handlers.KindUint"
+        elif startswith("int") then "handlers.KindInt"
+        else error("routes: unknown parse \(.)")
+        end;
+
+      def bits_expr:
+        if . == "int" or . == "uint" then "strconv.IntSize"
+        elif startswith("int") or startswith("uint") then (parse_bits | tostring)
+        else ""
+        end;
+
       def surface_const:
         if . == "html" then "handlers.HTML"
         elif . == "json" then "handlers.JSON"
@@ -62,7 +77,11 @@ generators:
               is_rest: (.value.kind == "rest"),
               is_int: (.value.parse | startswith("int")),
               is_uint: (.value.parse | startswith("uint")),
-              bits: (.value.parse | parse_bits)
+              bits: (.value.parse | parse_bits),
+              kind_const: (.value.parse | kind_const),
+              bits_expr: (.value.parse | bits_expr),
+              from: (.value.from // ""),
+              is_text: (.value.parse == "text")
             } ] as $params
           | {
               index: $ri,
@@ -75,7 +94,6 @@ generators:
               permission: ($r.permission // ""),
               view: $r.view,
               search: $r.search,
-              entity: ($r.entity // ""),
               max_body: ($r.maxBody // 0),
               operation: ($r.operation // ""),
               params: $params,

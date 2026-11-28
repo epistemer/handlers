@@ -1,0 +1,69 @@
+{
+  "domain": "routes/v1",
+  "package": {
+    "dir": "internal/shop/shoproutes",
+    "name": "shoproutes"
+  },
+  "permissions": [
+    {
+      "key": "orders.manage",
+      "level": "verified",
+      "text": "Manage customer orders",
+      "var": "PermOrdersManage"
+    }
+  ],
+  "prefix": "/shop",
+  "producer": "handlers",
+  "routes": [
+    {
+      "auth": "permission",
+      "key": "orders.detail",
+      "method": "GET",
+      "name": "OrderDetail",
+      "params": [
+        {
+          "from": "orders.search",
+          "go": "orderID",
+          "import": "",
+          "kind": "segment",
+          "label": "Order ID",
+          "name": "id",
+          "parse": "int",
+          "type": "int64",
+          "var": "L10nOrderID"
+        }
+      ],
+      "pattern": "/orders/{id}",
+      "permission": "orders.manage",
+      "search": false,
+      "text": "Order detail",
+      "var": "L10nOrderDetail",
+      "view": true
+    },
+    {
+      "auth": "session",
+      "key": "orders.search",
+      "method": "GET",
+      "name": "OrderSearch",
+      "params": [
+        {
+          "go": "q",
+          "import": "",
+          "kind": "segment",
+          "label": "Q",
+          "name": "q",
+          "parse": "string",
+          "type": "string",
+          "var": "L10nOrderSearchQ"
+        }
+      ],
+      "pattern": "/orders/search/{q}",
+      "search": false,
+      "text": "Find an order",
+      "var": "L10nOrderSearch",
+      "view": false
+    }
+  ],
+  "source": "internal/shop",
+  "surface": "html"
+}

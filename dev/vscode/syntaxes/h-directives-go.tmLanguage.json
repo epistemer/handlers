@@ -4,7 +4,7 @@
   "patterns": [
     {
       "name": "meta.h-directive.param.line.go",
-      "match": "^(\\s*//)(h):(param)(?:\\s+(\\S+)(?:\\s+(label)(?:\\s+([^\\n]*))?)?)?$",
+      "match": "^(\\s*//)(h):(param)(?:\\s+(\\S+)(?:\\s+(from)\\s+(\\S+))?(?:\\s+(label)(?:\\s+([^\\n]*))?)?)?$",
       "captures": {
         "1": {
           "name": "comment.line.double-slash.go"
@@ -19,9 +19,15 @@
           "name": "variable.parameter.h-directive.go"
         },
         "5": {
-          "name": "keyword.other.h-directive.param-label.go"
+          "name": "keyword.other.h-directive.param-from.go"
         },
         "6": {
+          "name": "entity.name.function.h-directive.route-key.go"
+        },
+        "7": {
+          "name": "keyword.other.h-directive.param-label.go"
+        },
+        "8": {
           "name": "string.unquoted.h-directive.value.go"
         }
       }
@@ -76,7 +82,7 @@
     },
     {
       "name": "meta.h-directive.line.go",
-      "match": "^(\\s*//)(h):(key|method|path|desc|auth|perm|view|search|entity|body)(?:\\s+([^\\n]*))?$",
+      "match": "^(\\s*//)(h):(key|method|path|desc|auth|perm|view|search|body)(?:\\s+([^\\n]*))?$",
       "captures": {
         "1": {
           "name": "comment.line.double-slash.go"

@@ -89,10 +89,10 @@
           "parse": "int64",
           "kind": "segment",
           "label": "Product ID",
-          "alias": "ids"
+          "alias": "ids",
+          "from": "products.list"
         }
-      ],
-      "entity": "products.list"
+      ]
     },
     {
       "key": "orders.list",
@@ -127,11 +127,11 @@
           "parse": "int64",
           "kind": "segment",
           "label": "Order ID",
-          "alias": "ids"
+          "alias": "ids",
+          "from": "orders.list"
         }
       ],
-      "permission": "orders.manage",
-      "entity": "orders.list"
+      "permission": "orders.manage"
     },
     {
       "key": "orders.cancel",

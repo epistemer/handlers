@@ -152,6 +152,7 @@ func Check(v any) error {
 			}
 			checkRoute(i, loc, r, surface, allRouteKeys, allPermKeys, seenRouteKey, seenMethodPattern, seenRouteName, seenVar, add)
 		}
+		checkSources(items, add)
 	}
 
 	// permissions: required array of permission objects
@@ -898,5 +899,65 @@ func checkPermission(
 	// Rule 9: every entry is named by at least one route (permissions[2]: no route uses "x")
 	if permKey != "" && !usedPerms[permKey] {
 		add(loc, fmt.Sprintf("no route uses %q", permKey))
+	}
+}
+
+// checkSources checks every param's optional from (A9): a string naming a
+// GET route of the document without params, other than the param's own.
+func checkSources(routes []any, add func(loc, msg string)) {
+	type source struct {
+		method  string
+		nparams int
+	}
+	byKey := make(map[string]source)
+	for _, item := range routes {
+		r, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		k, _ := r["key"].(string)
+		if _, seen := byKey[k]; k == "" || seen {
+			continue
+		}
+		m, _ := r["method"].(string)
+		ps, _ := r["params"].([]any)
+		byKey[k] = source{method: m, nparams: len(ps)}
+	}
+	for i, item := range routes {
+		r, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		own, _ := r["key"].(string)
+		ps, _ := r["params"].([]any)
+		for j, pi := range ps {
+			p, ok := pi.(map[string]any)
+			if !ok {
+				continue
+			}
+			raw, ok := p["from"]
+			if !ok {
+				continue
+			}
+			loc := fmt.Sprintf("routes[%d].params[%d].from", i, j)
+			k, ok := raw.(string)
+			if !ok {
+				add(loc, "must be a string")
+				continue
+			}
+			src, found := byKey[k]
+			switch {
+			case k == "":
+				add(loc, "must not be empty")
+			case k == own:
+				add(loc, fmt.Sprintf("%q is the param's own route", k))
+			case !found:
+				add(loc, fmt.Sprintf("unknown route key %q", k))
+			case src.method != "GET":
+				add(loc, fmt.Sprintf("%q is %s, not GET", k, src.method))
+			case src.nparams > 0:
+				add(loc, fmt.Sprintf("%q has params", k))
+			}
+		}
 	}
 }

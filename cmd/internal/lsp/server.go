@@ -362,7 +362,7 @@ func (s *Server) handleRawMessage(raw []byte) (exit bool, code int) {
 				routes = ps.pkg.Routes
 			}
 		}
-		loc := definitionForEntity(doc, routes, params.Position, s.encoding, s.linesForFile)
+		loc := definitionForSource(doc, routes, params.Position, s.encoding, s.linesForFile)
 		if isRequest {
 			s.sendResult(msg.ID, loc)
 		}
