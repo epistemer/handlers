@@ -20,8 +20,7 @@ func (h *H) ListCategories(w http.ResponseWriter, r *http.Request) error {
 //h:path /categories/{id}
 //h:desc Category detail
 //h:perm categories.manage
-//h:param id label Category ID
-//h:entity categories.list
+//h:param id from categories.list label Category ID
 func (h *H) Category(w http.ResponseWriter, r *http.Request, id int64) error {
 	return nil
 }

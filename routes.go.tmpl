@@ -38,9 +38,6 @@ var Routes = []handlers.Route{
 		Label: {{.var}},
 		View: {{.view}},
 		Searchable: {{.search}},
-{{- if .entity}}
-		Entity: {{printf "%q" .entity}},
-{{- end}}
 {{- if .max_body}}
 		MaxBody: {{.max_body}},
 {{- end}}
@@ -50,7 +47,19 @@ var Routes = []handlers.Route{
 {{- if .params}}
 		Params: []handlers.Param{
 {{- range .params}}
-			{Name: {{printf "%q" .name}}, Rest: {{.is_rest}}, Label: {{.var}}},
+			{Name: {{printf "%q" .name}}, Rest: {{.is_rest}}, Label: {{.var}}, Kind: {{.kind_const}}{{if .bits_expr}}, Bits: {{.bits_expr}}{{end}}{{if .from}}, From: {{printf "%q" .from}}{{end}}{{if .is_text}},
+				Canon: func(s string) (string, error) {
+					var v {{.type}}
+					if err := v.UnmarshalText([]byte(s)); err != nil {
+						return "", err
+					}
+					b, err := v.MarshalText()
+					if err != nil {
+						return "", err
+					}
+					return string(b), nil
+				},
+			{{end}}},
 {{- end}}
 		},
 {{- end}}

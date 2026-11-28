@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.5.0] - 2026-11-28
+
+Searching routes that have parameters (neozp H5, neozp ADR 0002). Amendment
+A9 (ADR 0008), locked by epistemer with the defaults of P1–P3, P9, P11 and
+A9.1–A9.4. All four modules: `handlers`, `authguard`, `openapi`, `cmd`.
+
+### Added
+- `//h:param <name> [from <key>] [label <text>]`: a parameter's source, a
+  GET route of the same package without parameters that suggests its
+  values; `routes/v1` parameter `from` (schema, `Check`, conformance files).
+- `ParamKind` (`KindString`, `KindBool`, `KindInt`, `KindUint`, `KindText`)
+  and `Param.Kind`, `Param.Bits`, `Param.From` and `Param.Canon`, which the
+  generated table fills (`Canon` for text types only).
+- `(*Table).Link(key, url.Values)`: a route's link from string values,
+  parsed as the binder parses them (`ErrNotFound`, `ErrBadParam`).
+- `Hit.Link`: a search hit's link when its route has no parameters.
+- `handlers lsp` completes `from` and `label` after a parameter's name and
+  route keys after `from`, and goes to the source's handler from its key.
+
+### Changed
+- `search` and `view` on a route that isn't GET are errors: `h:<name> on a
+  <METHOD> route: only GET pages are searched`.
+
+### Removed
+- `//h:entity`, now the error `h:entity is retired: write "h:param <name>
+  from <key>" on the parameter`, and `Route.Entity`. `gen` no longer writes
+  a route's `entity`; `routes/v1` files that have one stay valid.
+
 ## [v0.4.0] - 2026-11-24
 
 Confab's first iteration (neozp decisions D4 and D6). Amendment A7 (ADR

@@ -80,9 +80,8 @@ var Routes = []handlers.Route{
 		Label:      L10nProduct,
 		View:       true,
 		Searchable: false,
-		Entity:     "products.list",
 		Params: []handlers.Param{
-			{Name: "id", Rest: false, Label: L10nProductId},
+			{Name: "id", Rest: false, Label: L10nProductId, Kind: handlers.KindInt, Bits: 64, From: "products.list"},
 		},
 	},
 	{
@@ -108,9 +107,8 @@ var Routes = []handlers.Route{
 		Label:      L10nOrder,
 		View:       true,
 		Searchable: false,
-		Entity:     "orders.list",
 		Params: []handlers.Param{
-			{Name: "id", Rest: false, Label: L10nOrderId},
+			{Name: "id", Rest: false, Label: L10nOrderId, Kind: handlers.KindInt, Bits: 64, From: "orders.list"},
 		},
 	},
 	{
@@ -126,7 +124,7 @@ var Routes = []handlers.Route{
 		Searchable: false,
 		MaxBody:    20971520,
 		Params: []handlers.Param{
-			{Name: "id", Rest: false, Label: L10nOrderCancelId},
+			{Name: "id", Rest: false, Label: L10nOrderCancelId, Kind: handlers.KindInt, Bits: 64},
 		},
 	},
 	{

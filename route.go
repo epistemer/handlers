@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/epistemer/i18n"
 )
@@ -67,7 +68,6 @@ type Route struct {
 	Label      i18n.TKer // route.<key>
 	View       bool
 	Searchable bool
-	Entity     string // a route key, or ""
 	MaxBody    int64  // bytes; 0: the registration's limit
 	Operation  string // the operationId on the JSON surface
 	Params     []Param
@@ -78,6 +78,54 @@ type Param struct {
 	Name  string    // the wildcard's name
 	Rest  bool      // {name...}
 	Label i18n.TKer // route_param.<key>.<name>
+	Kind  ParamKind // how the binder parses it (A9)
+	// Bits is the width of a KindInt or KindUint: 8, 16, 32, 64, or
+	// strconv.IntSize for int and uint (0 reads as strconv.IntSize, as in
+	// strconv); 0 for the other kinds (A9).
+	Bits int
+	// From is the key of the route that suggests the parameter's values,
+	// from //h:param <name> from <key>; "" when it has none (A9).
+	From string
+	// Canon reads a KindText value as the binder does and returns it as
+	// MarshalText writes it, unescaped. Generated; nil unless Kind is
+	// KindText (A9).
+	Canon func(string) (string, error)
+}
+
+// ParamKind is how a path parameter is parsed: routes/v1's parse (A9).
+type ParamKind uint8
+
+const (
+	// KindString is a string or a named string type. A Rest parameter
+	// is always KindString.
+	KindString ParamKind = iota
+	// KindBool is a bool or a named bool type.
+	KindBool
+	// KindInt is int, int8 … int64 or a named type over one; Bits says which.
+	KindInt
+	// KindUint is uint, uint8 … uint64 or a named type over one; Bits says which.
+	KindUint
+	// KindText is a type whose pointer implements encoding.TextUnmarshaler
+	// and which implements encoding.TextMarshaler.
+	KindText
+)
+
+// String is the kind's name in routes/v1's terms: "string", "bool", "int",
+// "uint" or "text".
+func (k ParamKind) String() string {
+	switch k {
+	case KindString:
+		return "string"
+	case KindBool:
+		return "bool"
+	case KindInt:
+		return "int"
+	case KindUint:
+		return "uint"
+	case KindText:
+		return "text"
+	}
+	return "ParamKind(" + strconv.Itoa(int(k)) + ")"
 }
 
 type routeKey struct{}

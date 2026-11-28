@@ -7,7 +7,7 @@ VS Code extension for `github.com/epistemer/handlers` (`//h:` route directives i
 - **Diagnostics, completion, hover, and go-to-definition** via `handlers lsp`
   (syntax pass on open/change, syntax + type pass on save).
 - **Syntax highlighting** (TextMate grammar injection for `source.go`):
-  - `//h:<name> <value>` (`key`, `method`, `path`, `desc`, `auth`, `perm`, `view`, `search`, `entity`)
+  - `//h:<name> <value>` (`key`, `method`, `path`, `desc`, `auth`, `perm`, `view`, `search`, `body`); `//h:param <name> [from <key>] [label <text>]`
   - `//h:param <name> label <text>`
 
 ## Requirements

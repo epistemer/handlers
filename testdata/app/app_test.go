@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -148,7 +149,7 @@ func TestAdminRoutesHTTPAndLabels(t *testing.T) {
 		if rec.Code != 200 || rec.Body.String() != "order:42:tok1" {
 			t.Fatalf("GET /admin/orders/42/tok1 = (%d, %q)", rec.Code, rec.Body.String())
 		}
-		if h.LastRoute.Key != "orders.detail" || h.LastRoute.Permission != "orders.manage" || h.LastRoute.Entity != "orders.list" {
+		if h.LastRoute.Key != "orders.detail" || h.LastRoute.Permission != "orders.manage" || h.LastRoute.Params[0].From != "orders.list" {
 			t.Errorf("handler route = %+v", h.LastRoute)
 		}
 
@@ -192,7 +193,7 @@ func TestAdminRoutesHTTPAndLabels(t *testing.T) {
 
 	t.Run("ByKey and i18ntest label translations", func(t *testing.T) {
 		rt, ok := adminroutes.ByKey("orders.detail")
-		if !ok || rt.Key != "orders.detail" || rt.Entity != "orders.list" || len(rt.Params) != 2 {
+		if !ok || rt.Key != "orders.detail" || len(rt.Params) != 2 || rt.Params[0].From != "orders.list" {
 			t.Fatalf("ByKey(orders.detail) = (%+v, %v)", rt, ok)
 		}
 		if _, ok := adminroutes.ByKey("missing"); ok {
@@ -534,4 +535,34 @@ func TestAPIRoutesADR0003(t *testing.T) {
 			t.Errorf("multipart = (%d, %q)", rec.Code, impl.uploaded)
 		}
 	})
+}
+
+// TestTableLinkMatchesBuilders checks A9's round trip: for the same values,
+// Table.Link writes the URL the generated builder writes, a text parameter
+// through its generated Canon included, and the generated table carries each
+// parameter's kind and source.
+func TestTableLinkMatchesBuilders(t *testing.T) {
+	tbl := handlers.NewTable(adminroutes.Routes)
+
+	want := adminroutes.Order(ids.OrderID(42), ids.Token{Raw: "a b"})
+	got, err := tbl.Link("orders.detail", map[string][]string{"id": {"42"}, "tok": {"a b"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.URL() != want.URL() || got.Route().Key != want.Route().Key {
+		t.Errorf("Table.Link = %q (%s), builder = %q (%s)", got.URL(), got.Route().Key, want.URL(), want.Route().Key)
+	}
+
+	if _, err := tbl.Link("orders.detail", map[string][]string{"id": {"42"}, "tok": {"bad"}}); !errors.Is(err, handlers.ErrBadParam) {
+		t.Errorf("a token Canon refuses: err = %v, want ErrBadParam", err)
+	}
+
+	rt, _ := adminroutes.ByKey("orders.detail")
+	id, tok := rt.Params[0], rt.Params[1]
+	if id.Kind != handlers.KindInt || id.Bits != 64 || id.From != "orders.list" || id.Canon != nil {
+		t.Errorf("id = %+v, want KindInt, 64 bits, from orders.list, no Canon", id)
+	}
+	if tok.Kind != handlers.KindText || tok.Bits != 0 || tok.From != "" || tok.Canon == nil {
+		t.Errorf("tok = kind %v, bits %d, from %q, Canon %v; want KindText, 0, \"\", set", tok.Kind, tok.Bits, tok.From, tok.Canon != nil)
+	}
 }

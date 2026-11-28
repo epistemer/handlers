@@ -3,7 +3,9 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/epistemer/i18n"
@@ -13,6 +15,7 @@ import (
 type Table struct {
 	routes []Route
 	byKey  map[string]Route
+	index  map[string]int // a key's position in routes, for links into the table
 }
 
 // NewTable combines route slices into a single Table, preserving their order.
@@ -24,6 +27,7 @@ func NewTable(routes ...[]Route) *Table {
 	}
 	all := make([]Route, 0, total)
 	byKey := make(map[string]Route, total)
+	index := make(map[string]int, total)
 	for _, slice := range routes {
 		for _, rt := range slice {
 			if _, ok := byKey[rt.Key]; ok {
@@ -34,12 +38,14 @@ func NewTable(routes ...[]Route) *Table {
 				clone.Params = slices.Clone(rt.Params)
 			}
 			byKey[rt.Key] = clone
+			index[rt.Key] = len(all)
 			all = append(all, clone)
 		}
 	}
 	return &Table{
 		routes: all,
 		byKey:  byKey,
+		index:  index,
 	}
 }
 
@@ -81,6 +87,9 @@ type Query struct {
 type Hit struct {
 	Route Route
 	Text  string // the label in the request's locale
+	// Link is the route's link when it has no parameters, else the zero
+	// Link (A9).
+	Link Link
 }
 
 // Search searches for routes in t matching q in the request's locale.
@@ -173,6 +182,118 @@ func (t *Table) Search(r *http.Request, g Guard, tr *i18n.Translator, q Query) (
 			Route: rt,
 			Text:  en.Text,
 		}
+		if len(rt.Params) == 0 {
+			if path, ok := fillPattern(rt.Pattern, nil); ok {
+				hits[i].Link = NewLink(&t.routes[t.index[routeKey]], rt.Prefix+path)
+			}
+		}
 	}
 	return hits, nil
+}
+
+// Link returns the link to the route with this key, its parameters taken
+// from v by name, each parsed as the binder parses it and written as the
+// route's builder writes it (A9). Values for names that aren't parameters
+// are ignored, and the link has no query. An unknown key is ErrNotFound. A
+// parameter whose value is missing, given more than once, empty, or that
+// doesn't parse is ErrBadParam with the parameter's label; so is a Rest
+// value that starts or ends with "/" or has an empty segment. Link consults
+// no guard: a caller that shows the link to someone checks it first.
+func (t *Table) Link(key string, v url.Values) (Link, error) {
+	if t == nil {
+		return Link{}, ErrNotFound
+	}
+	i, ok := t.index[key]
+	if !ok {
+		return Link{}, ErrNotFound
+	}
+	rt := &t.routes[i]
+	vals := make(map[string]string, len(rt.Params))
+	for _, p := range rt.Params {
+		s, err := linkValue(p, v[p.Name])
+		if err != nil {
+			return Link{}, err
+		}
+		vals[p.Name] = s
+	}
+	path, ok := fillPattern(rt.Pattern, vals)
+	if !ok {
+		return Link{}, ErrBadParam.With(rt.Label)
+	}
+	return NewLink(rt, rt.Prefix+path), nil
+}
+
+// linkValue is one parameter's value as its builder writes it, escaped.
+func linkValue(p Param, given []string) (string, error) {
+	bad := ErrBadParam.With(p.Label)
+	if len(given) != 1 || given[0] == "" {
+		return "", bad
+	}
+	s := given[0]
+	if p.Rest {
+		if p.Kind != KindString || strings.HasPrefix(s, "/") || strings.HasSuffix(s, "/") || strings.Contains(s, "//") {
+			return "", bad
+		}
+		return Rest(s), nil
+	}
+	switch p.Kind {
+	case KindBool:
+		b, err := strconv.ParseBool(s)
+		if err != nil {
+			return "", bad
+		}
+		return strconv.FormatBool(b), nil
+	case KindInt:
+		n, err := strconv.ParseInt(s, 10, p.Bits)
+		if err != nil {
+			return "", bad
+		}
+		return strconv.FormatInt(n, 10), nil
+	case KindUint:
+		n, err := strconv.ParseUint(s, 10, p.Bits)
+		if err != nil {
+			return "", bad
+		}
+		return strconv.FormatUint(n, 10), nil
+	case KindText:
+		if p.Canon == nil {
+			return "", bad
+		}
+		c, err := p.Canon(s)
+		if err != nil || c == "" {
+			return "", bad
+		}
+		return Segment(c), nil
+	case KindString:
+		return Segment(s), nil
+	}
+	return "", bad
+}
+
+// fillPattern writes vals, already escaped, into pattern's wildcards; {$}
+// writes nothing. It reports false for a wildcard vals has no value for, or
+// a brace that isn't closed: a hand-built route whose pattern and
+// parameters disagree.
+func fillPattern(pattern string, vals map[string]string) (string, bool) {
+	var b strings.Builder
+	for {
+		open := strings.IndexByte(pattern, '{')
+		if open < 0 {
+			b.WriteString(pattern)
+			return b.String(), true
+		}
+		end := strings.IndexByte(pattern[open:], '}')
+		if end < 0 {
+			return "", false
+		}
+		b.WriteString(pattern[:open])
+		if raw := pattern[open+1 : open+end]; raw != "$" {
+			v, ok := vals[strings.TrimSuffix(raw, "...")]
+			if !ok {
+				return "", false
+			}
+			b.WriteString(v)
+		}
+		pattern = pattern[open+end+1:]
+	}
 }

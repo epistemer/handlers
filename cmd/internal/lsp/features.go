@@ -20,7 +20,6 @@ var directiveNames = []string{
 	"perm",
 	"view",
 	"search",
-	"entity",
 	"body",
 	"param",
 }
@@ -34,9 +33,8 @@ var directiveDocs = map[string]string{
 	"perm":   "h:perm <key> [text] | <key> from <package> — Permission key, optional text, or taken from another package (only when auth is default or unverified; defaults to the route key).",
 	"view":   "h:view [true] — Mark route as a view page (takes no value or true).",
 	"search": "h:search [true] — Include route in search (takes no value or true).",
-	"entity": "h:entity <key> — Key of another route in the same package representing this route's entity.",
 	"body":   "h:body <size> — Maximum request body size for this route: positive whole number and B, KiB, MiB, or GiB (e.g. 20MiB).",
-	"param":  "h:param <name> label <text> — Label for a path parameter of the handler (defaults to parameter name made readable).",
+	"param":  "h:param <name> [from <key>] [label <text>] — A path parameter's source, a GET route of this package without parameters that suggests its values, and its label (defaults to the parameter name made readable).",
 }
 
 var methodValues = []string{"GET", "POST", "PUT", "PATCH", "DELETE"}
@@ -91,21 +89,49 @@ func completeDocument(doc *openDoc, routes []directive.Route, pos Position, enc 
 
 	if dirName == "param" {
 		if paramSep := strings.IndexAny(valPrefix, " \t"); paramSep >= 0 {
-			afterParam := strings.TrimLeft(valPrefix[paramSep+1:], " \t")
-			if !strings.ContainsAny(afterParam, " \t") && strings.HasPrefix("label", afterParam) {
-				kwStartByte := cursorByte - len(afterParam)
-				editRange := Range{
-					Start: Position{Line: pos.Line, Character: byteOffsetToChar(line, kwStartByte, enc)},
-					End:   pos,
+			// The words after the parameter's name: [from <key>] [label <text>].
+			words := strings.FieldsFunc(valPrefix[paramSep+1:], func(r rune) bool { return r == ' ' || r == '\t' })
+			partial := ""
+			if !strings.HasSuffix(valPrefix, " ") && !strings.HasSuffix(valPrefix, "\t") && len(words) > 0 {
+				partial = words[len(words)-1]
+				words = words[:len(words)-1]
+			}
+			editRange := Range{
+				Start: Position{Line: pos.Line, Character: byteOffsetToChar(line, cursorByte-len(partial), enc)},
+				End:   pos,
+			}
+			var offer []string
+			kind := itemKindKeyword
+			switch {
+			case len(words) == 0:
+				offer = []string{"from", "label"}
+			case len(words) == 1 && words[0] == "from":
+				selfKey := ownKeyInCommentBlock(doc.lines, pos.Line)
+				seen := make(map[string]bool)
+				for _, r := range routes {
+					// A source is a GET route without parameters.
+					if r.Key == "" || r.Key == selfKey || seen[r.Key] || !strings.EqualFold(r.Method, "GET") || len(r.Params) > 0 {
+						continue
+					}
+					seen[r.Key] = true
+					offer = append(offer, r.Key)
 				}
-				list.Items = append(list.Items, CompletionItem{
-					Label: "label",
-					Kind:  itemKindKeyword,
-					TextEdit: &TextEdit{
-						Range:   editRange,
-						NewText: "label",
-					},
-				})
+				sort.Strings(offer)
+				kind = itemKindReference
+			case len(words) == 2 && words[0] == "from":
+				offer = []string{"label"}
+			}
+			for _, o := range offer {
+				if strings.HasPrefix(o, partial) {
+					list.Items = append(list.Items, CompletionItem{
+						Label: o,
+						Kind:  kind,
+						TextEdit: &TextEdit{
+							Range:   editRange,
+							NewText: o,
+						},
+					})
+				}
 			}
 			return list
 		}
@@ -177,30 +203,6 @@ func completeDocument(doc *openDoc, routes []directive.Route, pos Position, enc 
 				TextEdit: &TextEdit{
 					Range:   editRange,
 					NewText: "true",
-				},
-			})
-		}
-	case "entity":
-		selfKey := ownKeyInCommentBlock(doc.lines, pos.Line)
-		seen := make(map[string]bool)
-		var keys []string
-		for _, r := range routes {
-			if r.Key == "" || r.Key == selfKey || seen[r.Key] {
-				continue
-			}
-			seen[r.Key] = true
-			if strings.HasPrefix(r.Key, valPrefix) {
-				keys = append(keys, r.Key)
-			}
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			list.Items = append(list.Items, CompletionItem{
-				Label: k,
-				Kind:  itemKindReference,
-				TextEdit: &TextEdit{
-					Range:   editRange,
-					NewText: k,
 				},
 			})
 		}
@@ -310,7 +312,9 @@ func hoverDocument(doc *openDoc, pos Position, enc string) *Hover {
 	}
 }
 
-func definitionForEntity(
+// definitionForSource answers go-to-definition on the key of an
+// h:param <name> from <key> line: the source route's handler (A9).
+func definitionForSource(
 	doc *openDoc,
 	routes []directive.Route,
 	pos Position,
@@ -323,21 +327,30 @@ func definitionForEntity(
 	line := doc.lines[pos.Line]
 	trimmed := strings.TrimLeft(line, " \t")
 	leadingBytes := len(line) - len(trimmed)
-	if !strings.HasPrefix(trimmed, "//h:entity") {
+	if !strings.HasPrefix(trimmed, "//h:param ") && !strings.HasPrefix(trimmed, "//h:param\t") {
 		return nil
 	}
-	rest := trimmed[len("//h:entity"):]
-	if len(rest) == 0 || (rest[0] != ' ' && rest[0] != '\t') {
+	// The key is the word after the word "from", which follows the name.
+	rest := trimmed[len("//h:param"):]
+	base := leadingBytes + len("//h:param")
+	var spans [][2]int // byte offsets of the first three words, in line
+	for i := 0; i < len(rest) && len(spans) < 3; {
+		for i < len(rest) && (rest[i] == ' ' || rest[i] == '\t') {
+			i++
+		}
+		start := i
+		for i < len(rest) && rest[i] != ' ' && rest[i] != '\t' {
+			i++
+		}
+		if i > start {
+			spans = append(spans, [2]int{base + start, base + i})
+		}
+	}
+	if len(spans) < 3 || line[spans[1][0]:spans[1][1]] != "from" {
 		return nil
 	}
-
-	trimmedValLeft := strings.TrimLeft(rest, " \t")
-	valStartByte := leadingBytes + len("//h:entity") + (len(rest) - len(trimmedValLeft))
-	val := strings.TrimRight(trimmedValLeft, " \t")
-	valEndByte := valStartByte + len(val)
-	if val == "" {
-		return nil
-	}
+	valStartByte, valEndByte := spans[2][0], spans[2][1]
+	val := line[valStartByte:valEndByte]
 
 	cursorByte := charToByteOffset(line, pos.Character, enc)
 	if cursorByte < valStartByte || cursorByte > valEndByte {

@@ -105,8 +105,7 @@ func (h *H) Orders(w http.ResponseWriter, r *http.Request) error {
 //h:desc Order detail
 //h:perm orders.manage
 //h:view
-//h:entity orders.list
-//h:param id label Order ID
+//h:param id from orders.list label Order ID
 func (h *H) Order(w http.ResponseWriter, r *http.Request, id int64) error {
 	_, err := fmt.Fprintf(w, "order %d", id)
 	return err

@@ -47,8 +47,7 @@ func (h *H) Orders(w http.ResponseWriter, r *http.Request) error {
 //h:path /orders/{id}/{tok}
 //h:desc Order detail
 //h:perm orders.manage
-//h:entity orders.list
-//h:param id label Order ID
+//h:param id from orders.list label Order ID
 //h:param tok label Access token
 func (h *H) Order(w http.ResponseWriter, r *http.Request, id ids.OrderID, tok ids.Token) error {
 	if rt, ok := handlers.From(r.Context()); ok {

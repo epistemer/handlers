@@ -48,10 +48,21 @@ var Routes = []handlers.Route{
 		Label:      L10nOrder,
 		View:       false,
 		Searchable: false,
-		Entity:     "orders.list",
 		Params: []handlers.Param{
-			{Name: "id", Rest: false, Label: L10nOrderId},
-			{Name: "tok", Rest: false, Label: L10nOrderTok},
+			{Name: "id", Rest: false, Label: L10nOrderId, Kind: handlers.KindInt, Bits: 64, From: "orders.list"},
+			{Name: "tok", Rest: false, Label: L10nOrderTok, Kind: handlers.KindText,
+				Canon: func(s string) (string, error) {
+					var v ids.Token
+					if err := v.UnmarshalText([]byte(s)); err != nil {
+						return "", err
+					}
+					b, err := v.MarshalText()
+					if err != nil {
+						return "", err
+					}
+					return string(b), nil
+				},
+			},
 		},
 	},
 	{
@@ -67,7 +78,7 @@ var Routes = []handlers.Route{
 		Searchable: false,
 		MaxBody:    20971520,
 		Params: []handlers.Param{
-			{Name: "id", Rest: false, Label: L10nOrderCancelId},
+			{Name: "id", Rest: false, Label: L10nOrderCancelId, Kind: handlers.KindInt, Bits: 64},
 		},
 	},
 	{
@@ -81,7 +92,7 @@ var Routes = []handlers.Route{
 		View:       false,
 		Searchable: false,
 		Params: []handlers.Param{
-			{Name: "path", Rest: true, Label: L10nFilesPath},
+			{Name: "path", Rest: true, Label: L10nFilesPath, Kind: handlers.KindString},
 		},
 	},
 	{
@@ -95,8 +106,8 @@ var Routes = []handlers.Route{
 		View:       false,
 		Searchable: false,
 		Params: []handlers.Param{
-			{Name: "ok", Rest: false, Label: L10nFlagsOk},
-			{Name: "n", Rest: false, Label: L10nFlagsN},
+			{Name: "ok", Rest: false, Label: L10nFlagsOk, Kind: handlers.KindBool},
+			{Name: "n", Rest: false, Label: L10nFlagsN, Kind: handlers.KindUint, Bits: 16},
 		},
 	},
 }

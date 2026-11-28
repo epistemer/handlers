@@ -25,13 +25,13 @@ type routeRec struct {
 	methodPos token.Position
 	pathPos   token.Position
 	permPos   token.Position
-	entityPos token.Position
+	viewPos   token.Position
+	searchPos token.Position
 	bodyPos   token.Position
 	keyValid  bool
 	methodOK  bool
 	pathOK    bool
 	permValid bool
-	entityOK  bool
 	bodyOK    bool
 	hasKey    bool
 	hasMethod bool
@@ -603,6 +603,7 @@ func validateDirectives(lines []parsedLine, fn *ast.FuncDecl, funcPos token.Posi
 				})
 			} else {
 				rec.route.View = true
+				rec.viewPos = l.pos
 			}
 
 		case "search":
@@ -614,20 +615,16 @@ func validateDirectives(lines []parsedLine, fn *ast.FuncDecl, funcPos token.Posi
 				})
 			} else {
 				rec.route.Search = true
+				rec.searchPos = l.pos
 			}
 
 		case "entity":
-			rec.entityPos = l.pos
-			if !isValidKey(l.val) {
-				diags = append(diags, Diagnostic{
-					Pos:      l.pos,
-					Severity: Error,
-					Message:  fmt.Sprintf("h:entity: %q is not a key", l.val),
-				})
-			} else {
-				rec.entityOK = true
-				rec.route.Entity = l.val
-			}
+			// Retired by A9: a parameter names its source instead.
+			diags = append(diags, Diagnostic{
+				Pos:      l.pos,
+				Severity: Error,
+				Message:  `h:entity is retired: write "h:param <name> from <key>" on the parameter`,
+			})
 
 		case "body":
 			rec.bodyPos = l.pos
@@ -644,12 +641,20 @@ func validateDirectives(lines []parsedLine, fn *ast.FuncDecl, funcPos token.Posi
 			}
 
 		case "param":
-			pName, kw, labelText, ok := parseParamDirective(l.val)
-			if !ok || kw != "label" || labelText == "" {
+			pName, from, labelText, ok := parseParamDirective(l.val)
+			if !ok {
 				diags = append(diags, Diagnostic{
 					Pos:      l.pos,
 					Severity: Error,
-					Message:  `h:param: write "h:param <name> label <text>"`,
+					Message:  `h:param: write "h:param <name> [from <key>] [label <text>]"`,
+				})
+				continue
+			}
+			if from != "" && !isValidKey(from) {
+				diags = append(diags, Diagnostic{
+					Pos:      l.pos,
+					Severity: Error,
+					Message:  fmt.Sprintf("h:param %s: %q is not a key", pName, from),
 				})
 				continue
 			}
@@ -672,8 +677,14 @@ func validateDirectives(lines []parsedLine, fn *ast.FuncDecl, funcPos token.Posi
 					})
 					continue
 				}
-				rec.route.Params[idx].Label = labelText
-				rec.route.Params[idx].LabelSet = true
+				if labelText != "" {
+					rec.route.Params[idx].Label = labelText
+					rec.route.Params[idx].LabelSet = true
+				}
+				if from != "" {
+					rec.route.Params[idx].From = from
+					rec.route.Params[idx].FromPos = l.pos
+				}
 			}
 		}
 	}
@@ -686,12 +697,33 @@ func validateDirectives(lines []parsedLine, fn *ast.FuncDecl, funcPos token.Posi
 		})
 	}
 
-	if rec.entityOK && rec.keyValid && rec.route.Entity == rec.route.Key {
-		diags = append(diags, Diagnostic{
-			Pos:      rec.entityPos,
-			Severity: Error,
-			Message:  "h:entity names the route itself",
-		})
+	if rec.methodOK && rec.route.Method != "GET" {
+		if rec.route.View {
+			diags = append(diags, Diagnostic{
+				Pos:      rec.viewPos,
+				Severity: Error,
+				Message:  fmt.Sprintf("h:view on a %s route: only GET pages are searched", rec.route.Method),
+			})
+		}
+		if rec.route.Search {
+			diags = append(diags, Diagnostic{
+				Pos:      rec.searchPos,
+				Severity: Error,
+				Message:  fmt.Sprintf("h:search on a %s route: only GET pages are searched", rec.route.Method),
+			})
+		}
+	}
+
+	if rec.keyValid {
+		for _, p := range rec.route.Params {
+			if p.From != "" && p.From == rec.route.Key {
+				diags = append(diags, Diagnostic{
+					Pos:      p.FromPos,
+					Severity: Error,
+					Message:  fmt.Sprintf("h:param %s: from names the route itself", p.Name),
+				})
+			}
+		}
 	}
 
 	if rec.bodyOK && rec.methodOK && rec.route.Method == "GET" {
@@ -750,21 +782,36 @@ func validateDirectives(lines []parsedLine, fn *ast.FuncDecl, funcPos token.Posi
 	return rec, diags
 }
 
-func parseParamDirective(val string) (name, kw, text string, ok bool) {
-	p1, rest, f1 := cutWhitespace(val)
-	if !f1 || p1 == "" {
+// parseParamDirective reads "<name> [from <key>] [label <text>]", with at
+// least one of from and label (A9). from's key is returned unchecked.
+func parseParamDirective(val string) (name, from, label string, ok bool) {
+	name, rest, found := cutWhitespace(val)
+	if !found || name == "" {
 		return "", "", "", false
 	}
 	rest = strings.TrimLeft(rest, " \t")
-	p2, rest2, f2 := cutWhitespace(rest)
-	if !f2 || p2 == "" {
+	kw, after, _ := cutWhitespace(rest)
+	after = strings.TrimLeft(after, " \t")
+	if kw == "from" {
+		from, after, _ = cutWhitespace(after)
+		if from == "" || from == "label" {
+			return "", "", "", false
+		}
+		after = strings.TrimLeft(after, " \t")
+		if after == "" {
+			return name, from, "", true
+		}
+		kw, after, _ = cutWhitespace(after)
+		after = strings.TrimLeft(after, " \t")
+	}
+	if kw != "label" {
 		return "", "", "", false
 	}
-	rest2 = strings.TrimSpace(rest2)
-	if rest2 == "" {
+	label = strings.TrimSpace(after)
+	if label == "" {
 		return "", "", "", false
 	}
-	return p1, p2, rest2, true
+	return name, from, label, true
 }
 
 func testServeMuxPattern(pattern string) (reason string, ok bool) {
@@ -782,9 +829,16 @@ func testServeMuxPattern(pattern string) (reason string, ok bool) {
 func checkPackageRoutes(recs []routeRec, cfg syntaxConfig) []Diagnostic {
 	var diags []Diagnostic
 
-	// Known route keys for h:entity lookup.
+	// Known route keys, for h:param's from.
 	routeKeys := make(map[string]token.Position)
-	for _, r := range recs {
+	byKey := make(map[string]*routeRec)
+	for i := range recs {
+		r := recs[i]
+		if r.keyValid {
+			if _, seen := byKey[r.route.Key]; !seen {
+				byKey[r.route.Key] = &recs[i]
+			}
+		}
 		if r.keyValid {
 			if first, dup := routeKeys[r.route.Key]; dup {
 				diags = append(diags, Diagnostic{
@@ -798,14 +852,31 @@ func checkPackageRoutes(recs []routeRec, cfg syntaxConfig) []Diagnostic {
 		}
 	}
 
-	// h:entity unknown route check.
+	// h:param's from: a GET route of this package without parameters.
 	for _, r := range recs {
-		if r.entityOK && r.route.Entity != r.route.Key {
-			if _, ok := routeKeys[r.route.Entity]; !ok {
+		for _, p := range r.route.Params {
+			if p.From == "" || (r.keyValid && p.From == r.route.Key) {
+				continue
+			}
+			src, ok := byKey[p.From]
+			switch {
+			case !ok:
 				diags = append(diags, Diagnostic{
-					Pos:      r.entityPos,
+					Pos:      p.FromPos,
 					Severity: Error,
-					Message:  fmt.Sprintf("h:entity: no route with key %q", r.route.Entity),
+					Message:  fmt.Sprintf("h:param %s: no route with key %q", p.Name, p.From),
+				})
+			case src.methodOK && src.route.Method != "GET":
+				diags = append(diags, Diagnostic{
+					Pos:      p.FromPos,
+					Severity: Error,
+					Message:  fmt.Sprintf("h:param %s: %s is %s, and a source must be GET", p.Name, p.From, src.route.Method),
+				})
+			case len(src.route.Params) > 0:
+				diags = append(diags, Diagnostic{
+					Pos:      p.FromPos,
+					Severity: Error,
+					Message:  fmt.Sprintf("h:param %s: %s has parameters, and a source can't", p.Name, p.From),
 				})
 			}
 		}

@@ -539,8 +539,8 @@ func (h *H) List(w http.ResponseWriter, r *http.Request) error { return nil }
 //h:auth s
 //h:view t
 //h:param 
-//h:entity categories.
-//h:entity categories.list
+//h:param id from categories.
+//h:param id from categories.list
 //h:body 
 //h:body 20
 //h:body 20MiB
@@ -555,6 +555,12 @@ import "net/http"
 //h:path /orders/{id}
 //h:desc Show order
 func (h *H) ShowOrder(w http.ResponseWriter, r *http.Request, id int64) error { return nil }
+
+//h:key orders.list
+//h:method GET
+//h:path /orders
+//h:desc Orders
+func (h *H) ListOrders(w http.ResponseWriter, r *http.Request) error { return nil }
 `
 	if err := os.WriteFile(fileA, []byte(srcA), 0o644); err != nil {
 		t.Fatal(err)
@@ -610,13 +616,22 @@ func (h *H) ShowOrder(w http.ResponseWriter, r *http.Request, id int64) error { 
 	if got := completeAt(16, 10); !slices.Equal(got, []string{"id", "slug"}) {
 		t.Errorf("line 16 param completion = %v, want [id slug]", got)
 	}
-	// Line 17: "//h:entity categories."
-	if got := completeAt(17, 22); !slices.Equal(got, []string{"categories.list"}) {
-		t.Errorf("line 17 entity completion = %v, want [categories.list]", got)
+	// Line 17: "//h:param id from categories."
+	if got := completeAt(17, 29); !slices.Equal(got, []string{"categories.list"}) {
+		t.Errorf("line 17 from completion = %v, want [categories.list]", got)
 	}
-	// Line 17 with empty prefix ("//h:entity ") -> includes both categories.list and orders.show from b.go
-	if got := completeAt(17, 11); !slices.Equal(got, []string{"categories.list", "orders.show"}) {
-		t.Errorf("line 17 empty entity completion = %v, want [categories.list orders.show]", got)
+	// Line 17 with empty prefix ("//h:param id from ") -> the GET routes without
+	// parameters, b.go's orders.list included and orders.show (it has {id}) left out
+	if got := completeAt(17, 18); !slices.Equal(got, []string{"categories.list", "orders.list"}) {
+		t.Errorf("line 17 empty from completion = %v, want [categories.list orders.list]", got)
+	}
+	// Line 17 after the name ("//h:param id ") -> the two keywords
+	if got := completeAt(17, 13); !slices.Equal(got, []string{"from", "label"}) {
+		t.Errorf("line 17 keyword completion = %v, want [from label]", got)
+	}
+	// Line 17 inside the keyword ("//h:param id fr") -> from
+	if got := completeAt(17, 15); !slices.Equal(got, []string{"from"}) {
+		t.Errorf("line 17 partial keyword completion = %v, want [from]", got)
 	}
 	// Line 19: "//h:body "
 	if got := completeAt(19, 9); !slices.Equal(got, []string{"512B", "64KiB", "20MiB", "1GiB"}) {
@@ -665,10 +680,10 @@ func (h *H) ShowOrder(w http.ResponseWriter, r *http.Request, id int64) error { 
 		t.Errorf("hover on package line = %s, want null", hresp2.Result)
 	}
 
-	// Definition on "//h:entity categories.list" (line 18) -> func List at line 10.
+	// Definition on "//h:param id from categories.list" (line 18) -> func List at line 10.
 	did := c.request("textDocument/definition", DefinitionParams{
 		TextDocument: TextDocumentIdentifier{URI: uriA},
-		Position:     Position{Line: 18, Character: 15},
+		Position:     Position{Line: 18, Character: 20},
 	})
 	dresp := c.readResponse(did)
 	var loc Location
@@ -679,8 +694,8 @@ func (h *H) ShowOrder(w http.ResponseWriter, r *http.Request, id int64) error { 
 		t.Errorf("definition = %+v, want uri %s line 10", loc, uriA)
 	}
 
-	// Definition on cross-file entity (orders.show in b.go) and unknown entity (returns null).
-	crossSrc := strings.Replace(srcA, "//h:entity categories.list", "//h:entity orders.show", 1)
+	// Definition on a cross-file source (orders.show in b.go) and an unknown one (returns null).
+	crossSrc := strings.Replace(srcA, "//h:param id from categories.list", "//h:param id from orders.show", 1)
 	c.notify("textDocument/didChange", DidChangeTextDocumentParams{
 		TextDocument:   VersionedTextDocumentIdentifier{URI: uriA, Version: 2},
 		ContentChanges: []TextDocumentContentChangeEvent{{Text: crossSrc}},
@@ -689,7 +704,7 @@ func (h *H) ShowOrder(w http.ResponseWriter, r *http.Request, id int64) error { 
 
 	did2 := c.request("textDocument/definition", DefinitionParams{
 		TextDocument: TextDocumentIdentifier{URI: uriA},
-		Position:     Position{Line: 18, Character: 15},
+		Position:     Position{Line: 18, Character: 20},
 	})
 	dresp2 := c.readResponse(did2)
 	var loc2 Location
@@ -701,8 +716,8 @@ func (h *H) ShowOrder(w http.ResponseWriter, r *http.Request, id int64) error { 
 		t.Errorf("cross-file definition = %+v, want uri %s line 8", loc2, uriB)
 	}
 
-	// Unknown entity returns null.
-	unknownSrc := strings.Replace(crossSrc, "//h:entity orders.show", "//h:entity missing.key", 1)
+	// An unknown source returns null.
+	unknownSrc := strings.Replace(crossSrc, "//h:param id from orders.show", "//h:param id from missing.key", 1)
 	c.notify("textDocument/didChange", DidChangeTextDocumentParams{
 		TextDocument:   VersionedTextDocumentIdentifier{URI: uriA, Version: 3},
 		ContentChanges: []TextDocumentContentChangeEvent{{Text: unknownSrc}},
@@ -711,11 +726,11 @@ func (h *H) ShowOrder(w http.ResponseWriter, r *http.Request, id int64) error { 
 
 	did3 := c.request("textDocument/definition", DefinitionParams{
 		TextDocument: TextDocumentIdentifier{URI: uriA},
-		Position:     Position{Line: 18, Character: 15},
+		Position:     Position{Line: 18, Character: 20},
 	})
 	dresp3 := c.readResponse(did3)
 	if string(dresp3.Result) != "null" {
-		t.Errorf("unknown entity definition = %s, want null", dresp3.Result)
+		t.Errorf("unknown source definition = %s, want null", dresp3.Result)
 	}
 }
 
