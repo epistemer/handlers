@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Drafted 2026-11-28, waiting on epistemer's lock (API design). Amendment A9, for v0.5.0. Reviewed: [0009](../reviews/0009-param-sources.md) |
+| Status | Locked by epistemer on 2026-11-28 with the defaults of P1–P3, P9, P11 and A9.1–A9.4. Amendment A9, for v0.5.0. Reviewed: [0009](../reviews/0009-param-sources.md) |
 | Date | 2026-11-28 |
 | Roadmap item | neozp decision H5 (2026-11-28) and [neozp ADR 0002](https://github.com/epistemer/neozp/blob/main/docs/adr/0002-route-search-parameters.md); Confab's F13 |
 | Deciders | epistemer decides. The answers of 2026-11-28 settle the what; questions P1–P3, P9, P11 and A9.1–A9.4 below are the how. Claude proposes |
