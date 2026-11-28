@@ -19,7 +19,7 @@ tool (
 require (
 	github.com/epistemer/auth v0.3.0
 	github.com/epistemer/genx v0.2.0
-	github.com/epistemer/handlers v0.4.0
+	github.com/epistemer/handlers v0.5.0
 	github.com/epistemer/handlers/authguard v0.0.0
 	github.com/epistemer/handlers/openapi v0.0.0
 	github.com/epistemer/i18n v0.3.1
