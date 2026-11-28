@@ -168,11 +168,11 @@ func (h *H) Category(w http.ResponseWriter, r *http.Request, id int64) error {
 | `desc` | text, not empty | the key made readable (§13.3), with a warning |
 | `auth` | `public`, `session`, `unverified` | the route's permission at `Verified` |
 | `perm` | `<key>`; (A7) `<key> <text>`, the permission's text; (A7) `<key> from <package>`, a permission another routes package declares | the route's key |
-| `view` | none, or `true` | off |
-| `search` | none, or `true` | off |
-| `entity` | another route's key, in the same package, not its own | none |
+| `view` | none, or `true`; (A9, draft) GET routes only | off |
+| `search` | none, or `true`; (A9, draft) GET routes only | off |
+| `entity` | another route's key, in the same package, not its own. (A9, draft) Retired: an error naming `//h:param <name> from <key>` | none |
 | `body` | `^[1-9][0-9]*(B\|KiB\|MiB\|GiB)$`: a positive whole number and a unit, no space, units as written (`512KiB`, `20MiB`); the bytes it names fit in an `int64` | the registration's `WithMaxBody` |
-| `param` | `<name> label <text>`, `<name>` a parameter of the handler; once per parameter | the parameter's name made readable |
+| `param` | `<name> label <text>`, `<name>` a parameter of the handler; once per parameter. (A9, draft) `<name> [from <key>] [label <text>]`, at least one of the two: `from` names the parameter's source, a GET route of the same package without parameters ([ADR 0008](adr/0008-param-sources.md)) | the parameter's name made readable; no source |
 
 - `unverified` declares the route's permission at `auth.Unverified`.
 - `perm` is only for routes whose `auth` is the default or `unverified`.
@@ -226,7 +226,7 @@ kinds is reported; otherwise the first error, as `doesn't type-check`.
 | `key`, `perm`, `entity` | `h:<name>: "<v>" is not a key` |
 | `path` | `h:path: "<v>" must start with "/"` · `h:path: "<v>" must not end with "/"` · `h:path: "<v>": <ServeMux's reason>` |
 | `body` | `h:body: "<v>" is not a size: write a positive whole number and B, KiB, MiB or GiB, as 20MiB` · `h:body: "<v>" is larger than a body can be` · `h:body on a GET route, which has no body` |
-| `param` | `h:param: write "h:param <name> label <text>"` · `h:param: no parameter <name>` |
+| `param` | `h:param: write "h:param <name> label <text>"` · `h:param: no parameter <name>`. (A9, draft) the first becomes `h:param: write "h:param <name> [from <key>] [label <text>]"`; `from`'s diagnostics are in ADR 0008 §7 |
 | `perm` with `public` or `session` | `h:perm needs a permission route, not auth <auth>` |
 | Routes sharing a permission disagree on `unverified` | `permission "<k>": <key a> is unverified and <key b> isn't` |
 | (A7) `from` naming this package | `h:perm: <package> is this routes package; declare the permission here` |
@@ -391,6 +391,7 @@ Go names, resolved by the producer:
 | `type`, `import`, `alias` | The parameter's type as the generated package spells it (`shop.OrderID`), its package's import path (`""` for predeclared types) and the qualifier it is imported as. Aliases are the package's name, numbered on a collision (`shop2`), and never a name under which the generated file imports its own packages (`handlers`, `http`, `strconv`, `url`, `access`, `auth`, `openapi`, `openapi3`) |
 | `parse` | `text` for a text type; else the underlying type: `string`, `bool`, `int`, `int8` … `int64`, `uint`, `uint8` … `uint64` |
 | Permission `from` | (A7) Optional: the name of the routes package that declares it, never the file's own. An entry with `from` has `key` and `level` (the taking routes'), and no `var` or `text` |
+| Parameter `from` | (A9, draft) Optional: the key of a GET route of the same file without parameters, never the parameter's own route. A route's `entity` is no longer written |
 | `maxBody` | Optional integer of bytes (at least 1, absent on a `GET` route), from `//h:body` or `x-max-body` |
 | `source` | The handler package's directory, or the spec's path, relative to the module root |
 
@@ -504,7 +505,7 @@ type Route struct {
 	Label      i18n.TKer // route.<key>
 	View       bool
 	Searchable bool
-	Entity     string    // a route key, or ""
+	Entity     string    // a route key, or "". (A9, draft) Removed
 	MaxBody    int64     // bytes; 0: the registration's limit
 	Operation  string    // the operationId on the JSON surface
 	Params     []Param
@@ -514,6 +515,10 @@ type Param struct {
 	Name  string    // the wildcard's name
 	Rest  bool      // {name...}
 	Label i18n.TKer // route_param.<key>.<name>
+	Kind  ParamKind // (A9, draft) String, Bool, Int, Uint, Text
+	Bits  int       // (A9, draft) for Int and Uint
+	From  string    // (A9, draft) the source's route key, or ""
+	Canon func(string) (string, error) // (A9, draft) Text only, generated
 }
 
 // From returns the route of the request ctx belongs to.
@@ -712,7 +717,12 @@ type Query struct {
 type Hit struct {
 	Route Route
 	Text  string // the label in the request's locale
+	Link  Link   // (A9, draft) the route's link when it has no parameters, else the zero Link
 }
+
+// (A9, draft) Link is the route with this key, its parameters parsed from
+// v as the binder parses them: ErrNotFound, or ErrBadParam with the label.
+func (t *Table) Link(key string, v url.Values) (Link, error)
 
 func (t *Table) Search(r *http.Request, g Guard, tr *i18n.Translator, q Query) ([]Hit, error)
 ```
@@ -939,4 +949,5 @@ client SDK pipeline; a language server in the Claude Code plugin.
 - **A6** (2026-11-24, Claude, a clarification; Confab's F4, downgraded to low by epistemer): `handlers gen` still refuses a handler package that doesn't type-check, but when the cause is a link to a builder its routes package doesn't have yet, or an import of a routes package that doesn't exist yet, the message names it and says to generate first (§5.1, §5.2). A routes package is the `-out` directory, or a package holding a `zz_*.routes.json`. `vet` and the language server give the first message too.
 - **A7** (2026-11-24, for v0.4.0, locked by epistemer with the defaults of N1–N11; neozp D4 and D6, Confab's F16, F21, F22 and F25): `handlers/middleware` (recovery for the app's own handlers, `Redirect`, `HTMX`, `Boosted`, `ErrorPage`, `Flash`), recovery on by default in `Register` and `Mount` with `ErrPanic` and `Panic`, a permission's text after its key, and a permission taken from another routes package with `from <package>`. The design and its questions N1–N11 are [ADR 0007](adr/0007-request-lifecycle.md); §1, §2, §4.2, §5.2, §7.2, §7.3, §8, §9, §11.2, §11.8, §12.1, §13.2 and §16 state it.
 - **A8** (2026-11-24, v0.4.0, Claude, clarifications found while building A7): recovery puts the headers back as they were before the route ran, rather than clearing them (§12.1); `h:perm: write "h:perm <key> from <package>"` quotes the actual key; `ErrorPage`'s fallback is plain text as `WriteText` writes it; the flash holds a status set before an unsniffed body and decides on the first non-empty write, ignores empty writes, rewrites a cookie it couldn't fully read, drops a message too large on its own before older ones, and yields messages that aren't keys; `vet` takes a vetted package's routes package name from its committed routes file, else `<package>routes`.
+- **A9** (2026-11-28, **draft**, waiting on epistemer's lock; neozp H5 and ADR 0002, Confab's F13): a parameter's source, `//h:param <name> from <key>`, replacing `//h:entity`; `Param.Kind`, `Bits`, `From` and `Canon`; `Table.Link` from values; `Hit.Link`; `search` and `view` on GET only. [ADR 0008](adr/0008-param-sources.md), questions P1–P3, P9, P11 and A9.1–A9.4.
 

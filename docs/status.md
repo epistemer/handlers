@@ -3,6 +3,28 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-28 — A9 drafted: a parameter's source, and a link from values
+
+Docs only, for epistemer's lock. It follows neozp's decision of 2026-11-28
+(H5, neozp ADR 0002), taken after a review of zp's global search:
+`//h:search` stays opt-in, a parameter names its source, and a nested ui
+module (`ui/palette`) builds the parameter form.
+
+[ADR 0008](adr/0008-param-sources.md) proposes:
+- `//h:param <name> [from <key>] [label <text>]`, which retires
+  `//h:entity`;
+- `ParamKind` and `Param.Kind`, `Bits`, `From` and a generated `Canon`
+  for text types;
+- `(*Table).Link(key, url.Values)`;
+- `Hit.Link` for routes without parameters;
+- `search` and `view` on GET routes only.
+
+**Waiting on epistemer** (API design): the lock of P1–P3, P9, P11 and
+A9.1–A9.4.
+
+**Next.** A Gemini review of the draft with ui's A10, then the lock, then
+the build and v0.5.0 of all four modules.
+
 ## 2026-11-24 — v0.4.0 released
 
 v0.4.0 (A6 and A7) tagged on main after #27; `authguard`, `openapi` and
