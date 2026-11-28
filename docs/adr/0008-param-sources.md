@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Drafted 2026-11-28, waiting on epistemer's lock (API design). Amendment A9, for v0.5.0 |
+| Status | Drafted 2026-11-28, waiting on epistemer's lock (API design). Amendment A9, for v0.5.0. Reviewed: [0009](../reviews/0009-param-sources.md) |
 | Date | 2026-11-28 |
 | Roadmap item | neozp decision H5 (2026-11-28) and [neozp ADR 0002](https://github.com/epistemer/neozp/blob/main/docs/adr/0002-route-search-parameters.md); Confab's F13 |
 | Deciders | epistemer decides. The answers of 2026-11-28 settle the what; questions P1–P3, P9, P11 and A9.1–A9.4 below are the how. Claude proposes |
@@ -95,11 +95,11 @@ The OpenAPI producer writes no `from` (A9.4).
 type ParamKind uint8
 
 const (
-	String ParamKind = iota // string and named string types; Rest is always String
-	Bool
-	Int  // int, int8 … int64 and named types over them; Bits says which
-	Uint // uint, uint8 … uint64 and named types over them; Bits says which
-	Text // a type with UnmarshalText and MarshalText
+	KindString ParamKind = iota // string and named string types; a Rest parameter is always KindString (gen already refuses another type)
+	KindBool
+	KindInt  // int, int8 … int64 and named types over them; Bits says which
+	KindUint // uint, uint8 … uint64 and named types over them; Bits says which
+	KindText // a type with UnmarshalText and MarshalText
 )
 
 func (k ParamKind) String() string // "string", "bool", "int", "uint", "text"
@@ -109,10 +109,11 @@ type Param struct {
 	Rest  bool      // {name...}
 	Label i18n.TKer // route_param.<key>.<name>
 	Kind  ParamKind // (A9)
-	Bits  int       // (A9) 8, 16, 32 or 64 for Int and Uint (int and uint: strconv.IntSize); 0 otherwise
+	Bits  int       // (A9) 8, 16, 32 or 64 for KindInt and KindUint (int and uint: strconv.IntSize, written as such); 0 otherwise
 	From  string    // (A9) the key of the route that suggests values, or ""
-	// Canon (A9) reads a Text value as the binder does and returns it as
-	// MarshalText writes it; nil unless Kind is Text. Generated.
+	// Canon (A9) reads a KindText value as the binder does and returns it
+	// as MarshalText writes it, unescaped; nil unless Kind is KindText.
+	// Generated.
 	Canon func(string) (string, error)
 }
 ```
@@ -124,14 +125,14 @@ The generated table fills the new fields:
 
 ```go
 Params: []handlers.Param{
-	{Name: "id", Rest: false, Label: L10nEventsEditId, Kind: handlers.Int, Bits: 64, From: "events.search"},
-	{Name: "locale", Label: L10nTranslationsLocale, Kind: handlers.Text,
+	{Name: "id", Rest: false, Label: L10nEventsEditId, Kind: handlers.KindInt, Bits: 64, From: "events.search"},
+	{Name: "locale", Label: L10nTranslationsLocale, Kind: handlers.KindText, From: "locales.search",
 		Canon: func(s string) (string, error) {
 			var v ids.Locale
 			if err := v.UnmarshalText([]byte(s)); err != nil {
 				return "", err
 			}
-			return handlers.Text(v), nil
+			return handlers.Text(v), nil // MarshalText's bytes, not escaped
 		}},
 },
 ```
@@ -154,18 +155,31 @@ Each parameter is handled by its kind:
 
 | Kind | Handling |
 |---|---|
-| String | Written as given |
-| Bool | `strconv.ParseBool`, then `FormatBool` |
-| Int | `strconv.ParseInt(s, 10, Bits)`, then `FormatInt` |
-| Uint | `strconv.ParseUint(s, 10, Bits)`, then `FormatUint` |
-| Text | `Canon` |
+| KindString | Written as given |
+| KindBool | `strconv.ParseBool`, then `FormatBool` |
+| KindInt | `strconv.ParseInt(s, 10, Bits)`, then `FormatInt` |
+| KindUint | `strconv.ParseUint(s, 10, Bits)`, then `FormatUint` |
+| KindText | `Canon` |
+
+Some values are `ErrBadParam` whatever the kind:
+
+- a missing value, or one given twice;
+- an empty value, which would leave an empty segment and so miss the
+  route;
+- a Rest value that starts or ends with `/` or has an empty segment, which
+  would also miss the route (and could start the URL with `//`).
+
+`middleware.Redirect` refuses a URL that isn't local (`ErrNotLocal`) in any
+case.
 
 A value is escaped with `Segment`, or with `Rest` for a rest parameter. For
 the same values, the link's `URL()` equals the builder's and its `Route()`
 equals the builder's route. The link points at the table's copy of the
 route, so `==` with a builder's link is false (A9.2). `Link` doesn't consult
-a guard. `ui/palette` admits the target route itself, before it shows a
-form and before it redirects.
+a guard, and it builds a link to any route of the table. `ui/palette`
+checks that the target is a searchable GET page and admits it, before it
+shows a form and before it redirects. A caller finds a route's parameters
+with the existing `ByKey`.
 
 ### 6. A hit carries a link
 
@@ -206,9 +220,9 @@ Each question has a default. ⚠ marks a reversal of something locked.
 
 | # | Question | Default |
 |---|---|---|
-| P1 | Kind names: `handlers.ParamKind` with `String, Bool, Int, Uint, Text`, and `Rest` stays a bool | Yes |
+| P1 | Kind names: `handlers.ParamKind` with `KindString, KindBool, KindInt, KindUint, KindText`, and `Rest` stays a bool. The bare names would collide with `handlers.Text`, the function, and claim generic words in the package | Yes |
 | P2 | `(*Table).Link(key string, v url.Values) (Link, error)`: `ErrNotFound` for an unknown key, `ErrBadParam` with the parameter's label | Yes |
-| P3 | A source has no parameters this round. Dependent sources, such as a talk filtered by its event, come later | Yes |
+| P3 | A source has no parameters this round, and it is in the same routes package. Dependent sources, such as a talk filtered by its event, and a source in another package, come later | Yes |
 | P9 | Query parameters stay out (§16) | Yes |
 | P11 | An entity route must be marked `//h:search`, like any other | Yes |
 | A9.1 | `Param.Canon`, a generated `func(string) (string, error)` on Text parameters. Alternative: a generated resolver per route, `Route.Fill`, which handles every kind in generated code | `Canon`: the rest is generic and tested once |

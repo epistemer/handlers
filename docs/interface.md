@@ -515,10 +515,10 @@ type Param struct {
 	Name  string    // the wildcard's name
 	Rest  bool      // {name...}
 	Label i18n.TKer // route_param.<key>.<name>
-	Kind  ParamKind // (A9, draft) String, Bool, Int, Uint, Text
-	Bits  int       // (A9, draft) for Int and Uint
+	Kind  ParamKind // (A9, draft) KindString, KindBool, KindInt, KindUint, KindText
+	Bits  int       // (A9, draft) for KindInt and KindUint
 	From  string    // (A9, draft) the source's route key, or ""
-	Canon func(string) (string, error) // (A9, draft) Text only, generated
+	Canon func(string) (string, error) // (A9, draft) KindText only, generated
 }
 
 // From returns the route of the request ctx belongs to.
