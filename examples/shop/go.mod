@@ -23,7 +23,7 @@ require (
 	github.com/epistemer/cfgx v0.2.0
 	github.com/epistemer/errors v0.1.0
 	github.com/epistemer/genx v0.2.0
-	github.com/epistemer/handlers v0.4.0
+	github.com/epistemer/handlers v0.5.0
 	github.com/epistemer/handlers/authguard v0.0.0-00010101000000-000000000000
 	github.com/epistemer/handlers/openapi v0.0.0-00010101000000-000000000000
 	github.com/epistemer/i18n v0.3.1
