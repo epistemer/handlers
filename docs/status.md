@@ -3,6 +3,22 @@
 Newest first. Every working session adds an entry: what landed, the decisions
 taken for you, what's next, and what's waiting on you.
 
+## 2026-11-28 — v0.5.0 released
+
+- **Tags:** `v0.5.0` on #29's merge, then `authguard`, `openapi` and `cmd`
+  `v0.5.0` on #30, which moved them onto the tagged root.
+- **Proxy:** proxy.golang.org serves the root, `authguard` and `openapi`.
+  It had cached a failed fetch of `cmd/v0.5.0`, a connection error on its
+  side. The tag resolves with `GOPROXY=direct`, and the proxy retries on
+  its own.
+- **CI:** on #29, the Windows timing test `TestTypePassOnSaveAndStaleDrop`
+  failed once and passed on a re-run. It is the flake that v0.4.0's entry
+  lists.
+- **Review:** Gemini 4 Argon (High) reviewed the build (review 0010).
+- **Skill:** current for v0.5.0, in both copies.
+
+**Next.** ui A10 builds on v0.5.0 (epistemer/ui#56), then Confab (F13).
+
 ## 2026-11-28 — A9 built: a parameter's source, Table.Link, Hit.Link
 
 epistemer locked A9 with every default (P1–P3, P9, P11, A9.1–A9.4), and it
