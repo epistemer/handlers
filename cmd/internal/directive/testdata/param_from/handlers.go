@@ -49,3 +49,10 @@ func (h *H) Copy(w http.ResponseWriter, r *http.Request, id int64) error { retur
 //h:search
 //h:view
 func (h *H) Save(w http.ResponseWriter, r *http.Request, id int64) error { return nil }
+
+//h:key items.pick
+//h:method GET
+//h:path /items/{id}/pick
+//h:desc Pick an item
+//h:param id from label
+func (h *H) Pick(w http.ResponseWriter, r *http.Request, id int64) error { return nil }

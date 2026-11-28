@@ -90,7 +90,7 @@ func completeDocument(doc *openDoc, routes []directive.Route, pos Position, enc 
 	if dirName == "param" {
 		if paramSep := strings.IndexAny(valPrefix, " \t"); paramSep >= 0 {
 			// The words after the parameter's name: [from <key>] [label <text>].
-			words := strings.Fields(valPrefix[paramSep+1:])
+			words := strings.FieldsFunc(valPrefix[paramSep+1:], func(r rune) bool { return r == ' ' || r == '\t' })
 			partial := ""
 			if !strings.HasSuffix(valPrefix, " ") && !strings.HasSuffix(valPrefix, "\t") && len(words) > 0 {
 				partial = words[len(words)-1]
@@ -109,7 +109,8 @@ func completeDocument(doc *openDoc, routes []directive.Route, pos Position, enc 
 				selfKey := ownKeyInCommentBlock(doc.lines, pos.Line)
 				seen := make(map[string]bool)
 				for _, r := range routes {
-					if r.Key == "" || r.Key == selfKey || seen[r.Key] {
+					// A source is a GET route without parameters.
+					if r.Key == "" || r.Key == selfKey || seen[r.Key] || !strings.EqualFold(r.Method, "GET") || len(r.Params) > 0 {
 						continue
 					}
 					seen[r.Key] = true

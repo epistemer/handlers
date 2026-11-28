@@ -111,6 +111,27 @@ func TestTableLink(t *testing.T) {
 		})
 	}
 
+	t.Run("an unknown kind, a rest that isn't a string, and a pattern without the parameter are refused", func(t *testing.T) {
+		tb := handlers.NewTable([]handlers.Route{
+			{Key: "a.k", Pattern: "/{x}", Params: []handlers.Param{{Name: "x", Kind: handlers.ParamKind(9)}}},
+			{Key: "a.r", Pattern: "/{x...}", Params: []handlers.Param{{Name: "x", Rest: true, Kind: handlers.KindInt, Bits: 64}}},
+			{Key: "a.p", Pattern: "/{x}/{y}", Params: []handlers.Param{{Name: "x", Kind: handlers.KindString}}},
+			{Key: "a.o", Pattern: "/{x", Params: []handlers.Param{{Name: "x", Kind: handlers.KindString}}},
+		})
+		for _, k := range []string{"a.k", "a.r", "a.p", "a.o"} {
+			if _, err := tb.Link(k, url.Values{"x": {"1"}}); !errors.Is(err, handlers.ErrBadParam) {
+				t.Errorf("%s: err = %v, want ErrBadParam", k, err)
+			}
+		}
+	})
+
+	t.Run("{$} writes nothing", func(t *testing.T) {
+		tb := handlers.NewTable([]handlers.Route{{Key: "a.d", Prefix: "/p", Pattern: "/posts/{$}"}})
+		if l, err := tb.Link("a.d", nil); err != nil || l.URL() != "/p/posts/" {
+			t.Errorf("Link = %q, %v; want /p/posts/", l.URL(), err)
+		}
+	})
+
 	t.Run("a text parameter without Canon is refused", func(t *testing.T) {
 		tb := handlers.NewTable([]handlers.Route{{Key: "a.t", Pattern: "/{t}", Params: []handlers.Param{{Name: "t", Kind: handlers.KindText}}}})
 		if _, err := tb.Link("a.t", url.Values{"t": {"x"}}); !errors.Is(err, handlers.ErrBadParam) {

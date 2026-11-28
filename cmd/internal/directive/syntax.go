@@ -794,7 +794,7 @@ func parseParamDirective(val string) (name, from, label string, ok bool) {
 	after = strings.TrimLeft(after, " \t")
 	if kw == "from" {
 		from, after, _ = cutWhitespace(after)
-		if from == "" {
+		if from == "" || from == "label" {
 			return "", "", "", false
 		}
 		after = strings.TrimLeft(after, " \t")

@@ -183,7 +183,9 @@ func (t *Table) Search(r *http.Request, g Guard, tr *i18n.Translator, q Query) (
 			Text:  en.Text,
 		}
 		if len(rt.Params) == 0 {
-			hits[i].Link = NewLink(&t.routes[t.index[routeKey]], rt.Prefix+rt.Pattern)
+			if path, ok := fillPattern(rt.Pattern, nil); ok {
+				hits[i].Link = NewLink(&t.routes[t.index[routeKey]], rt.Prefix+path)
+			}
 		}
 	}
 	return hits, nil
@@ -214,7 +216,11 @@ func (t *Table) Link(key string, v url.Values) (Link, error) {
 		}
 		vals[p.Name] = s
 	}
-	return NewLink(rt, rt.Prefix+fillPattern(rt.Pattern, vals)), nil
+	path, ok := fillPattern(rt.Pattern, vals)
+	if !ok {
+		return Link{}, ErrBadParam.With(rt.Label)
+	}
+	return NewLink(rt, rt.Prefix+path), nil
 }
 
 // linkValue is one parameter's value as its builder writes it, escaped.
@@ -225,7 +231,7 @@ func linkValue(p Param, given []string) (string, error) {
 	}
 	s := given[0]
 	if p.Rest {
-		if strings.HasPrefix(s, "/") || strings.HasSuffix(s, "/") || strings.Contains(s, "//") {
+		if p.Kind != KindString || strings.HasPrefix(s, "/") || strings.HasSuffix(s, "/") || strings.Contains(s, "//") {
 			return "", bad
 		}
 		return Rest(s), nil
@@ -258,27 +264,36 @@ func linkValue(p Param, given []string) (string, error) {
 			return "", bad
 		}
 		return Segment(c), nil
+	case KindString:
+		return Segment(s), nil
 	}
-	return Segment(s), nil
+	return "", bad
 }
 
-// fillPattern writes vals, already escaped, into pattern's wildcards.
-func fillPattern(pattern string, vals map[string]string) string {
+// fillPattern writes vals, already escaped, into pattern's wildcards; {$}
+// writes nothing. It reports false for a wildcard vals has no value for, or
+// a brace that isn't closed: a hand-built route whose pattern and
+// parameters disagree.
+func fillPattern(pattern string, vals map[string]string) (string, bool) {
 	var b strings.Builder
 	for {
 		open := strings.IndexByte(pattern, '{')
 		if open < 0 {
 			b.WriteString(pattern)
-			return b.String()
+			return b.String(), true
 		}
 		end := strings.IndexByte(pattern[open:], '}')
 		if end < 0 {
-			b.WriteString(pattern)
-			return b.String()
+			return "", false
 		}
 		b.WriteString(pattern[:open])
-		name := strings.TrimSuffix(pattern[open+1:open+end], "...")
-		b.WriteString(vals[name])
+		if raw := pattern[open+1 : open+end]; raw != "$" {
+			v, ok := vals[strings.TrimSuffix(raw, "...")]
+			if !ok {
+				return "", false
+			}
+			b.WriteString(v)
+		}
 		pattern = pattern[open+end+1:]
 	}
 }

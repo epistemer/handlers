@@ -5,3 +5,4 @@ handlers.go:32:1: h:param rev: items.show has parameters, and a source can't
 handlers.go:33:1: h:param tag: "Bad.Key" is not a key
 handlers.go:49:1: h:search on a POST route: only GET pages are searched
 handlers.go:50:1: h:view on a POST route: only GET pages are searched
+handlers.go:57:1: h:param: write "h:param <name> [from <key>] [label <text>]"

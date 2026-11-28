@@ -80,7 +80,8 @@ type Param struct {
 	Label i18n.TKer // route_param.<key>.<name>
 	Kind  ParamKind // how the binder parses it (A9)
 	// Bits is the width of a KindInt or KindUint: 8, 16, 32, 64, or
-	// strconv.IntSize for int and uint; 0 for the other kinds (A9).
+	// strconv.IntSize for int and uint (0 reads as strconv.IntSize, as in
+	// strconv); 0 for the other kinds (A9).
 	Bits int
 	// From is the key of the route that suggests the parameter's values,
 	// from //h:param <name> from <key>; "" when it has none (A9).

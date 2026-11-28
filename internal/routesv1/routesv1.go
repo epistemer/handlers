@@ -916,7 +916,7 @@ func checkSources(routes []any, add func(loc, msg string)) {
 			continue
 		}
 		k, _ := r["key"].(string)
-		if _, seen := byKey[k]; k == "" || seen {
+		if _, seen := byKey[k]; !keyPattern.MatchString(k) || seen {
 			continue
 		}
 		m, _ := r["method"].(string)
@@ -949,11 +949,13 @@ func checkSources(routes []any, add func(loc, msg string)) {
 			switch {
 			case k == "":
 				add(loc, "must not be empty")
+			case !keyPattern.MatchString(k):
+				add(loc, fmt.Sprintf("%q is not a valid key", k))
 			case k == own:
 				add(loc, fmt.Sprintf("%q is the param's own route", k))
 			case !found:
 				add(loc, fmt.Sprintf("unknown route key %q", k))
-			case src.method != "GET":
+			case src.method != "" && src.method != "GET":
 				add(loc, fmt.Sprintf("%q is %s, not GET", k, src.method))
 			case src.nparams > 0:
 				add(loc, fmt.Sprintf("%q has params", k))

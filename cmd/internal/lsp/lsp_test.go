@@ -555,6 +555,12 @@ import "net/http"
 //h:path /orders/{id}
 //h:desc Show order
 func (h *H) ShowOrder(w http.ResponseWriter, r *http.Request, id int64) error { return nil }
+
+//h:key orders.list
+//h:method GET
+//h:path /orders
+//h:desc Orders
+func (h *H) ListOrders(w http.ResponseWriter, r *http.Request) error { return nil }
 `
 	if err := os.WriteFile(fileA, []byte(srcA), 0o644); err != nil {
 		t.Fatal(err)
@@ -614,9 +620,10 @@ func (h *H) ShowOrder(w http.ResponseWriter, r *http.Request, id int64) error { 
 	if got := completeAt(17, 29); !slices.Equal(got, []string{"categories.list"}) {
 		t.Errorf("line 17 from completion = %v, want [categories.list]", got)
 	}
-	// Line 17 with empty prefix ("//h:param id from ") -> includes both categories.list and orders.show from b.go
-	if got := completeAt(17, 18); !slices.Equal(got, []string{"categories.list", "orders.show"}) {
-		t.Errorf("line 17 empty from completion = %v, want [categories.list orders.show]", got)
+	// Line 17 with empty prefix ("//h:param id from ") -> the GET routes without
+	// parameters, b.go's orders.list included and orders.show (it has {id}) left out
+	if got := completeAt(17, 18); !slices.Equal(got, []string{"categories.list", "orders.list"}) {
+		t.Errorf("line 17 empty from completion = %v, want [categories.list orders.list]", got)
 	}
 	// Line 17 after the name ("//h:param id ") -> the two keywords
 	if got := completeAt(17, 13); !slices.Equal(got, []string{"from", "label"}) {
